@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Explore and replay flame experiments from NASA's BASS–II microgravity research.">
+<title>Flame Lab — BASS–II</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap bar">
+<a class="brand" href="#lab"><span class="mark" aria-hidden="true">◈</span> Flame Lab</a>
+<nav aria-label="Main navigation"><a href="#lab">Simulator</a><a href="#evidence">Experiments</a><a href="#method">Method</a></nav>
+<a class="report" href="https://ntrs.nasa.gov/citations/20210011385" target="_blank" rel="noopener">NASA report <span aria-hidden="true">↗</span></a>
+</div></header>
+<main id="lab" class="wrap">
+<section class="intro"><div class="overline"><span></span> BASS–II / INTERNATIONAL SPACE STATION</div><h1>Fire in microgravity<span>.</span></h1><p>Explore how solid fuels burn, spread, and go out aboard the ISS.</p></section>
+<div class="scenarios" aria-label="Experiment scenarios">
+<button class="scenario selected" data-case="film" aria-pressed="true"><small>01 <span>·</span> EXPERIMENT REPLAY</small><strong>Radiative extinction</strong><span>PMMA film · Opposed flow</span></button>
+<button class="scenario" data-case="rod" aria-pressed="false"><small>02 <span>·</span> PARAMETER EXPLORER</small><strong>Flammability boundary</strong><span>PMMA rod · Opposed flow</span></button>
+<button class="scenario" data-case="fabric" aria-pressed="false"><small>03 <span>·</span> EXPERIMENT REPLAY</small><strong>Concurrent spread</strong><span>SIBAL fabric · Concurrent flow</span></button>
+</div>
+<div class="workspace">
+<section class="panel chamber" aria-labelledby="chamber-title">
+<div class="panelhead"><div><span class="eyebrow">COMBUSTION CHAMBER</span><h2 id="chamber-title">Flame visualization</h2></div><span id="phase" class="phase">Steady spread</span></div>
+<div class="viewport">
+<canvas id="flame" aria-label="Schematic animation of flame geometry and ventilation direction" role="img"></canvas>
+<div class="viewport-top"><span><i></i> ILLUSTRATIVE VIEW</span><span id="orientation">TOP VIEW</span></div>
+<div class="viewport-bottom"><span><i class="blue"></i> Flame envelope</span><span><i class="warm"></i> Luminous zone</span><span><i class="gas"></i> Gas flow</span></div>
+</div>
+<div class="transport">
+<div class="transport-row"><button id="play" type="button">▶ <span>Play replay</span></button><button id="reset" type="button" title="Reset scenario" aria-label="Reset scenario">↺</button><output id="clock" for="time"></output><label class="speed">Speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+<div id="scrub"><input id="time" type="range" min="0" max="35" step="0.01" value="18" aria-label="Replay time"><div class="times"><span>0 s</span><span id="time-end">35 s</span></div></div>
+</div>
+</section>
+<aside class="panel controls" aria-labelledby="control-title">
+<div class="panelhead"><div><span class="eyebrow" id="control-type">EXPERIMENT REPLAY</span><h2 id="control-title">Test conditions</h2></div></div>
+<div class="control-body" id="replay-settings"><dl class="params"><div><dt>Fuel</dt><dd id="fuel"></dd></div><div><dt>Geometry</dt><dd id="geometry"></dd></div><div><dt>Flow direction</dt><dd id="direction"></dd></div><div><dt>Oxygen</dt><dd id="oxygen"></dd></div></dl><p id="replay-note" class="note"></p><div class="reference"><div><span class="eyebrow">NASA FRAME</span><span id="frame-time"></span></div><button id="frame" type="button" aria-label="Jump to the time of this NASA frame"><img id="frame-image" alt=""></button><small id="frame-caption"></small></div></div>
+<div class="control-body" id="rod-settings" hidden>
+<div class="slider"><label for="flow">Ventilation speed <output id="flow-out" for="flow"></output></label><input type="range" id="flow" min="0" max="32" step="0.1" value="3"><div class="times"><span>0 cm/s</span><span>32 cm/s</span></div></div>
+<div class="slider"><label for="o2">Oxygen <output id="o2-out" for="o2"></output></label><input type="range" id="o2" min="12" max="21" step="0.1" value="14.5"><div class="times"><span>12 vol%</span><span>21 vol%</span></div></div>
+<label class="radius" for="radius">Rod radius <select id="radius"><option value="0.318">3.18 mm</option><option value="0.476" selected>4.76 mm</option><option value="0.635">6.35 mm</option></select></label>
+<div class="presets" aria-label="Boundary examples"><button data-preset="stable">Stable</button><button data-preset="quench">Quench</button><button data-preset="blowoff">Blowoff</button></div>
+<p class="note" id="rod-note"></p></div>
+<div class="source"><span>↗</span><a id="case-source" target="_blank" rel="noopener"></a></div>
+</aside>
+</div>
+<section class="readouts" aria-label="Key metrics">
+<div class="metric"><span id="label1">FLOW SPEED</span><strong id="value1"></strong></div>
+<div class="metric"><span id="label2">SPREAD RATE</span><strong id="value2"></strong></div>
+<div class="metric"><span id="label3">RADIOMETER SIGNAL</span><strong id="value3"></strong></div>
+</section>
+<section class="panel telemetry" aria-labelledby="telemetry-title">
+<div class="panelhead"><div><span class="eyebrow">DATA &amp; MODEL</span><h2 id="telemetry-title">Experiment telemetry</h2></div><label class="channel">Signal <select id="channel"><option value="spread">Spread rate</option><option value="radiometer">Radiometer</option><option value="flow">Flow profile</option></select></label></div>
+<div class="plot"><canvas id="plot" role="img" aria-label="Experiment telemetry graph"></canvas></div>
+<p id="plot-caption" class="caption"></p>
+</section>
+<section id="evidence" class="section"><div class="section-head"><div><span class="eyebrow">NASA BASS–II REPORT</span><h2>From the experiments</h2></div><p>Inspect the original figures used in the lab.</p></div><div class="gallery" id="gallery"></div></section>
+<section id="method" class="section"><div class="section-head"><div><span class="eyebrow">MODEL NOTES</span><h2>How the lab works</h2></div></div>
+<div class="method-grid">
+<article class="panel method"><h3>Replay the observations</h3><p>PMMA film telemetry uses points read from Figures 2.8–2.10. SIBAL fabric telemetry approximates the flame tip and base curves in Figure 7.2. Playback interpolates between points, and the chamber illustrates the observed changes in shape.</p><p>For the PMMA film, the exact flow schedule before 27 s is unavailable here. The nominal 3 cm/s segment is an illustrative hold. The leading-edge spread rate is shown starting at 11 s, at the first digitized point.</p></article>
+<article class="panel method"><h3>Explore the rod boundary</h3><p>Equation 6.1 estimates the final oxygen concentration at the boundary for opposed-flow PMMA rods. The shaded area in the lab chart represents conditions above the fitted boundary.</p><div class="formula">a = (3/2)(U/r)√(r/r₀)<br>X<sub>O₂</sub> = 6 exp(−0.5a) + 0.0167a + 13.4</div><p>Use cm and s for U and r. The reference radius r₀ is 0.318 cm. The fit shown spans 0–150 s⁻¹. Conditions within ±0.2 percentage points are flagged by this interface to encourage caution near the curve.</p></article>
+<article class="panel method"><h3>Read the visual cues</h3><p>Blue and orange indicate the observed visual transition toward extinction. The schematic has no temperature calibration. The chamber geometry, tracer particles and flame shape are illustrative.</p><p>The rod view implements an empirical fit. The flame animation is schematic. Thin films, rods and fabric have distinct geometries and limits.</p></article>
+</div>
+</section>
+<footer><span>Flame Lab · Based on NASA/TM–20210011385</span><a href="#lab">Back to simulator ↑</a></footer>
+</main>
+<dialog id="figure-dialog"><form method="dialog"><button aria-label="Close figure">×</button></form><h2 id="figure-title"></h2><img id="figure-image" alt=""><a id="figure-source" target="_blank" rel="noopener">Open report page ↗</a></dialog>
+</body></html>

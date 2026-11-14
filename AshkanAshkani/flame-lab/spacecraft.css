@@ -1,0 +1,43 @@
+.ship-intro{padding-bottom:23px}
+.ship-intro p{max-width:700px}
+.ship-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,335px);gap:12px}
+.ship-chamber{display:flex;flex-direction:column}
+.ship-viewport{position:relative;isolation:isolate;flex:1;min-height:345px;border-block:1px solid var(--line);background:#090e15}
+.ship-viewport canvas{position:absolute;inset:0}
+.ship-viewport .viewport-top span:last-child{color:#a8dfe7}
+.ship-chamber .transport{padding:11px 15px 13px}
+.ship-chamber .primary{background:var(--accent);color:#0c212a;border-color:var(--accent);font-weight:750;min-width:69px}
+.ship-config .panelhead{border-bottom:1px solid var(--line)}
+.ship-controls{padding:12px 14px 13px}
+.ship-missions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.ship-missions button{border:1px solid #384c5e;border-radius:8px;text-align:left;background:#141f2b;padding:7px 9px}
+.ship-missions button[aria-pressed=true]{background:#1b353f;border-color:#66b5c4}
+.ship-missions strong,.ship-missions span{display:block}
+.ship-missions strong{font-size:13px}
+.ship-missions span{color:#b1c4d6;font-size:11px}
+.ship-config .params div{padding:8px 0}
+.ship-config .params dt,.ship-config .params dd{font-size:12px}
+.scenario-control{margin-top:10px}
+.air-control{display:flex;align-items:center;gap:6px;color:#e6f1fb;font-size:13px;cursor:pointer}
+.air-control input{accent-color:var(--accent);width:15px;height:15px}
+.scenario-control .note{margin:3px 0 0;min-height:36px}
+.vehicle-photo{display:flex;gap:8px;align-items:center;margin:8px 0 0;font-size:11px;color:var(--muted)}
+.vehicle-photo img{width:79px;height:49px;object-fit:cover;border:1px solid #344354;border-radius:6px}
+.metric strong b{font:inherit}
+.model-label{font:10px var(--mono);color:var(--muted);text-align:right}
+.ship-evidence{display:grid;grid-template-columns:1fr 1fr 1.65fr;gap:10px}
+.ship-evidence figure{margin:0}
+.ship-evidence img{width:100%;height:245px;object-fit:contain;background:#09121b;display:block}
+.ship-evidence figcaption{padding:8px 11px}
+.ship-evidence strong,.ship-evidence figcaption span{display:block}
+.ship-evidence figcaption span{font-size:12px;color:var(--muted)}
+.ship-credit{padding:8px 0 0}
+.ship-method a{color:#99dee9;font-size:12px}
+@media(max-width:760px){
+  .ship-layout{grid-template-columns:minmax(0,1fr)}
+  .ship-viewport{min-height:285px}
+  .ship-evidence{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ship-evidence figure:last-child{grid-column:1/-1}
+  .ship-evidence img{height:205px}
+}
+@media(max-width:480px){.ship-viewport{min-height:250px}.ship-chamber .transport-row{gap:5px}.ship-chamber .transport button{padding-inline:7px}.ship-chamber .speed{font-size:0}.ship-chamber .speed select{font-size:12px}}

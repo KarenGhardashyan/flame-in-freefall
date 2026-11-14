@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Explore and replay flame experiments from NASA's BASS–II microgravity research.">
+<title>Flame Lab — NASA fire experiments</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="spacecraft.css">
+<link rel="stylesheet" href="lab.css">
+<script type="module" src="navigation.js"></script>
+<script type="module" src="spacecraft.js"></script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap bar">
+<a class="brand" href="#lab"><span class="mark" aria-hidden="true">◈</span> Flame Lab</a>
+<a class="header-link" id="browse-evidence" href="#evidence">Photos &amp; sources ↓</a>
+</div></header>
+<main id="main" class="wrap">
+<section class="intro"><h1>Fire in microgravity</h1><p>Explore NASA’s flame experiments on the ISS and aboard the Cygnus cargo spacecraft.</p></section>
+<nav class="lab-nav" aria-label="Choose an experiment series">
+<a href="#lab" id="nav-lab" aria-current="page">ISS flame lab <span>BASS–II</span></a>
+<a href="#spacecraft" id="nav-spacecraft">Spacecraft fire <span>Saffire</span></a>
+</nav>
+<div id="lab-view">
+<div class="lab-task">
+<label for="lab-case" class="field-label">Experiment</label>
+<select id="lab-case">
+<optgroup label="Change the conditions"><option value="liveFilm">Thin acrylic film (PMMA)</option><option value="rod">Acrylic rod (PMMA)</option></optgroup>
+<optgroup label="Replay recorded tests"><option value="film">Film flame goes out</option><option value="fabric">Flame spreads along fabric</option></optgroup>
+</select>
+<p id="lab-instruction">Change oxygen or airflow to see how the flame responds.</p>
+</div>
+<div class="workspace">
+<section class="panel chamber" aria-labelledby="chamber-title">
+<div class="panelhead"><div><h2 id="chamber-title">Combustion chamber</h2></div><span id="phase" class="phase" role="status">Steady spread</span></div>
+<div class="viewport">
+<canvas id="flame" aria-label="Schematic animation of flame geometry and ventilation direction" role="img"></canvas>
+<div class="viewport-top"><span><i></i> ILLUSTRATIVE VIEW</span><span id="orientation">TOP VIEW</span></div>
+<div class="scope-values" id="scope-values"><span><b id="scope-o2"></b> O₂</span><span><b id="scope-flow"></b> AIRFLOW</span></div><div class="viewport-bottom"><span><i class="blue"></i> Flame envelope</span><span><i class="warm"></i> Luminous zone</span><span><i class="gas"></i> Gas flow</span></div>
+</div>
+<div class="transport">
+<div class="transport-row"><button id="play" type="button">▶ <span>Play replay</span></button><button id="reset" type="button" title="Reset scenario" aria-label="Reset scenario">Reset</button><output id="clock" for="time"></output><label class="speed">Speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label><div id="live-actions" hidden><button id="ignite" type="button">Ignite</button><button id="hold" type="button" aria-pressed="false">Pause animation</button></div></div><div id="scrub"><input id="time" type="range" min="0" max="35" step="0.01" value="18" aria-label="Replay time"><div class="times"><span>0 s</span><span id="time-end">35 s</span></div></div>
+</div>
+</section>
+<aside class="panel controls" aria-labelledby="control-title">
+<div class="panelhead"><div><h2 id="control-title">Test conditions</h2></div></div>
+<div class="control-body" id="replay-settings"><dl class="params"><div><dt>Fuel</dt><dd id="fuel"></dd></div><div><dt>Geometry</dt><dd id="geometry"></dd></div><div><dt>Flow direction</dt><dd id="direction"></dd></div><div><dt>Oxygen</dt><dd id="oxygen"></dd></div></dl><p id="replay-note" class="note"></p><div class="reference"><div><span class="eyebrow">NASA FRAME</span><span id="frame-time"></span></div><button id="frame" type="button" aria-label="Jump to the time of this NASA frame"><img id="frame-image" alt=""></button><small id="frame-caption"></small></div></div>
+<div class="control-body" id="film-settings" hidden>
+<div class="slider"><label for="filmO2">Oxygen concentration <output id="filmO2-out" for="filmO2"></output></label><input type="range" id="filmO2" min="16" max="21" step=".1" value="21"><div class="times"><span>16 vol%</span><span>21 vol%</span></div></div>
+<div class="slider"><label for="filmFlow">Airflow against the flame <output id="filmFlow-out" for="filmFlow"></output></label><input type="range" id="filmFlow" min="0" max="20" step=".1" value="5"><div class="times"><span>0 cm/s</span><span>20 cm/s</span></div></div>
+<label class="radius" for="filmThickness">Film thickness <select id="filmThickness"><option value="100">100 µm</option><option value="200">200 µm</option><option value="300">300 µm</option><option value="400">400 µm</option></select></label>
+<div class="preset-label">Compare oxygen at 5 cm/s</div>
+<div class="presets" aria-label="Film comparisons"><button data-film-preset="air">21% O₂</button><button data-film-preset="low">16% O₂</button><button data-film-preset="limit">Near limit</button></div>
+<p class="note feedback" id="film-note"></p>
+<figure class="evidence-mini"><img src="media/film-0.webp" alt="NASA frame of a luminous PMMA film flame"><figcaption>Observed PMMA flame · Fig. 2.9</figcaption></figure>
+</div>
+<div class="control-body" id="rod-settings" hidden>
+<div class="slider"><label for="flow">Ventilation speed <output id="flow-out" for="flow"></output></label><input type="range" id="flow" min="0" max="32" step="0.1" value="3"><div class="times"><span>0 cm/s</span><span>32 cm/s</span></div></div>
+<div class="slider"><label for="o2">Oxygen <output id="o2-out" for="o2"></output></label><input type="range" id="o2" min="12" max="21" step="0.1" value="15.8"><div class="times"><span>12 vol%</span><span>21 vol%</span></div></div>
+<label class="radius" for="radius">Rod radius <select id="radius"><option value="0.318">3.18 mm</option><option value="0.476" selected>4.76 mm</option><option value="0.635">6.35 mm</option></select></label>
+<div class="preset-label">Explore the boundary</div><div class="presets" aria-label="Boundary examples"><button data-preset="stable">Stable</button><button data-preset="quench">Low flow</button><button data-preset="blowoff">High flow</button></div>
+<p class="note feedback" id="rod-note"></p><figure class="evidence-mini"><img src="media/rod-limit.webp" alt="NASA image of a blue flame surrounding a PMMA rod tip"><figcaption>Observed rod flame near quenching · Fig. 6.3</figcaption></figure></div>
+<div class="source"><a id="case-source" target="_blank" rel="noopener"></a></div>
+</aside>
+</div>
+<section class="readouts" aria-label="Key metrics">
+<div class="metric"><span id="label1">FLOW SPEED</span><strong id="value1"></strong></div>
+<div class="metric"><span id="label2">SPREAD RATE</span><strong id="value2"></strong></div>
+<div class="metric"><span id="label3">RADIOMETER SIGNAL</span><strong id="value3"></strong></div>
+</section>
+<section class="panel telemetry" aria-labelledby="telemetry-title">
+<div class="panelhead"><div><h2 id="telemetry-title">Experiment telemetry</h2></div><label class="channel">Signal <select id="channel"><option value="spread">Spread rate</option><option value="radiometer">Radiometer</option><option value="flow">Flow profile</option></select></label></div>
+<div class="plot"><canvas id="plot" role="img" aria-label="Experiment telemetry graph"></canvas></div>
+<p id="plot-caption" class="caption"></p>
+</section>
+<section id="evidence" class="section"><div class="section-head"><div><h2>From the experiments</h2></div><p>Inspect the original figures used in the lab.</p></div><div class="gallery" id="gallery"></div></section>
+<details id="method" class="source-details section"><summary>How the BASS–II model works</summary>
+<div class="method-grid">
+<article class="panel method"><h3>Replay the observations</h3><p>PMMA film telemetry uses points read from Figures 2.8–2.10. SIBAL fabric telemetry approximates the flame tip and base curves in Figure 7.2. Playback interpolates between points, and the chamber illustrates the observed changes in shape.</p><p>For the PMMA film, the exact flow schedule before 27 s is unavailable here. The nominal 3 cm/s segment is an illustrative hold. The leading-edge spread rate is shown starting at 11 s, at the first digitized point.</p></article>
+<article class="panel method"><h3>Explore the rod boundary</h3><p>Equation 6.1 estimates the final oxygen concentration at the boundary for opposed-flow PMMA rods. The shaded area in the lab chart represents conditions above the fitted boundary.</p><div class="formula">a = (3/2)(U/r)√(r/r₀)<br>X<sub>O₂</sub> = 6 exp(−0.5a) + 0.0167a + 13.4</div><p>Use cm and s for U and r. The reference radius r₀ is 0.318 cm. The fit shown spans 0–150 s⁻¹. The interface highlights a small band above the fitted curve as near extinction. The illustrative oscillation uses 1.1 Hz, observed in one near-quench rod test (Figure 6.6).</p></article>
+<article class="panel method"><h3>Model the PMMA film</h3><p>The live film model interpolates approximate values from NASA’s computed 100 µm curves at 16 and 21 vol% O₂. The reported low-flow cutoffs are 3.5 and 1.5 cm/s, respectively. Intermediate oxygen values are an interpolation. For comparison, the flight experiments in Table 2.1 report approximately 1.0 ± 0.5 cm/s at 21% O₂ and 3.0 ± 0.5 cm/s at 16% O₂.</p><p>For thicker films, the app applies the inverse-thickness relation from §2.2.7 as an approximation. Figures 2.11–2.12 describe 1 atm. The operating envelope here focuses on low-flow extinction and ends at 20 cm/s.</p><p>Flame shape, color and response timing are illustrative. Relighting requires the Ignite control. The displayed spread rate is the estimated steady rate under the selected conditions. The drawn film represents 100 mm of travel. Chapter 8 of Combustion Physics explains the role of heat loss and residence time in extinction.</p></article>
+</div>
+</details>
+</div>
+<div id="spacecraft-view" hidden>
+<div class="ship-layout">
+<section class="panel ship-chamber" aria-labelledby="ship-view-title">
+<div class="panelhead"><div><span id="mission-label" class="eyebrow">SAFFIRE–I</span><h2 id="ship-view-title">Combustion duct</h2></div><span id="ship-phase" class="phase" role="status"></span></div>
+<div class="ship-viewport">
+<canvas id="ship-canvas" role="img" aria-label="Diagram of flame behavior in the Cygnus test duct"></canvas>
+<div class="viewport-top"><span><i></i> SCHEMATIC TOP VIEW</span><span id="ship-vent-indicator">AIRFLOW →</span></div>
+<div class="viewport-bottom"><span id="ship-legend">Schematic flame and remaining sample</span></div>
+</div>
+<div class="transport">
+<div class="transport-row"><button id="ship-play" class="primary" type="button">Play</button><button id="ship-reset" type="button" aria-label="Reset time and airflow">Reset</button><output id="ship-clock" for="ship-time"></output><label class="speed">Speed <select id="ship-speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="20">20×</option><option value="40">40×</option></select></label></div>
+<input id="ship-time" type="range" min="0" max="420" step="1" value="120" aria-label="Time in experiment"><div class="times"><span>Ignition</span><span id="ship-end">420 s</span></div>
+</div>
+</section>
+<aside class="panel ship-config" aria-labelledby="flight-title">
+<div class="panelhead"><div><h2 id="flight-title">Choose a flight test</h2></div></div>
+<div class="ship-controls">
+<label for="ship-mission" class="field-label">NASA flight test</label>
+<select id="ship-mission"><option value="first">Saffire I — fabric, 20 cm/s</option><option value="third">Saffire III — fabric, 25 cm/s</option><option value="sixth">Saffire VI-3 — acrylic, 20 → 5 cm/s</option></select>
+<dl class="params"><div><dt>Initial oxygen</dt><dd id="ship-oxygen"></dd></div><div><dt>Sample</dt><dd id="ship-sample"></dd></div><div id="ship-pressure-row" hidden><dt>Pressure</dt><dd id="ship-pressure"></dd></div></dl>
+<div class="scenario-control"><button type="button" id="ship-cut" aria-pressed="false">Try an early airflow cutoff</button><p class="note" id="ship-air-note"></p></div>
+<p class="end-note" id="ship-end-note"></p><div class="ship-milestones" id="ship-milestones" hidden><button type="button" data-ship-time="483">Flow reduced · 483 s</button><button type="button" data-ship-time="783">Flow off · 783 s</button></div><a id="ship-source" class="inline-source" target="_blank" rel="noopener">NASA results for this test ↗</a>
+<figure class="vehicle-photo"><img src="media/saffire/cygnus.webp" alt="Saffire experiment package secured inside the Cygnus spacecraft"><figcaption>Saffire experiment package inside Cygnus · NASA</figcaption></figure>
+</div>
+</aside>
+</div>
+<section class="readouts" aria-label="Spacecraft experiment metrics">
+<div class="metric"><span>Duct airflow</span><strong><b id="ship-flow"></b> <span>cm/s</span></strong></div>
+<div class="metric"><span id="ship-label2">Reference spread rate</span><strong><b id="ship-rate"></b> <span id="ship-unit2">mm/s</span></strong></div>
+<div class="metric"><span id="ship-label3">Front position</span><strong><b id="ship-position"></b> <span id="ship-unit3">mm</span></strong></div>
+</section>
+<section class="panel telemetry" aria-labelledby="ship-graph-title">
+<div class="panelhead"><div><h2 id="ship-graph-title">Front position over time</h2></div><span id="ship-model-label" class="model-label"></span></div>
+<div class="plot"><canvas id="ship-plot" role="img" aria-label="Graph of the reconstructed pyrolysis front and replay time"></canvas></div>
+<p class="caption" id="ship-chart-caption"></p>
+</section>
+<section id="flight-evidence" class="section">
+<div class="section-head"><div><h2>Flight photographs</h2></div><a class="report" href="https://ntrs.nasa.gov/api/citations/20180005168/downloads/20180005168.pdf#page=16">View PDF plates ↗</a></div>
+<div class="ship-evidence">
+<figure class="panel"><img loading="lazy" src="media/saffire/flight-i.webp" alt="Successive orange flame fronts from Saffire I moving up the swatch"><figcaption><strong>Saffire–I</strong><span>20 cm/s · Concurrent flame fronts</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/flight-iii.webp" alt="Successive orange flame fronts from Saffire III"><figcaption><strong>Saffire–III</strong><span>25 cm/s · Concurrent flame fronts</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/flow-comparison.webp" alt="Straight opposed-flow flame above an irregular arched concurrent flame"><figcaption><strong>Opposed vs. concurrent</strong><span>Saffire–III · Opposed flame above concurrent flame</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/vi-pmma.webp" alt="Luminous flame on the two-sided acrylic sample in Saffire VI-3"><figcaption><strong>Saffire VI-3</strong><span>Two-sided PMMA · NASA 2024, slide 13</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/vi-fabric.webp" alt="Glowing SIBAL fabric flame front in Saffire VI-2"><figcaption><strong>Saffire VI-2</strong><span>SIBAL fabric · NASA 2024, slide 13</span></figcaption></figure>
+<figure class="panel"><a href="media/saffire/vi-power.webp" target="_blank" rel="noopener"><img loading="lazy" src="media/saffire/vi-power.webp" alt="Experimental heat release plot for Saffire VI-3"></a><figcaption><strong>Heat release over time</strong><span>Saffire VI-3 · NASA 2024, slide 17</span></figcaption></figure>
+</div>
+<p class="caption ship-credit">NASA flight images reproduced from the Saffire results PDF. The consecutive outlines in the Saffire I and III montages are 40 seconds apart.</p>
+</section>
+<details id="ship-method" class="source-details section"><summary>How the Saffire replays work</summary>
+<div class="method-grid ship-method">
+<article class="panel method"><h3>Flight conditions</h3><p>NASA burned a cotton–fiberglass panel inside the Saffire test duct on Cygnus after the vehicle departed the ISS. The schematic shows concurrent spread in the duct. In Saffire I, airflow was stopped at 420 s and NASA reported about 10% of the fuel remained.</p><a href="https://www.nasa.gov/centers-and-facilities/glenn/nasa-ignites-fire-experiment-aboard-space-cargo-ship/">NASA mission coverage ↗</a></article>
+<article class="panel method"><h3>Tracking the front</h3><p>Saffire–I uses approximate points read from NASA’s pyrolysis-position plot. Its detailed results report 420 seconds. Saffire–III uses a constant 2.3 mm/s spread-rate approximation for the reported 320-second run. The horizontal view rotates the experiment for readability.</p><a href="media/saffire/tracking.webp" target="_blank" rel="noopener">Original tracking chart ↗</a></article>
+<article class="panel method"><h3>Airflow cutoff</h3><p>Saffire–I’s flame went out at the scheduled airflow cutoff. Moving that event earlier here freezes the reconstructed front and fades the flame. The early cutoff, flame shape and cooling animation are illustrative.</p><p>The Saffire V study used a separate vehicle model for heat and combustion product transport. Neither the duct illustration nor the heat-release replay calculates transport through Cygnus.</p><a href="https://ntrs.nasa.gov/api/citations/20170008805/downloads/20170008805.pdf#page=16">Saffire I results ↗</a><br><a href="https://ntrs.nasa.gov/api/citations/20240008602/downloads/ICES-2024-310.pdf">Saffire V vehicle model ↗</a></article>
+<article class="panel method"><h3>Saffire VI-3</h3><p>The timeline starts at ignition. Airflow fell from 20 to 5 cm/s at 483 s and stopped at 783 s. Heat release is approximated from slide 17. The flame symbol stays in one place because the slide does not provide front positions. Slide 20 lists the burn duration as 780 s, while slide 17 gives 783 s between ignition and duct shutdown.</p><a href="https://ntrs.nasa.gov/citations/20240007488">NASA Saffire VI slides ↗</a></article>
+</div></details>
+</div>
+<footer><span>Flame Lab · NASA experiment viewer</span><details class="previous-releases"><summary>Previous versions</summary><a href="archive/v1/index.html">Version 1</a><a href="archive/v2/index.html">Version 2</a><a href="archive/v3/index.html">Version 3</a></details><a href="#main">Back to top ↑</a></footer>
+</main>
+<dialog id="figure-dialog"><form method="dialog"><button aria-label="Close figure">×</button></form><h2 id="figure-title"></h2><img id="figure-image" alt=""><a id="figure-source" target="_blank" rel="noopener">Open report page ↗</a></dialog>
+</body></html>
