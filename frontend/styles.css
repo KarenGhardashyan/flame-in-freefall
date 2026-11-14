@@ -76,13 +76,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 10px;
   box-sizing: border-box;
   z-index: 1000;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  gap: 8px;
+  scrollbar-width: none;
+  gap: 6px;
 }
 
 .brand-section, .topbar-brand, .topbar .brand-section {
@@ -185,7 +185,7 @@ html, body {
 .actions-section {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -194,13 +194,13 @@ html, body {
   border: 1px solid var(--border-card);
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 7px;
-  border-radius: 5px;
+  font-size: 9.5px;
+  padding: 3px 6px;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   white-space: nowrap;
   transition: all 0.15s ease;
 }
@@ -212,24 +212,25 @@ html, body {
 }
 
 .btn-bar svg {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   fill: currentColor;
 }
 
 .connection-pill {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  padding: 3px 7px;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  padding: 2.5px 6px;
   border-radius: 4px;
   background: rgba(0, 229, 255, 0.08);
   color: var(--color-go);
   border: 1px solid rgba(0, 229, 255, 0.25);
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .connection-dot {
@@ -1603,5 +1604,49 @@ select {
   border-color: #38BDF8;
   color: #38BDF8;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+@media (max-width: 1440px) {
+  #top-bar, .topbar {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .brand-title {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .brand-subtitle {
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+  }
+  .scenarios-section {
+    padding: 1px 3px;
+    gap: 2px;
+  }
+  .scenario-label {
+    font-size: 8.5px;
+    margin-right: 2px;
+  }
+  .btn-scenario {
+    font-size: 8.5px;
+    padding: 2px 4px;
+  }
+  .actions-section {
+    gap: 3px;
+  }
+  .btn-bar {
+    font-size: 8.5px;
+    padding: 2px 5px;
+    gap: 3px;
+  }
+  .btn-bar svg {
+    width: 10px;
+    height: 10px;
+  }
+  .connection-pill {
+    font-size: 8.5px;
+    padding: 2px 5px;
+    gap: 3px;
+  }
 }
 

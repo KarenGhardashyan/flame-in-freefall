@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v3';
+  const STORAGE_KEY = 'flame_blueprint_graph_v4';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -2912,12 +2912,9 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      if (localStorage.getItem('flame_blueprint_graph')) {
-        localStorage.removeItem('flame_blueprint_graph');
-      }
-      if (localStorage.getItem('flame_blueprint_graph_v2')) {
-        localStorage.removeItem('flame_blueprint_graph_v2');
-      }
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3'].forEach(k => {
+        if (localStorage.getItem(k)) localStorage.removeItem(k);
+      });
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
@@ -2991,7 +2988,26 @@
       buildDefaultGraph();
     }
 
-    console.log('[FLAME BLUEPRINT] Engine active on port 5000.');
+    try {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const pillText = document.getElementById('connection-status-text') || document.querySelector('.connection-pill span');
+      if (!isLocal) {
+        if (pillText) pillText.textContent = 'CLOUD ENGINE // ONLINE';
+      } else {
+        fetch('/api/status')
+          .then(res => res.json())
+          .then(data => {
+            if (pillText) {
+              pillText.textContent = data.mode === 'standalone_cloud' ? 'CLOUD ENGINE // ONLINE' : 'PORT 5000 // CORE ONLINE';
+            }
+          })
+          .catch(() => {
+            if (pillText) pillText.textContent = 'CLOUD ENGINE // ONLINE';
+          });
+      }
+    } catch (_) {}
+
+    console.log('[FLAME BLUEPRINT] Engine initialized.');
   }
 
   if (document.readyState === 'loading') {

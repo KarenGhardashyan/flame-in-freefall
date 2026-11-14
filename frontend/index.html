@@ -53,9 +53,9 @@
         Reset
       </button>
 
-      <div class="connection-pill">
+      <div class="connection-pill" id="connection-status-pill">
         <div class="connection-dot"></div>
-        <span>PORT 5000 // CORE ONLINE</span>
+        <span id="connection-status-text">PORT 5000 // CORE ONLINE</span>
       </div>
     </div>
   </header>
@@ -107,6 +107,7 @@
   <div id="toast-container"></div>
 
   <!-- CORE LOGIC -->
+  <script src="standalone_api.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
