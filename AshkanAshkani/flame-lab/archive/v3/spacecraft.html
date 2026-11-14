@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Compare NASA's Saffire I and III fire experiments aboard Cygnus and explore airflow cutoff in an interactive reconstruction.">
+<title>Spacecraft fire — Flame Lab</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="spacecraft.css">
+<script type="module" src="spacecraft.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap bar">
+<a class="brand" href="index.html"><span class="mark" aria-hidden="true">◈</span> Flame Lab</a>
+<nav aria-label="Main navigation"><a href="index.html">BASS–II simulator</a><a href="spacecraft.html" aria-current="page">Spacecraft fire</a><a href="#flight-evidence">Flight images</a></nav>
+<a class="report" href="https://ntrs.nasa.gov/api/citations/20180005168/downloads/20180005168.pdf#page=16">NASA results ↗</a>
+</div></header>
+<main class="wrap">
+<section class="intro ship-intro"><div><div class="overline"><span></span> NASA SAFFIRE / CYGNUS CARGO VEHICLE</div><h1>Fire aboard Cygnus<span>.</span></h1><p>Watch a flame front spread across a fabric panel inside a ventilated duct on an uncrewed spacecraft.</p></div><div class="mission"><span>FLIGHT ENVIRONMENT</span><strong>Pressurized <i>·</i> Microgravity</strong></div></section>
+<div class="ship-layout">
+<section class="panel ship-chamber" aria-labelledby="ship-view-title">
+<div class="panelhead"><div><span id="mission-label" class="eyebrow">SAFFIRE–I</span><h2 id="ship-view-title">Combustion duct</h2></div><span id="ship-phase" class="phase" role="status"></span></div>
+<div class="ship-viewport">
+<canvas id="ship-canvas" role="img" aria-label="Top view of a Cygnus experiment duct with a flame spreading along a rectangular fabric sample"></canvas>
+<div class="viewport-top"><span><i></i> SCHEMATIC TOP VIEW</span><span id="ship-vent-indicator">AIRFLOW →</span></div>
+<div class="viewport-bottom"><span><i class="blue"></i> Flame base</span><span><i class="warm"></i> Luminous front</span><span><i class="gas"></i> Ventilation</span></div>
+</div>
+<div class="transport">
+<div class="transport-row"><button id="ship-play" class="primary" type="button">Play</button><button id="ship-reset" type="button" aria-label="Reset time and airflow">Reset</button><output id="ship-clock" for="ship-time"></output><label class="speed">Speed <select id="ship-speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="20">20×</option><option value="40">40×</option></select></label></div>
+<input id="ship-time" type="range" min="0" max="420" step="1" value="120" aria-label="Time in experiment"><div class="times"><span>Ignition</span><span id="ship-end">420 s</span></div>
+</div>
+</section>
+<aside class="panel ship-config">
+<div class="panelhead"><div><span class="eyebrow">CYGNUS FLIGHT TESTS</span><h2>Compare missions</h2></div></div>
+<div class="ship-controls">
+<div class="ship-missions" aria-label="Select flight experiment">
+<button data-mission="first" aria-pressed="true"><strong>Saffire–I</strong><span>20 cm/s air</span></button>
+<button data-mission="third" aria-pressed="false"><strong>Saffire–III</strong><span>25 cm/s air</span></button>
+</div>
+<dl class="params"><div><dt>Initial oxygen</dt><dd id="ship-oxygen"></dd></div><div><dt>Sample</dt><dd>SIBAL fabric · 40.6 × 94 cm</dd></div><div><dt>Flow direction</dt><dd>Concurrent</dd></div></dl>
+<div class="scenario-control"><span class="eyebrow">VENTILATION</span><label class="air-control"><input type="checkbox" id="ship-cut"> Cut airflow early</label><p class="note" id="ship-air-note">Play or scrub to the end to see the run stop.</p></div>
+<figure class="vehicle-photo"><img src="media/saffire/cygnus.webp" alt="Saffire experiment package secured inside the Cygnus spacecraft"><figcaption>Saffire experiment package inside Cygnus · NASA</figcaption></figure>
+</div>
+</aside>
+</div>
+<section class="readouts" aria-label="Spacecraft experiment metrics">
+<div class="metric"><span>DUCT AIRFLOW</span><strong><b id="ship-flow"></b> <span>cm/s</span></strong></div>
+<div class="metric"><span>REFERENCE SPREAD RATE</span><strong><b id="ship-rate"></b> <span>mm/s</span></strong></div>
+<div class="metric"><span>PYROLYSIS FRONT POSITION</span><strong><b id="ship-position"></b> <span>mm</span></strong></div>
+</section>
+<section class="panel telemetry" aria-labelledby="ship-graph-title">
+<div class="panelhead"><div><span class="eyebrow">FLAME TRACKING</span><h2 id="ship-graph-title">Front position over time</h2></div><span id="ship-model-label" class="model-label"></span></div>
+<div class="plot"><canvas id="ship-plot" role="img" aria-label="Graph of the reconstructed pyrolysis front and replay time"></canvas></div>
+<p class="caption" id="ship-chart-caption"></p>
+</section>
+<section id="flight-evidence" class="section">
+<div class="section-head"><div><span class="eyebrow">NASA FLIGHT IMAGERY</span><h2>Real flames, two flights</h2></div><a class="report" href="https://ntrs.nasa.gov/api/citations/20180005168/downloads/20180005168.pdf#page=16">View PDF plates ↗</a></div>
+<div class="ship-evidence">
+<figure class="panel"><img loading="lazy" src="media/saffire/flight-i.webp" alt="Successive orange flame fronts from Saffire I moving up the swatch"><figcaption><strong>Saffire–I</strong><span>20 cm/s · Concurrent flame fronts</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/flight-iii.webp" alt="Successive orange flame fronts from Saffire III"><figcaption><strong>Saffire–III</strong><span>25 cm/s · Concurrent flame fronts</span></figcaption></figure>
+<figure class="panel"><img loading="lazy" src="media/saffire/flow-comparison.webp" alt="Straight opposed-flow flame above an irregular arched concurrent flame"><figcaption><strong>Opposed vs. concurrent</strong><span>Saffire–III · Opposed flame above concurrent flame</span></figcaption></figure>
+</div>
+<p class="caption ship-credit">NASA flight images reproduced from the Saffire results PDF. The consecutive outlines in each montage are 40 seconds apart.</p>
+</section>
+<section class="section" aria-labelledby="ship-method"><div class="section-head"><div><span class="eyebrow">MODEL NOTES</span><h2 id="ship-method">How to read this simulation</h2></div></div>
+<div class="method-grid ship-method">
+<article class="panel method"><h3>Flight conditions</h3><p>NASA burned a cotton–fiberglass panel inside the Saffire test duct on Cygnus after the vehicle departed the ISS. The live schematic focuses on the concurrent-flow tests.</p><a href="https://www.nasa.gov/centers-and-facilities/glenn/nasa-ignites-fire-experiment-aboard-space-cargo-ship/">NASA mission coverage ↗</a></article>
+<article class="panel method"><h3>Tracking the front</h3><p>Saffire–I uses approximate points read from NASA’s pyrolysis-position plot. Its detailed results report 420 seconds. Saffire–III uses a constant 2.3 mm/s spread-rate approximation for the reported 320-second run. The horizontal view rotates the experiment for readability.</p><a href="media/saffire/tracking.webp" target="_blank" rel="noopener">Original tracking chart ↗</a></article>
+<article class="panel method"><h3>Airflow cutoff</h3><p>Saffire–I’s flame went out at the scheduled airflow cutoff. Moving that event earlier here freezes the reconstructed front and fades the flame. The early cutoff, flame shape and cooling animation are illustrative.</p><p>This model covers the test duct. It has no calculation for smoke transport, cabin heating or fire suppression across the spacecraft.</p><a href="https://ntrs.nasa.gov/api/citations/20170008805/downloads/20170008805.pdf#page=16">NASA detailed Saffire–I results ↗</a></article>
+</div></section>
+<footer><span>Flame Lab · NASA Saffire flight data</span><a href="index.html">Back to BASS–II simulator ↑</a></footer>
+</main>
+</body>
+</html>
