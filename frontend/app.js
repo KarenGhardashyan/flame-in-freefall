@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v4';
+  const STORAGE_KEY = 'flame_blueprint_graph_v5';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -2947,13 +2947,11 @@
   // =========================================================================
 
   function setupTopBar() {
-    // Scenario buttons
-    document.querySelectorAll('.btn-scenario').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const scKey = btn.dataset.scenario;
+    // Scenario select dropdown
+    const scSelect = document.getElementById('scenario-select');
+    if (scSelect) {
+      scSelect.addEventListener('change', () => {
+        const scKey = scSelect.value;
         const sc = SCENARIOS[scKey];
         if (!sc) return;
 
@@ -2967,7 +2965,37 @@
         }
 
         if (!varNode) {
-          varNode = spawnNode('variable', 80, 80, sc.params);
+          varNode = spawnNode('variable', 40, 440, sc.params);
+        } else {
+          varNode.setParams(sc.params);
+        }
+
+        showToast(`Loaded scenario: ${sc.name}`);
+      });
+    }
+
+    // Scenario buttons fallback (if present in DOM)
+    document.querySelectorAll('.btn-scenario').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const scKey = btn.dataset.scenario;
+        if (scSelect) scSelect.value = scKey;
+        const sc = SCENARIOS[scKey];
+        if (!sc) return;
+
+        // Apply scenario to active or first Variable node
+        let varNode = null;
+        for (const n of state.nodes.values()) {
+          if (n.type === 'variable') {
+            varNode = n;
+            break;
+          }
+        }
+
+        if (!varNode) {
+          varNode = spawnNode('variable', 40, 440, sc.params);
         } else {
           varNode.setParams(sc.params);
         }
@@ -3007,6 +3035,11 @@
   }
 
   function autoLayoutGraph() {
+    const simNode = Array.from(state.nodes.values()).find(n => n.type === 'sim');
+    const simHeight = (simNode && simNode.element && simNode.element.offsetHeight > 100) ? simNode.element.offsetHeight : 700;
+    const simY = simNode ? simNode.y : 50;
+    const graphY = simY + simHeight + 28;
+
     state.nodes.forEach(node => {
       if (node.type === 'note') {
         node.x = 40;
@@ -3019,10 +3052,10 @@
         node.y = 50;
       } else if (node.type === 'sim') {
         node.x = 920;
-        node.y = 50;
+        node.y = simY;
       } else if (node.type === 'graph') {
         node.x = 920;
-        node.y = 550;
+        node.y = graphY;
       } else if (node.type === 'prompt') {
         node.x = 1400;
         node.y = 50;
@@ -3137,8 +3170,12 @@
     // Node 3: SIM Spacecraft Cutaway
     const simNode = spawnNode('sim', 920, 50);
 
+    // Calculate dynamic Y for graphNode with robust clearance
+    const simHeight = (simNode && simNode.element && simNode.element.offsetHeight > 100) ? simNode.element.offsetHeight : 700;
+    const graphY = simNode.y + simHeight + 28;
+
     // Node 4: Graph Time Telemetry
-    const graphNode = spawnNode('graph', 920, 550);
+    const graphNode = spawnNode('graph', 920, graphY);
 
     // Node 5: Prompt AI Safety Officer
     const promptNode = spawnNode('prompt', 1400, 50);
@@ -3155,6 +3192,22 @@
 
     updateWorldTransform();
     saveGraphToLocalStorage();
+
+    // Secondary clearance check after DOM layout pass
+    requestAnimationFrame(() => {
+      if (simNode.element && graphNode.element) {
+        const actualSimH = simNode.element.offsetHeight;
+        if (actualSimH > 100) {
+          const targetY = simNode.y + actualSimH + 28;
+          if (graphNode.y < targetY) {
+            graphNode.y = targetY;
+            graphNode.element.style.top = `${targetY}px`;
+            updateWorldTransform();
+            saveGraphToLocalStorage();
+          }
+        }
+      }
+    });
   }
 
   function saveGraphToLocalStorage() {
@@ -3179,7 +3232,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -3204,6 +3257,24 @@
       if (Array.isArray(data.wires)) {
         data.wires.forEach(w => {
           addWire(w.fromNode, w.fromPin, w.toNode, w.toPin);
+        });
+      }
+
+      // Check and enforce clearance for graphNode below simNode
+      const simNode = Array.from(state.nodes.values()).find(n => n.type === 'sim');
+      const graphNode = Array.from(state.nodes.values()).find(n => n.type === 'graph');
+      if (simNode && graphNode) {
+        requestAnimationFrame(() => {
+          if (simNode.element && graphNode.element) {
+            const actualSimH = simNode.element.offsetHeight || 700;
+            const minGraphY = simNode.y + actualSimH + 28;
+            if (graphNode.y < minGraphY) {
+              graphNode.y = minGraphY;
+              graphNode.element.style.top = `${minGraphY}px`;
+              updateWorldTransform();
+              saveGraphToLocalStorage();
+            }
+          }
         });
       }
 

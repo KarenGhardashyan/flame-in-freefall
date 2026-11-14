@@ -18,7 +18,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -161,7 +161,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -304,7 +304,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -447,7 +447,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -590,7 +590,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -733,7 +733,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -876,7 +876,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -1019,7 +1019,7 @@
       "co_ratio": "0.088 (Tunnel Flow)",
       "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -3736,7 +3736,7 @@
       "co_ratio": "0.142 (Incomplete)",
       "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -3879,7 +3879,7 @@
       "co_ratio": "0.142 (Incomplete)",
       "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4022,7 +4022,7 @@
       "co_ratio": "0.142 (Incomplete)",
       "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4165,7 +4165,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4308,7 +4308,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4451,7 +4451,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4594,7 +4594,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4737,7 +4737,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4880,7 +4880,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5023,7 +5023,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5166,7 +5166,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-159&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-159&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5309,7 +5309,7 @@
       "co_ratio": "0.065 (Nominal)",
       "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi&data_type=investigation",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5452,7 +5452,7 @@
       "co_ratio": "0.048 (Pure O2)",
       "outcome": "Catastrophic Flashover"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/19670014763",
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5595,7 +5595,7 @@
       "co_ratio": "0.00 (N/A)",
       "outcome": "Cryogenic Gas Deflagration"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/19700076776",
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5738,7 +5738,7 @@
       "co_ratio": "0.125 (Smoldering)",
       "outcome": "Oxygen Candle Fire"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20050160960",
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
     "discrete_telemetry": [
       {
         "t_sec": 0,

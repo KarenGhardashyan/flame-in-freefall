@@ -1,0 +1,5865 @@
+[
+  {
+    "run_id": "SAFFIRE-I-01",
+    "mission": "Cygnus Saffire-I",
+    "investigation": "NASA Saffire-I Spacecraft Fire Safety",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 20.0,
+      "fuel_type": "sibal",
+      "fuel_display": "SIBAL Cotton-Fiberglass Fabric (100x40 cm)",
+      "cabin_volume_m3": 19.2
+    },
+    "measured_summary": {
+      "vf_mm_s": 4.5,
+      "tf_k": 1820.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 6.56,
+        "cabin_temp_c": 28.3,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 13.25,
+        "cabin_temp_c": 31.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 19.69,
+        "cabin_temp_c": 35.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.8,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 26.05,
+        "cabin_temp_c": 38.7,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.2,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 39.58,
+        "cabin_temp_c": 46.0,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 13.3,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 52.79,
+        "cabin_temp_c": 53.1,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 16.2,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 78.84,
+        "cabin_temp_c": 66.6,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.8,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 79.97,
+        "cabin_temp_c": 81.1,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.7,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 80.08,
+        "cabin_temp_c": 95.1,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 33.6,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 80.0,
+        "cabin_temp_c": 110.0,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 39.2,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 79.98,
+        "cabin_temp_c": 123.7,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 45.2,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.9,
+        "cabin_temp_c": 138.5,
+        "cabin_pressure_kpa": 104.2,
+        "co_ppm": 50.5,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.97,
+        "cabin_temp_c": 151.6,
+        "cabin_pressure_kpa": 104.6,
+        "co_ppm": 56.5,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.0,
+        "cabin_temp_c": 165.8,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 63.1,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-II-01",
+    "mission": "Cygnus Saffire-II",
+    "investigation": "NASA Saffire-II Multi-Material LOI Threshold",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 0.7,
+      "vg_cm_s": 20.0,
+      "fuel_type": "sibal",
+      "fuel_display": "SIBAL & Nomex 9 Fabric Swatches",
+      "cabin_volume_m3": 19.2
+    },
+    "measured_summary": {
+      "vf_mm_s": 3.8,
+      "tf_k": 1780.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 70.9,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 5.78,
+        "cabin_temp_c": 28.2,
+        "cabin_pressure_kpa": 71.0,
+        "co_ppm": 6.1,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 11.14,
+        "cabin_temp_c": 32.1,
+        "cabin_pressure_kpa": 71.1,
+        "co_ppm": 7.3,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 16.56,
+        "cabin_temp_c": 35.4,
+        "cabin_pressure_kpa": 71.1,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 22.04,
+        "cabin_temp_c": 39.1,
+        "cabin_pressure_kpa": 71.3,
+        "co_ppm": 10.6,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 34.2,
+        "cabin_temp_c": 46.4,
+        "cabin_pressure_kpa": 71.4,
+        "co_ppm": 13.6,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 45.22,
+        "cabin_temp_c": 53.5,
+        "cabin_pressure_kpa": 71.6,
+        "co_ppm": 16.3,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 67.34,
+        "cabin_temp_c": 67.4,
+        "cabin_pressure_kpa": 72.0,
+        "co_ppm": 21.9,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 79.96,
+        "cabin_temp_c": 81.1,
+        "cabin_pressure_kpa": 72.4,
+        "co_ppm": 27.3,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 80.02,
+        "cabin_temp_c": 94.5,
+        "cabin_pressure_kpa": 72.8,
+        "co_ppm": 33.5,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 79.93,
+        "cabin_temp_c": 108.4,
+        "cabin_pressure_kpa": 73.1,
+        "co_ppm": 39.4,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.01,
+        "cabin_temp_c": 122.8,
+        "cabin_pressure_kpa": 73.5,
+        "co_ppm": 45.6,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.99,
+        "cabin_temp_c": 136.5,
+        "cabin_pressure_kpa": 73.9,
+        "co_ppm": 51.8,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.02,
+        "cabin_temp_c": 151.1,
+        "cabin_pressure_kpa": 74.3,
+        "co_ppm": 57.7,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.92,
+        "cabin_temp_c": 165.5,
+        "cabin_pressure_kpa": 74.7,
+        "co_ppm": 64.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-III-01",
+    "mission": "Cygnus Saffire-III",
+    "investigation": "NASA Saffire-III Large-Scale Flame Spread",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 20.0,
+      "fuel_type": "sibal",
+      "fuel_display": "Cotton Fabric Large Sample",
+      "cabin_volume_m3": 19.2
+    },
+    "measured_summary": {
+      "vf_mm_s": 4.8,
+      "tf_k": 1850.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.0,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 7.35,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 14.62,
+        "cabin_temp_c": 30.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.7,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 21.51,
+        "cabin_temp_c": 34.5,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 28.63,
+        "cabin_temp_c": 37.7,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.7,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 43.43,
+        "cabin_temp_c": 44.9,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 13.6,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 58.48,
+        "cabin_temp_c": 51.7,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 15.9,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 80.06,
+        "cabin_temp_c": 65.8,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.0,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 80.0,
+        "cabin_temp_c": 79.6,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.7,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 79.93,
+        "cabin_temp_c": 92.7,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.9,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 80.05,
+        "cabin_temp_c": 106.3,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 40.1,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 79.98,
+        "cabin_temp_c": 121.0,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 45.5,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 80.0,
+        "cabin_temp_c": 135.4,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 50.9,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.06,
+        "cabin_temp_c": 150.2,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 57.0,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.0,
+        "cabin_temp_c": 164.1,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 63.3,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-IV-01",
+    "mission": "Cygnus Saffire-IV",
+    "investigation": "NASA Saffire-IV High-Oxygen Combustion Run",
+    "conditions": {
+      "o2_pct": 34.0,
+      "pressure_atm": 0.6,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Thick PMMA Solid Slab & Nomex",
+      "cabin_volume_m3": 28.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 2.8,
+      "tf_k": 2420.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 60.9,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 4.29,
+        "cabin_temp_c": 27.3,
+        "cabin_pressure_kpa": 61.0,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 8.7,
+        "cabin_temp_c": 29.5,
+        "cabin_pressure_kpa": 61.1,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 12.94,
+        "cabin_temp_c": 32.1,
+        "cabin_pressure_kpa": 61.1,
+        "co_ppm": 8.6,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 17.15,
+        "cabin_temp_c": 34.4,
+        "cabin_pressure_kpa": 61.2,
+        "co_ppm": 10.4,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 25.76,
+        "cabin_temp_c": 39.4,
+        "cabin_pressure_kpa": 61.5,
+        "co_ppm": 13.1,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 34.62,
+        "cabin_temp_c": 44.4,
+        "cabin_pressure_kpa": 61.7,
+        "co_ppm": 15.9,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 51.27,
+        "cabin_temp_c": 53.9,
+        "cabin_pressure_kpa": 62.0,
+        "co_ppm": 21.7,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 68.67,
+        "cabin_temp_c": 63.1,
+        "cabin_pressure_kpa": 62.4,
+        "co_ppm": 27.2,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 80.0,
+        "cabin_temp_c": 72.8,
+        "cabin_pressure_kpa": 62.8,
+        "co_ppm": 32.8,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 79.97,
+        "cabin_temp_c": 82.4,
+        "cabin_pressure_kpa": 63.1,
+        "co_ppm": 38.8,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.05,
+        "cabin_temp_c": 92.6,
+        "cabin_pressure_kpa": 63.5,
+        "co_ppm": 44.6,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.94,
+        "cabin_temp_c": 101.9,
+        "cabin_pressure_kpa": 63.8,
+        "co_ppm": 50.3,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.02,
+        "cabin_temp_c": 111.8,
+        "cabin_pressure_kpa": 64.3,
+        "co_ppm": 56.2,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.0,
+        "cabin_temp_c": 121.2,
+        "cabin_pressure_kpa": 64.6,
+        "co_ppm": 62.2,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-V-01",
+    "mission": "Cygnus Saffire-V",
+    "investigation": "NASA Saffire-V (ICES-2024-310 Benchmark)",
+    "conditions": {
+      "o2_pct": 29.5,
+      "pressure_atm": 0.71,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Thick PMMA Slab (40x10x5 cm)",
+      "cabin_volume_m3": 28.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 2.0,
+      "tf_k": 2320.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.0,
+        "cabin_pressure_kpa": 71.9,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 2.91,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 72.0,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 5.99,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 72.1,
+        "co_ppm": 6.8,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 9.05,
+        "cabin_temp_c": 30.9,
+        "cabin_pressure_kpa": 72.2,
+        "co_ppm": 8.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 12.14,
+        "cabin_temp_c": 33.8,
+        "cabin_pressure_kpa": 72.3,
+        "co_ppm": 10.0,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 18.3,
+        "cabin_temp_c": 38.5,
+        "cabin_pressure_kpa": 72.5,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 24.3,
+        "cabin_temp_c": 43.0,
+        "cabin_pressure_kpa": 72.6,
+        "co_ppm": 15.7,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 36.08,
+        "cabin_temp_c": 52.8,
+        "cabin_pressure_kpa": 73.0,
+        "co_ppm": 21.6,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 48.13,
+        "cabin_temp_c": 62.8,
+        "cabin_pressure_kpa": 73.4,
+        "co_ppm": 27.0,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 59.66,
+        "cabin_temp_c": 72.0,
+        "cabin_pressure_kpa": 73.8,
+        "co_ppm": 33.3,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 72.12,
+        "cabin_temp_c": 81.7,
+        "cabin_pressure_kpa": 74.2,
+        "co_ppm": 39.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 79.95,
+        "cabin_temp_c": 91.1,
+        "cabin_pressure_kpa": 74.6,
+        "co_ppm": 45.3,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.98,
+        "cabin_temp_c": 100.2,
+        "cabin_pressure_kpa": 75.0,
+        "co_ppm": 51.2,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.96,
+        "cabin_temp_c": 110.0,
+        "cabin_pressure_kpa": 75.3,
+        "co_ppm": 57.0,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.94,
+        "cabin_temp_c": 119.7,
+        "cabin_pressure_kpa": 75.7,
+        "co_ppm": 63.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-V-02",
+    "mission": "Cygnus Saffire-V",
+    "investigation": "NASA Saffire-V Hypobaric Lower Oxygen Run",
+    "conditions": {
+      "o2_pct": 26.5,
+      "pressure_atm": 0.71,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Thick PMMA Slab (5 mm)",
+      "cabin_volume_m3": 28.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.6,
+      "tf_k": 2210.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 71.9,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 2.39,
+        "cabin_temp_c": 27.3,
+        "cabin_pressure_kpa": 72.1,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 4.79,
+        "cabin_temp_c": 29.7,
+        "cabin_pressure_kpa": 72.1,
+        "co_ppm": 7.7,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 7.22,
+        "cabin_temp_c": 32.3,
+        "cabin_pressure_kpa": 72.3,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 9.45,
+        "cabin_temp_c": 34.8,
+        "cabin_pressure_kpa": 72.3,
+        "co_ppm": 10.3,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 14.39,
+        "cabin_temp_c": 39.4,
+        "cabin_pressure_kpa": 72.5,
+        "co_ppm": 13.0,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 19.36,
+        "cabin_temp_c": 44.3,
+        "cabin_pressure_kpa": 72.7,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 28.63,
+        "cabin_temp_c": 53.5,
+        "cabin_pressure_kpa": 73.1,
+        "co_ppm": 22.0,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 37.8,
+        "cabin_temp_c": 62.9,
+        "cabin_pressure_kpa": 73.5,
+        "co_ppm": 27.2,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 47.7,
+        "cabin_temp_c": 72.1,
+        "cabin_pressure_kpa": 73.8,
+        "co_ppm": 33.1,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 56.92,
+        "cabin_temp_c": 81.3,
+        "cabin_pressure_kpa": 74.3,
+        "co_ppm": 39.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 66.0,
+        "cabin_temp_c": 90.7,
+        "cabin_pressure_kpa": 74.6,
+        "co_ppm": 44.2,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 75.84,
+        "cabin_temp_c": 100.2,
+        "cabin_pressure_kpa": 75.0,
+        "co_ppm": 50.2,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.01,
+        "cabin_temp_c": 110.0,
+        "cabin_pressure_kpa": 75.4,
+        "co_ppm": 56.3,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.97,
+        "cabin_temp_c": 119.0,
+        "cabin_pressure_kpa": 75.8,
+        "co_ppm": 62.5,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-VI-01",
+    "mission": "Cygnus Saffire-VI",
+    "investigation": "NASA Saffire-VI Two-Sided Acrylic Burn",
+    "conditions": {
+      "o2_pct": 30.3,
+      "pressure_atm": 0.54,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Two-sided PMMA Slab (18 cm)",
+      "cabin_volume_m3": 28.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 2.45,
+      "tf_k": 2390.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 54.7,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 3.9,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 54.8,
+        "co_ppm": 6.1,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 7.69,
+        "cabin_temp_c": 29.9,
+        "cabin_pressure_kpa": 54.9,
+        "co_ppm": 7.4,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 11.18,
+        "cabin_temp_c": 32.2,
+        "cabin_pressure_kpa": 55.0,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 14.95,
+        "cabin_temp_c": 34.5,
+        "cabin_pressure_kpa": 55.0,
+        "co_ppm": 10.2,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 22.66,
+        "cabin_temp_c": 39.3,
+        "cabin_pressure_kpa": 55.2,
+        "co_ppm": 12.8,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 29.76,
+        "cabin_temp_c": 44.4,
+        "cabin_pressure_kpa": 55.4,
+        "co_ppm": 16.3,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 45.13,
+        "cabin_temp_c": 53.7,
+        "cabin_pressure_kpa": 55.8,
+        "co_ppm": 21.6,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 59.32,
+        "cabin_temp_c": 63.2,
+        "cabin_pressure_kpa": 56.2,
+        "co_ppm": 27.2,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 73.93,
+        "cabin_temp_c": 72.4,
+        "cabin_pressure_kpa": 56.6,
+        "co_ppm": 33.6,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 80.05,
+        "cabin_temp_c": 82.1,
+        "cabin_pressure_kpa": 57.0,
+        "co_ppm": 39.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.04,
+        "cabin_temp_c": 91.8,
+        "cabin_pressure_kpa": 57.4,
+        "co_ppm": 45.3,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 80.06,
+        "cabin_temp_c": 101.4,
+        "cabin_pressure_kpa": 57.8,
+        "co_ppm": 51.0,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.02,
+        "cabin_temp_c": 111.7,
+        "cabin_pressure_kpa": 58.1,
+        "co_ppm": 56.6,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.98,
+        "cabin_temp_c": 121.6,
+        "cabin_pressure_kpa": 58.6,
+        "co_ppm": 62.4,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "SAFFIRE-VI-03",
+    "mission": "Cygnus Saffire-VI",
+    "investigation": "NASA Saffire-VI Early Airflow Cutoff Scenario",
+    "conditions": {
+      "o2_pct": 28.0,
+      "pressure_atm": 0.7,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Two-sided PMMA Slab with Flow Cutoff at 120s",
+      "cabin_volume_m3": 28.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.8,
+      "tf_k": 2280.0,
+      "regime": "extinguished",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.1,
+        "cabin_pressure_kpa": 70.9,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 2.75,
+        "cabin_temp_c": 26.3,
+        "cabin_pressure_kpa": 71.0,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 5.56,
+        "cabin_temp_c": 27.8,
+        "cabin_pressure_kpa": 71.1,
+        "co_ppm": 7.3,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 8.38,
+        "cabin_temp_c": 29.8,
+        "cabin_pressure_kpa": 71.3,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 11.15,
+        "cabin_temp_c": 31.9,
+        "cabin_pressure_kpa": 71.3,
+        "co_ppm": 11.0,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 16.47,
+        "cabin_temp_c": 35.9,
+        "cabin_pressure_kpa": 71.6,
+        "co_ppm": 14.5,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 22.06,
+        "cabin_temp_c": 40.4,
+        "cabin_pressure_kpa": 71.9,
+        "co_ppm": 17.0,
+        "sensor_sigma": 0.6
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 22.01,
+        "cabin_temp_c": 39.4,
+        "cabin_pressure_kpa": 71.7,
+        "co_ppm": 17.8,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 22.04,
+        "cabin_temp_c": 38.6,
+        "cabin_pressure_kpa": 71.5,
+        "co_ppm": 17.7,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 22.08,
+        "cabin_temp_c": 38.0,
+        "cabin_pressure_kpa": 71.4,
+        "co_ppm": 18.7,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 22.04,
+        "cabin_temp_c": 37.3,
+        "cabin_pressure_kpa": 71.2,
+        "co_ppm": 18.7,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 22.02,
+        "cabin_temp_c": 36.4,
+        "cabin_pressure_kpa": 71.1,
+        "co_ppm": 19.1,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 22.01,
+        "cabin_temp_c": 35.9,
+        "cabin_pressure_kpa": 71.0,
+        "co_ppm": 19.9,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 22.01,
+        "cabin_temp_c": 34.8,
+        "cabin_pressure_kpa": 71.0,
+        "co_ppm": 20.1,
+        "sensor_sigma": 0.4
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 22.06,
+        "cabin_temp_c": 33.8,
+        "cabin_pressure_kpa": 70.9,
+        "co_ppm": 20.7,
+        "sensor_sigma": 0.4
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R01",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.2.6)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 3.2,
+      "tf_k": 1750.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 4.72,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 9.58,
+        "cabin_temp_c": 25.5,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.4,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 14.57,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.7,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 19.24,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.2,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 29.26,
+        "cabin_temp_c": 28.0,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.4,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 39.25,
+        "cabin_temp_c": 29.3,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.1,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 57.84,
+        "cabin_temp_c": 31.9,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 22.7,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 76.32,
+        "cabin_temp_c": 34.6,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 28.1,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 79.97,
+        "cabin_temp_c": 36.9,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.9,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 80.04,
+        "cabin_temp_c": 39.4,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 39.4,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 79.98,
+        "cabin_temp_c": 42.2,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 45.1,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.94,
+        "cabin_temp_c": 44.7,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 50.1,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 80.04,
+        "cabin_temp_c": 47.3,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.6,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.01,
+        "cabin_temp_c": 49.7,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.3,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R02",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.2.7)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 2.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 2.1,
+      "tf_k": 1650.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.1,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 3.0,
+        "cabin_temp_c": 25.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 6.35,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.5,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 9.66,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 12.71,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.4,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 18.69,
+        "cabin_temp_c": 28.6,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 24.71,
+        "cabin_temp_c": 29.7,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 37.98,
+        "cabin_temp_c": 32.3,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 21.5,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 49.93,
+        "cabin_temp_c": 34.9,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.7,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 62.59,
+        "cabin_temp_c": 37.3,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 32.4,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 75.52,
+        "cabin_temp_c": 40.2,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 38.3,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.01,
+        "cabin_temp_c": 42.6,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 43.7,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.96,
+        "cabin_temp_c": 45.2,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 49.7,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.98,
+        "cabin_temp_c": 47.5,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 55.6,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.06,
+        "cabin_temp_c": 50.5,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 61.5,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R03",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Fig 2.14)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 1.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.6,
+      "tf_k": 1420.0,
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.8,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.04,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 6.1,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.9,
+        "cabin_temp_c": 25.9,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.6,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 2.69,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 9.3,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 3.62,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.3,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 5.34,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 13.6,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 7.14,
+        "cabin_temp_c": 29.8,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.4,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 10.62,
+        "cabin_temp_c": 32.3,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 21.9,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 14.17,
+        "cabin_temp_c": 34.8,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 28.0,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 17.5,
+        "cabin_temp_c": 37.4,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 34.0,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 21.0,
+        "cabin_temp_c": 39.7,
+        "cabin_pressure_kpa": 103.7,
+        "co_ppm": 40.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 24.43,
+        "cabin_temp_c": 42.7,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 45.6,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 28.01,
+        "cabin_temp_c": 45.2,
+        "cabin_pressure_kpa": 104.5,
+        "co_ppm": 51.3,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 31.54,
+        "cabin_temp_c": 47.3,
+        "cabin_pressure_kpa": 104.8,
+        "co_ppm": 57.8,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 35.18,
+        "cabin_temp_c": 50.0,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 63.1,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R04",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.3)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 0.5,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.0,
+      "tf_k": 298.0,
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.2,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.79,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.54,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.57,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.53,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.43,
+        "cabin_temp_c": 25.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.52,
+        "cabin_temp_c": 25.1,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 1.51,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 1.46,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.52,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.47,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 1.52,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.1,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 1.49,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.9,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.47,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.2,
+        "sensor_sigma": 0.25
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R05",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Fig 2.18)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 10.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 4.5,
+      "tf_k": 1820.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 6.85,
+        "cabin_temp_c": 25.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 13.74,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.4,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 20.3,
+        "cabin_temp_c": 27.1,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 8.6,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 27.22,
+        "cabin_temp_c": 27.9,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 10.2,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 40.23,
+        "cabin_temp_c": 29.2,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.3,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 53.24,
+        "cabin_temp_c": 30.3,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.4,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 80.04,
+        "cabin_temp_c": 32.9,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 22.5,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 80.02,
+        "cabin_temp_c": 35.7,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 28.0,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 79.99,
+        "cabin_temp_c": 38.3,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 34.8,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 79.96,
+        "cabin_temp_c": 40.6,
+        "cabin_pressure_kpa": 103.7,
+        "co_ppm": 40.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.09,
+        "cabin_temp_c": 43.1,
+        "cabin_pressure_kpa": 104.1,
+        "co_ppm": 45.4,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.99,
+        "cabin_temp_c": 45.4,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 51.5,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.94,
+        "cabin_temp_c": 47.9,
+        "cabin_pressure_kpa": 104.8,
+        "co_ppm": 57.8,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.01,
+        "cabin_temp_c": 50.3,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 63.8,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R06",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Fig 2.22)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 20.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 5.8,
+      "tf_k": 1890.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 8.43,
+        "cabin_temp_c": 25.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 17.68,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.6,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 26.48,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 35.38,
+        "cabin_temp_c": 27.1,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.5,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 52.84,
+        "cabin_temp_c": 28.6,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 13.2,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 69.11,
+        "cabin_temp_c": 29.6,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 16.2,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 80.02,
+        "cabin_temp_c": 32.1,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.4,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 80.05,
+        "cabin_temp_c": 34.7,
+        "cabin_pressure_kpa": 102.7,
+        "co_ppm": 28.0,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 79.94,
+        "cabin_temp_c": 37.2,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 33.4,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 79.95,
+        "cabin_temp_c": 40.1,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 39.4,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 80.1,
+        "cabin_temp_c": 42.4,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 45.1,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 80.03,
+        "cabin_temp_c": 45.3,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 51.1,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.95,
+        "cabin_temp_c": 47.6,
+        "cabin_pressure_kpa": 104.6,
+        "co_ppm": 56.4,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.95,
+        "cabin_temp_c": 50.5,
+        "cabin_pressure_kpa": 105.0,
+        "co_ppm": 62.7,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R07",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.5)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 35.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.0,
+      "tf_k": 298.0,
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.72,
+        "cabin_temp_c": 25.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.53,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.56,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.48,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.48,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.2,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.56,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 1.45,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 1.51,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.46,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.49,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.49,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.1,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 1.6,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.2,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 1.48,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.1,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.48,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.2,
+        "sensor_sigma": 0.25
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R08",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.6)",
+    "conditions": {
+      "o2_pct": 18.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 2.2,
+      "tf_k": 1620.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 4.2,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 3.11,
+        "cabin_temp_c": 25.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 6.35,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 9.78,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.4,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 12.91,
+        "cabin_temp_c": 27.3,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.2,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 19.48,
+        "cabin_temp_c": 28.8,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 13.0,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 25.83,
+        "cabin_temp_c": 30.2,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 16.3,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 39.35,
+        "cabin_temp_c": 32.8,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.7,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 52.17,
+        "cabin_temp_c": 35.2,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.5,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 64.88,
+        "cabin_temp_c": 37.4,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 32.8,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 77.8,
+        "cabin_temp_c": 40.0,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 38.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 79.92,
+        "cabin_temp_c": 42.6,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 44.5,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 79.98,
+        "cabin_temp_c": 45.3,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 50.1,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.99,
+        "cabin_temp_c": 47.8,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.2,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.02,
+        "cabin_temp_c": 50.6,
+        "cabin_pressure_kpa": 105.0,
+        "co_ppm": 62.3,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R09",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Fig 2.28)",
+    "conditions": {
+      "o2_pct": 16.5,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 4.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.1,
+      "tf_k": 1490.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.1,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.62,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 3.24,
+        "cabin_temp_c": 25.2,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.2,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 4.93,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 6.67,
+        "cabin_temp_c": 26.5,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.6,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 10.12,
+        "cabin_temp_c": 28.0,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.3,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 13.27,
+        "cabin_temp_c": 28.9,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 15.9,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 19.48,
+        "cabin_temp_c": 31.5,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.9,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 26.42,
+        "cabin_temp_c": 34.0,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.6,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 32.82,
+        "cabin_temp_c": 36.6,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.6,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 39.56,
+        "cabin_temp_c": 39.0,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 39.8,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 46.07,
+        "cabin_temp_c": 41.7,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 46.0,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 52.55,
+        "cabin_temp_c": 44.5,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 51.4,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 58.82,
+        "cabin_temp_c": 46.8,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 57.1,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 65.43,
+        "cabin_temp_c": 49.5,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 63.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R10",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 2.7)",
+    "conditions": {
+      "o2_pct": 15.8,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 3.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Cast Acrylic Film (100 um)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.35,
+      "tf_k": 1390.0,
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.52,
+        "cabin_temp_c": 25.7,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.06,
+        "cabin_temp_c": 26.3,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 7.0,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.64,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 2.02,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 10.3,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 3.08,
+        "cabin_temp_c": 28.9,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 13.5,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 4.25,
+        "cabin_temp_c": 29.9,
+        "cabin_pressure_kpa": 102.2,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 6.18,
+        "cabin_temp_c": 32.9,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 21.6,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 8.41,
+        "cabin_temp_c": 35.4,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 27.4,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 10.41,
+        "cabin_temp_c": 37.8,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 33.4,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 12.58,
+        "cabin_temp_c": 40.5,
+        "cabin_pressure_kpa": 103.7,
+        "co_ppm": 38.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 14.63,
+        "cabin_temp_c": 42.9,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 45.0,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 16.88,
+        "cabin_temp_c": 45.5,
+        "cabin_pressure_kpa": 104.5,
+        "co_ppm": 50.7,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 18.92,
+        "cabin_temp_c": 48.0,
+        "cabin_pressure_kpa": 104.8,
+        "co_ppm": 56.5,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 20.89,
+        "cabin_temp_c": 50.5,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 62.1,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R11",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.1)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "pmma",
+      "fuel_display": "PMMA Solid Rod (radius 0.476 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.85,
+      "tf_k": 1780.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.32,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 2.54,
+        "cabin_temp_c": 25.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 7.2,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 3.83,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 5.03,
+        "cabin_temp_c": 27.5,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.0,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 7.43,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.0,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 10.03,
+        "cabin_temp_c": 30.1,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.2,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 15.36,
+        "cabin_temp_c": 32.4,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 21.5,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 20.57,
+        "cabin_temp_c": 34.9,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.1,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 25.84,
+        "cabin_temp_c": 37.4,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.1,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 31.13,
+        "cabin_temp_c": 39.9,
+        "cabin_pressure_kpa": 103.7,
+        "co_ppm": 38.3,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 36.07,
+        "cabin_temp_c": 42.3,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 44.8,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 41.01,
+        "cabin_temp_c": 44.9,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 50.0,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 46.37,
+        "cabin_temp_c": 47.7,
+        "cabin_pressure_kpa": 104.8,
+        "co_ppm": 56.5,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 51.72,
+        "cabin_temp_c": 50.4,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R12",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.2)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 2.5,
+      "fuel_type": "pmma",
+      "fuel_display": "PMMA Solid Rod (radius 0.476 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.52,
+      "tf_k": 1690.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.7,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.75,
+        "cabin_temp_c": 25.9,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.63,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 2.39,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 3.18,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.8,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 4.62,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 13.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 6.18,
+        "cabin_temp_c": 30.0,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.2,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 9.4,
+        "cabin_temp_c": 32.8,
+        "cabin_pressure_kpa": 102.3,
+        "co_ppm": 22.8,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 12.56,
+        "cabin_temp_c": 34.9,
+        "cabin_pressure_kpa": 102.7,
+        "co_ppm": 27.9,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 15.64,
+        "cabin_temp_c": 37.8,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 34.3,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 18.83,
+        "cabin_temp_c": 40.4,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 39.9,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 21.78,
+        "cabin_temp_c": 42.8,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 45.9,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 24.79,
+        "cabin_temp_c": 45.4,
+        "cabin_pressure_kpa": 104.2,
+        "co_ppm": 51.9,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 27.83,
+        "cabin_temp_c": 47.8,
+        "cabin_pressure_kpa": 104.6,
+        "co_ppm": 57.0,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 31.09,
+        "cabin_temp_c": 50.5,
+        "cabin_pressure_kpa": 105.0,
+        "co_ppm": 63.4,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R13",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.3)",
+    "conditions": {
+      "o2_pct": 18.5,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 4.0,
+      "fuel_type": "pmma",
+      "fuel_display": "PMMA Solid Rod (radius 0.476 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.4,
+      "tf_k": 1580.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.65,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.18,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 7.4,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.81,
+        "cabin_temp_c": 26.3,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 2.45,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 10.3,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 3.67,
+        "cabin_temp_c": 28.1,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 12.7,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 4.88,
+        "cabin_temp_c": 29.5,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.4,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 7.16,
+        "cabin_temp_c": 32.0,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 21.4,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 9.51,
+        "cabin_temp_c": 34.8,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 27.5,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 11.83,
+        "cabin_temp_c": 37.3,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 33.1,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 14.21,
+        "cabin_temp_c": 39.8,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 38.7,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 16.77,
+        "cabin_temp_c": 42.5,
+        "cabin_pressure_kpa": 104.1,
+        "co_ppm": 44.7,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 19.13,
+        "cabin_temp_c": 44.8,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 50.4,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 21.55,
+        "cabin_temp_c": 47.7,
+        "cabin_pressure_kpa": 104.8,
+        "co_ppm": 56.0,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 24.14,
+        "cabin_temp_c": 49.5,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 62.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R14",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.4)",
+    "conditions": {
+      "o2_pct": 16.8,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 3.0,
+      "fuel_type": "pmma",
+      "fuel_display": "PMMA Solid Rod (radius 0.476 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.18,
+      "tf_k": 1410.0,
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.23,
+        "cabin_temp_c": 25.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.52,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.83,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.4,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.08,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.1,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.74,
+        "cabin_temp_c": 28.8,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 2.28,
+        "cabin_temp_c": 30.3,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 3.26,
+        "cabin_temp_c": 32.8,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.9,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 4.29,
+        "cabin_temp_c": 35.0,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.8,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 5.47,
+        "cabin_temp_c": 37.7,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 33.7,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 6.45,
+        "cabin_temp_c": 40.4,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 39.1,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 7.56,
+        "cabin_temp_c": 42.9,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 44.5,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 8.67,
+        "cabin_temp_c": 45.5,
+        "cabin_pressure_kpa": 104.2,
+        "co_ppm": 50.1,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 9.69,
+        "cabin_temp_c": 47.9,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.1,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 10.79,
+        "cabin_temp_c": 50.2,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 61.8,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R15",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.5)",
+    "conditions": {
+      "o2_pct": 22.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 8.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Thick PMMA Rod (radius 0.635 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.95,
+      "tf_k": 1820.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.38,
+        "cabin_temp_c": 25.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 2.81,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.3,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 4.16,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.8,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 5.48,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.1,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 8.31,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.2,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 11.25,
+        "cabin_temp_c": 30.1,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 15.9,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 16.68,
+        "cabin_temp_c": 32.6,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.6,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 22.59,
+        "cabin_temp_c": 34.9,
+        "cabin_pressure_kpa": 102.7,
+        "co_ppm": 27.3,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 28.03,
+        "cabin_temp_c": 37.9,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 33.0,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 33.89,
+        "cabin_temp_c": 40.5,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 39.1,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 39.91,
+        "cabin_temp_c": 42.8,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 45.3,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 45.39,
+        "cabin_temp_c": 45.3,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 50.7,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 51.05,
+        "cabin_temp_c": 48.2,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.4,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 57.0,
+        "cabin_temp_c": 50.8,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.6,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R16",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 3.6)",
+    "conditions": {
+      "o2_pct": 19.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Thick PMMA Rod (radius 0.635 cm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.55,
+      "tf_k": 1670.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.82,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.74,
+        "cabin_temp_c": 26.0,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 2.46,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.9,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 3.25,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.5,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 4.91,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.2,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 6.58,
+        "cabin_temp_c": 29.7,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 9.98,
+        "cabin_temp_c": 32.3,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 22.3,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 13.13,
+        "cabin_temp_c": 34.8,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 27.7,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 16.24,
+        "cabin_temp_c": 37.4,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 33.7,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 19.69,
+        "cabin_temp_c": 40.0,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 39.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 23.12,
+        "cabin_temp_c": 42.2,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 44.9,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 26.32,
+        "cabin_temp_c": 44.9,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 51.0,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 29.56,
+        "cabin_temp_c": 47.6,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.7,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 32.88,
+        "cabin_temp_c": 50.0,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.8,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R17",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 4.2)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 1.5,
+      "fuel_type": "pmma",
+      "fuel_display": "Paraffin Wax Microgravity Candle",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.35,
+      "tf_k": 1580.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.1,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.5,
+        "cabin_temp_c": 25.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.4,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.07,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 6.7,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.66,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 2.18,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 9.8,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 3.22,
+        "cabin_temp_c": 28.5,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 12.8,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 4.29,
+        "cabin_temp_c": 29.7,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 15.6,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 6.38,
+        "cabin_temp_c": 32.3,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.5,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 8.55,
+        "cabin_temp_c": 34.7,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.1,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 10.78,
+        "cabin_temp_c": 37.5,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.1,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 12.83,
+        "cabin_temp_c": 40.2,
+        "cabin_pressure_kpa": 103.5,
+        "co_ppm": 38.8,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 14.9,
+        "cabin_temp_c": 42.6,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 44.9,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 17.0,
+        "cabin_temp_c": 44.9,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 50.2,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 19.09,
+        "cabin_temp_c": 47.4,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.2,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 21.29,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.2,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "BASS-II-R18",
+    "mission": "ISS BASS-II",
+    "investigation": "NASA BASS-II (TM-20210011385, Sec 4.5)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 35.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Paraffin Wax Microgravity Candle",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.0,
+      "tf_k": 298.0,
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
+    },
+    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.75,
+        "cabin_temp_c": 25.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.48,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.43,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.7,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.5,
+        "cabin_temp_c": 25.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.2,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.5,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.7,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 1.49,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.58,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.49,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.52,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 1.46,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.2,
+        "sensor_sigma": 0.25
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-117-01",
+    "mission": "ISS FLEX PSI-117",
+    "investigation": "NASA PSI-117 (FLEX Cool Flames CFD)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 0.0,
+      "fuel_type": "n-heptane",
+      "fuel_display": "n-Heptane Droplet (d0 = 2.0 mm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.18,
+      "tf_k": 760.0,
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.21,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 9.6,
+        "sensor_sigma": 0.3
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.53,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 10.8,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.83,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 11.5,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.12,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.64,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 15.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.96,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 17.1,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 2.01,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 21.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 2.05,
+        "cabin_temp_c": 27.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 26.6,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.97,
+        "cabin_temp_c": 27.0,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 30.9,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 2.04,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 35.6,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.99,
+        "cabin_temp_c": 27.5,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 40.0,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 2.02,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 44.5,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 2.01,
+        "cabin_temp_c": 28.0,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 49.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.98,
+        "cabin_temp_c": 28.0,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 53.3,
+        "sensor_sigma": 0.45
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-117-02",
+    "mission": "ISS FLEX PSI-117",
+    "investigation": "NASA PSI-117 (FLEX Cool Flames CFD)",
+    "conditions": {
+      "o2_pct": 18.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 0.0,
+      "fuel_type": "n-heptane",
+      "fuel_display": "n-Decane Droplet (d0 = 2.5 mm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.15,
+      "tf_k": 710.0,
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.22,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 9.2,
+        "sensor_sigma": 0.3
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.52,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 10.4,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.76,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 11.4,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.11,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 13.1,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.82,
+        "cabin_temp_c": 27.0,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 14.9,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 2.02,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 17.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 2.01,
+        "cabin_temp_c": 27.1,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 22.0,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 2.01,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 26.3,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.94,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 30.6,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.97,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 35.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 2.08,
+        "cabin_temp_c": 27.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 39.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 2.02,
+        "cabin_temp_c": 28.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 44.4,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 2.02,
+        "cabin_temp_c": 28.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 48.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 2.02,
+        "cabin_temp_c": 28.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 53.2,
+        "sensor_sigma": 0.45
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-117-03",
+    "mission": "ISS FLEX PSI-117",
+    "investigation": "NASA PSI-117 (FLEX Cool Flames CFD)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 0.5,
+      "fuel_type": "n-heptane",
+      "fuel_display": "n-Heptane Droplet under draft (d0 = 3.0 mm)",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.22,
+      "tf_k": 780.0,
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.8,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.27,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 10.1,
+        "sensor_sigma": 0.3
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.53,
+        "cabin_temp_c": 27.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 11.0,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.83,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 12.0,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.07,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 13.1,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.72,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 15.4,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 2.09,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 18.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 2.05,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 22.3,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 1.91,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 27.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 2.02,
+        "cabin_temp_c": 27.9,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 31.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.95,
+        "cabin_temp_c": 27.9,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 35.9,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 2.03,
+        "cabin_temp_c": 28.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 40.3,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 1.99,
+        "cabin_temp_c": 28.2,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 44.6,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 1.98,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 49.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.99,
+        "cabin_temp_c": 28.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 53.9,
+        "sensor_sigma": 0.45
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-10-01",
+    "mission": "ISS ACME PSI-10",
+    "investigation": "NASA PSI-10 (ACME Flame Design)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "methane",
+      "fuel_display": "Methane Co-flow Spherical Diffusion Flame",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.2,
+      "tf_k": 1850.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.9,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.63,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.5,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 3.58,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.0,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 5.27,
+        "cabin_temp_c": 26.0,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 9.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 6.94,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 11.1,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 10.61,
+        "cabin_temp_c": 28.1,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.4,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 14.15,
+        "cabin_temp_c": 29.2,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.1,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 21.32,
+        "cabin_temp_c": 31.8,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.6,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 28.12,
+        "cabin_temp_c": 34.2,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.7,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 35.33,
+        "cabin_temp_c": 36.7,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 34.0,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 42.66,
+        "cabin_temp_c": 39.2,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 40.1,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 49.63,
+        "cabin_temp_c": 42.2,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 45.9,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 57.3,
+        "cabin_temp_c": 44.4,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 51.6,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 64.39,
+        "cabin_temp_c": 46.9,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 57.1,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 71.47,
+        "cabin_temp_c": 49.3,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 63.0,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-10-02",
+    "mission": "ISS ACME PSI-10",
+    "investigation": "NASA PSI-10 (ACME Flame Design)",
+    "conditions": {
+      "o2_pct": 18.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 8.0,
+      "fuel_type": "methane",
+      "fuel_display": "Methane Diluted Flame at Soot Inception",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.85,
+      "tf_k": 1720.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.0,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.24,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.1,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 2.53,
+        "cabin_temp_c": 25.4,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 3.87,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.8,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 5.22,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.5,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 7.67,
+        "cabin_temp_c": 27.5,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.1,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 10.16,
+        "cabin_temp_c": 28.8,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.1,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 15.47,
+        "cabin_temp_c": 31.5,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.2,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 20.48,
+        "cabin_temp_c": 34.4,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.6,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 25.67,
+        "cabin_temp_c": 36.5,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.6,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 30.53,
+        "cabin_temp_c": 39.1,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 39.7,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 35.42,
+        "cabin_temp_c": 41.8,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 44.9,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 40.29,
+        "cabin_temp_c": 44.4,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 51.2,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 45.25,
+        "cabin_temp_c": 47.1,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 57.1,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 50.57,
+        "cabin_temp_c": 49.7,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 63.3,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-10-03",
+    "mission": "ISS ACME PSI-10",
+    "investigation": "NASA PSI-10 (ACME Flame Design)",
+    "conditions": {
+      "o2_pct": 14.5,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 5.0,
+      "fuel_type": "methane",
+      "fuel_display": "Methane Flame Nitrogen Quenching Boundary",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.0,
+      "tf_k": 298.0,
+      "regime": "extinguished",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.73,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.4,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.51,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.45,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.42,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.49,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.52,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.2,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 1.52,
+        "cabin_temp_c": 24.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 1.54,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.52,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.5,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.3,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.53,
+        "cabin_temp_c": 24.6,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.2,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 1.51,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 1.53,
+        "cabin_temp_c": 24.4,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.0,
+        "sensor_sigma": 0.25
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.51,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.0,
+        "sensor_sigma": 0.25
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-60-01",
+    "mission": "ISS SPICE PSI-60",
+    "investigation": "NASA PSI-60 (SPICE Soot Formation 0g vs 1g)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 10.0,
+      "fuel_type": "methane",
+      "fuel_display": "Ethylene / Nitrogen Diffusion Flame 0g",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.4,
+      "tf_k": 1790.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.3,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.94,
+        "cabin_temp_c": 25.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.6,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 4.02,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.2,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 6.02,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.8,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 8.24,
+        "cabin_temp_c": 27.6,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.1,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 12.31,
+        "cabin_temp_c": 28.8,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 16.36,
+        "cabin_temp_c": 30.0,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 16.2,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 24.79,
+        "cabin_temp_c": 32.9,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.1,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 33.69,
+        "cabin_temp_c": 35.2,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.4,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 41.78,
+        "cabin_temp_c": 37.7,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 33.0,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 50.64,
+        "cabin_temp_c": 40.2,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 38.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 59.01,
+        "cabin_temp_c": 43.0,
+        "cabin_pressure_kpa": 104.0,
+        "co_ppm": 44.2,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 67.53,
+        "cabin_temp_c": 45.2,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 49.9,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 75.65,
+        "cabin_temp_c": 48.0,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 55.7,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.06,
+        "cabin_temp_c": 50.2,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 61.1,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-60-02",
+    "mission": "ISS SPICE PSI-60",
+    "investigation": "NASA PSI-60 (SPICE Soot Formation 0g vs 1g)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 15.0,
+      "fuel_type": "methane",
+      "fuel_display": "Enhanced Radiative Soot Cloud Envelope",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.8,
+      "tf_k": 1820.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.2,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 2.72,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 5.8,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 5.29,
+        "cabin_temp_c": 25.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 6.9,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 8.08,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 8.6,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 10.8,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.0,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 16.55,
+        "cabin_temp_c": 28.7,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.0,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 21.68,
+        "cabin_temp_c": 29.7,
+        "cabin_pressure_kpa": 102.0,
+        "co_ppm": 16.0,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 31.94,
+        "cabin_temp_c": 32.6,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.2,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 42.06,
+        "cabin_temp_c": 34.6,
+        "cabin_pressure_kpa": 102.7,
+        "co_ppm": 27.9,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 53.5,
+        "cabin_temp_c": 37.4,
+        "cabin_pressure_kpa": 103.1,
+        "co_ppm": 33.7,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 64.0,
+        "cabin_temp_c": 39.9,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 40.0,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 74.5,
+        "cabin_temp_c": 42.7,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 46.6,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 80.0,
+        "cabin_temp_c": 45.3,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 51.6,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 79.99,
+        "cabin_temp_c": 47.6,
+        "cabin_pressure_kpa": 104.6,
+        "co_ppm": 57.7,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 79.98,
+        "cabin_temp_c": 50.3,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 63.7,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-179-01",
+    "mission": "ISS Aerosol Sampling PSI-179",
+    "investigation": "NASA PSI-179 (Aerosol Sampling Experiment)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 12.0,
+      "fuel_type": "sibal",
+      "fuel_display": "Cotton Lint & Cabin Dust Aerosol Suspension",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.45,
+      "tf_k": 620.0,
+      "regime": "smoldering",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 25.0,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.1,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.59,
+        "cabin_temp_c": 25.7,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.5,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.38,
+        "cabin_temp_c": 26.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 7.1,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 1.98,
+        "cabin_temp_c": 26.8,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.5,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 2.69,
+        "cabin_temp_c": 27.5,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 10.4,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 4.05,
+        "cabin_temp_c": 28.5,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.2,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 5.41,
+        "cabin_temp_c": 30.1,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.0,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 8.11,
+        "cabin_temp_c": 32.5,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 21.8,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 11.14,
+        "cabin_temp_c": 35.2,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 27.4,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 13.68,
+        "cabin_temp_c": 37.6,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 32.6,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 16.42,
+        "cabin_temp_c": 40.6,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 38.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 19.33,
+        "cabin_temp_c": 43.0,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 44.3,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 22.04,
+        "cabin_temp_c": 45.7,
+        "cabin_pressure_kpa": 104.4,
+        "co_ppm": 50.2,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 24.6,
+        "cabin_temp_c": 47.8,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 56.1,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 27.48,
+        "cabin_temp_c": 50.6,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 62.2,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-179-02",
+    "mission": "ISS Aerosol Sampling PSI-179",
+    "investigation": "NASA PSI-179 (Aerosol Sampling Experiment)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 18.0,
+      "fuel_type": "sibal",
+      "fuel_display": "ECLSS Return Grille Multi-Wavelength Particle Flow",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.55,
+      "tf_k": 650.0,
+      "regime": "smoldering",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 4.7,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.82,
+        "cabin_temp_c": 25.6,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 6.1,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 1.73,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 7.4,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 2.52,
+        "cabin_temp_c": 26.5,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 3.4,
+        "cabin_temp_c": 27.3,
+        "cabin_pressure_kpa": 101.8,
+        "co_ppm": 10.8,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 5.01,
+        "cabin_temp_c": 28.6,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 13.6,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 6.67,
+        "cabin_temp_c": 29.8,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 15.8,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 9.96,
+        "cabin_temp_c": 32.5,
+        "cabin_pressure_kpa": 102.6,
+        "co_ppm": 21.8,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 13.23,
+        "cabin_temp_c": 35.1,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 27.3,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 16.62,
+        "cabin_temp_c": 37.5,
+        "cabin_pressure_kpa": 103.3,
+        "co_ppm": 33.1,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 20.06,
+        "cabin_temp_c": 40.0,
+        "cabin_pressure_kpa": 103.8,
+        "co_ppm": 39.2,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 23.35,
+        "cabin_temp_c": 42.5,
+        "cabin_pressure_kpa": 104.1,
+        "co_ppm": 45.4,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 26.48,
+        "cabin_temp_c": 45.3,
+        "cabin_pressure_kpa": 104.5,
+        "co_ppm": 51.3,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 29.59,
+        "cabin_temp_c": 47.6,
+        "cabin_pressure_kpa": 104.9,
+        "co_ppm": 57.6,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 33.0,
+        "cabin_temp_c": 50.3,
+        "cabin_pressure_kpa": 105.2,
+        "co_ppm": 63.5,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-159-01",
+    "mission": "ISS ACME PSI-159",
+    "investigation": "NASA PSI-159 (Cool Flames Investigation Gases)",
+    "conditions": {
+      "o2_pct": 19.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 2.0,
+      "fuel_type": "methane",
+      "fuel_display": "Gaseous Fuel Spherical Cool Diffusion Flame",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 0.2,
+      "tf_k": 740.0,
+      "regime": "oscillatory",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-159&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 4.1,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.21,
+        "cabin_temp_c": 26.1,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 9.1,
+        "sensor_sigma": 0.3
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.46,
+        "cabin_temp_c": 26.5,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 10.3,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.74,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.2,
+        "co_ppm": 11.2,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 1.1,
+        "cabin_temp_c": 26.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 12.5,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 1.69,
+        "cabin_temp_c": 26.6,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 14.6,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 1.98,
+        "cabin_temp_c": 26.5,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 17.0,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 2.01,
+        "cabin_temp_c": 26.7,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 21.5,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 2.06,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 25.9,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 1.95,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 30.8,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 1.91,
+        "cabin_temp_c": 27.4,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 35.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 1.98,
+        "cabin_temp_c": 27.8,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 39.8,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 2.01,
+        "cabin_temp_c": 28.1,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 44.5,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 2.05,
+        "cabin_temp_c": 27.8,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 48.7,
+        "sensor_sigma": 0.45
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 1.97,
+        "cabin_temp_c": 28.2,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 53.5,
+        "sensor_sigma": 0.45
+      }
+    ]
+  },
+  {
+    "run_id": "PSI-62-01",
+    "mission": "ISS BASS PSI-62",
+    "investigation": "NASA PSI-62 (BASS Solid Fuel Burning)",
+    "conditions": {
+      "o2_pct": 21.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 8.0,
+      "fuel_type": "pmma",
+      "fuel_display": "PMMA Solid Slab Concurrent & Opposed Flow",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 1.35,
+      "tf_k": 1790.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
+    },
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi&data_type=investigation",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 1.96,
+        "cabin_temp_c": 25.3,
+        "cabin_pressure_kpa": 101.4,
+        "co_ppm": 5.9,
+        "sensor_sigma": 0.58
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 3.9,
+        "cabin_temp_c": 26.2,
+        "cabin_pressure_kpa": 101.5,
+        "co_ppm": 7.3,
+        "sensor_sigma": 0.61
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 5.91,
+        "cabin_temp_c": 26.9,
+        "cabin_pressure_kpa": 101.6,
+        "co_ppm": 8.6,
+        "sensor_sigma": 0.64
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 7.8,
+        "cabin_temp_c": 27.2,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 10.1,
+        "sensor_sigma": 0.67
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 11.94,
+        "cabin_temp_c": 28.6,
+        "cabin_pressure_kpa": 101.9,
+        "co_ppm": 12.9,
+        "sensor_sigma": 0.73
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 15.97,
+        "cabin_temp_c": 29.8,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 16.0,
+        "sensor_sigma": 0.79
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 24.38,
+        "cabin_temp_c": 32.2,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 22.0,
+        "sensor_sigma": 0.91
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 32.41,
+        "cabin_temp_c": 34.7,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 28.3,
+        "sensor_sigma": 1.03
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 40.5,
+        "cabin_temp_c": 37.3,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 34.0,
+        "sensor_sigma": 1.15
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 48.29,
+        "cabin_temp_c": 39.9,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 39.6,
+        "sensor_sigma": 1.27
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 56.3,
+        "cabin_temp_c": 42.7,
+        "cabin_pressure_kpa": 103.9,
+        "co_ppm": 45.8,
+        "sensor_sigma": 1.39
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 64.73,
+        "cabin_temp_c": 44.8,
+        "cabin_pressure_kpa": 104.3,
+        "co_ppm": 51.1,
+        "sensor_sigma": 1.51
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 72.82,
+        "cabin_temp_c": 47.7,
+        "cabin_pressure_kpa": 104.7,
+        "co_ppm": 57.2,
+        "sensor_sigma": 1.63
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 80.05,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 105.1,
+        "co_ppm": 62.9,
+        "sensor_sigma": 1.75
+      }
+    ]
+  },
+  {
+    "run_id": "HIST-APOLLO-1",
+    "mission": "Apollo 1",
+    "investigation": "NASA Historical Incident Report (Apollo 1)",
+    "conditions": {
+      "o2_pct": 100.0,
+      "pressure_atm": 1.15,
+      "vg_cm_s": 5.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Nylon / Velcro Cabin Materials in Pure O2",
+      "cabin_volume_m3": 15.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 32.0,
+      "tf_k": 2850.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.048 (Pure O2)",
+      "outcome": "Catastrophic Flashover"
+    },
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.3,
+        "cabin_pressure_kpa": 116.6,
+        "co_ppm": 4.2,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 40.01,
+        "cabin_temp_c": 59.6,
+        "cabin_pressure_kpa": 156.6,
+        "co_ppm": 29.0,
+        "sensor_sigma": 2.5
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 39.97,
+        "cabin_temp_c": 94.3,
+        "cabin_pressure_kpa": 196.6,
+        "co_ppm": 54.5,
+        "sensor_sigma": 2.5
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 40.01,
+        "cabin_temp_c": 79.3,
+        "cabin_pressure_kpa": 166.6,
+        "co_ppm": 54.1,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 39.99,
+        "cabin_temp_c": 64.3,
+        "cabin_pressure_kpa": 136.6,
+        "co_ppm": 54.2,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 40.0,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 106.6,
+        "co_ppm": 54.1,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 39.99,
+        "cabin_temp_c": 50.0,
+        "cabin_pressure_kpa": 76.6,
+        "co_ppm": 53.9,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 40.0,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 46.5,
+        "co_ppm": 54.4,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 40.02,
+        "cabin_temp_c": 49.9,
+        "cabin_pressure_kpa": 16.6,
+        "co_ppm": 54.0,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 40.02,
+        "cabin_temp_c": 49.7,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.5,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 39.99,
+        "cabin_temp_c": 50.2,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.4,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 39.98,
+        "cabin_temp_c": 49.9,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.3,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 40.02,
+        "cabin_temp_c": 50.3,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.2,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 40.01,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.2,
+        "sensor_sigma": 3.0
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 40.07,
+        "cabin_temp_c": 50.1,
+        "cabin_pressure_kpa": 10.0,
+        "co_ppm": 54.2,
+        "sensor_sigma": 3.0
+      }
+    ]
+  },
+  {
+    "run_id": "HIST-APOLLO-13",
+    "mission": "Apollo 13",
+    "investigation": "NASA Historical Incident Report (Apollo 13)",
+    "conditions": {
+      "o2_pct": 100.0,
+      "pressure_atm": 5.0,
+      "vg_cm_s": 10.0,
+      "fuel_type": "h2",
+      "fuel_display": "Teflon Insulation in Supercritical High-Pressure O2",
+      "cabin_volume_m3": 15.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 45.0,
+      "tf_k": 2950.0,
+      "regime": "explosion",
+      "co_ratio": "0.00 (N/A)",
+      "outcome": "Cryogenic Gas Deflagration"
+    },
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.5,
+        "cabin_pressure_kpa": 506.6,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 0.0,
+        "cabin_temp_c": 104.6,
+        "cabin_pressure_kpa": 656.5,
+        "co_ppm": 4.6,
+        "sensor_sigma": 4.0
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.7,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.6,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.5,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.8,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.1,
+        "co_ppm": 4.4,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 0.0,
+        "cabin_temp_c": 15.0,
+        "cabin_pressure_kpa": 0.0,
+        "co_ppm": 4.9,
+        "sensor_sigma": 0.5
+      }
+    ]
+  },
+  {
+    "run_id": "HIST-MIR-1997",
+    "mission": "Mir 1997",
+    "investigation": "NASA / Roscosmos Incident Report (Mir 1997)",
+    "conditions": {
+      "o2_pct": 25.0,
+      "pressure_atm": 1.0,
+      "vg_cm_s": 12.0,
+      "fuel_type": "pmma",
+      "fuel_display": "Perchlorate Candle (Vika) Solid Oxygen Generator",
+      "cabin_volume_m3": 106.0
+    },
+    "measured_summary": {
+      "vf_mm_s": 4.5,
+      "tf_k": 2200.0,
+      "regime": "hot_flame",
+      "co_ratio": "0.125 (Smoldering)",
+      "outcome": "Oxygen Candle Fire"
+    },
+    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "discrete_telemetry": [
+      {
+        "t_sec": 0,
+        "front_cm": 0.0,
+        "cabin_temp_c": 24.8,
+        "cabin_pressure_kpa": 101.3,
+        "co_ppm": 4.7,
+        "sensor_sigma": 0.35
+      },
+      {
+        "t_sec": 15,
+        "front_cm": 6.71,
+        "cabin_temp_c": 30.8,
+        "cabin_pressure_kpa": 101.7,
+        "co_ppm": 12.2,
+        "sensor_sigma": 1.2
+      },
+      {
+        "t_sec": 30,
+        "front_cm": 13.49,
+        "cabin_temp_c": 36.9,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 19.4,
+        "sensor_sigma": 1.2
+      },
+      {
+        "t_sec": 45,
+        "front_cm": 20.04,
+        "cabin_temp_c": 42.6,
+        "cabin_pressure_kpa": 102.5,
+        "co_ppm": 27.0,
+        "sensor_sigma": 1.2
+      },
+      {
+        "t_sec": 60,
+        "front_cm": 19.99,
+        "cabin_temp_c": 48.7,
+        "cabin_pressure_kpa": 102.9,
+        "co_ppm": 34.9,
+        "sensor_sigma": 1.2
+      },
+      {
+        "t_sec": 90,
+        "front_cm": 19.97,
+        "cabin_temp_c": 61.0,
+        "cabin_pressure_kpa": 103.7,
+        "co_ppm": 49.4,
+        "sensor_sigma": 1.2
+      },
+      {
+        "t_sec": 120,
+        "front_cm": 20.05,
+        "cabin_temp_c": 60.4,
+        "cabin_pressure_kpa": 103.6,
+        "co_ppm": 50.0,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 180,
+        "front_cm": 20.06,
+        "cabin_temp_c": 58.8,
+        "cabin_pressure_kpa": 103.4,
+        "co_ppm": 50.5,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 240,
+        "front_cm": 20.0,
+        "cabin_temp_c": 57.1,
+        "cabin_pressure_kpa": 103.2,
+        "co_ppm": 51.0,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 300,
+        "front_cm": 20.05,
+        "cabin_temp_c": 55.5,
+        "cabin_pressure_kpa": 103.0,
+        "co_ppm": 51.4,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 360,
+        "front_cm": 19.92,
+        "cabin_temp_c": 53.8,
+        "cabin_pressure_kpa": 102.8,
+        "co_ppm": 51.7,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 420,
+        "front_cm": 19.98,
+        "cabin_temp_c": 52.6,
+        "cabin_pressure_kpa": 102.6,
+        "co_ppm": 52.2,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 480,
+        "front_cm": 20.0,
+        "cabin_temp_c": 51.1,
+        "cabin_pressure_kpa": 102.4,
+        "co_ppm": 52.8,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 540,
+        "front_cm": 20.0,
+        "cabin_temp_c": 49.6,
+        "cabin_pressure_kpa": 102.2,
+        "co_ppm": 53.5,
+        "sensor_sigma": 0.5
+      },
+      {
+        "t_sec": 600,
+        "front_cm": 20.02,
+        "cabin_temp_c": 48.1,
+        "cabin_pressure_kpa": 102.1,
+        "co_ppm": 54.0,
+        "sensor_sigma": 0.5
+      }
+    ]
+  }
+]

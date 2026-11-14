@@ -26,12 +26,14 @@
 
     <!-- QUICK SCENARIOS -->
     <div class="scenarios-section">
-      <span class="scenario-label">Scenarios:</span>
-      <button class="btn-scenario active" data-scenario="iss_nominal">ISS Nominal (21%)</button>
-      <button class="btn-scenario" data-scenario="saffire_v">Saffire V (Cygnus)</button>
-      <button class="btn-scenario" data-scenario="psi117_cool">PSI-117 Cool Flame</button>
-      <button class="btn-scenario" data-scenario="apollo13_h2">Apollo 13 (H₂ Blast)</button>
-      <button class="btn-scenario" data-scenario="apollo1_o2">Apollo 1 (Flashover)</button>
+      <label class="scenario-label" for="scenario-select">Scenarios:</label>
+      <select id="scenario-select" class="scenario-dropdown" title="Select Flight / Hazard Scenario">
+        <option value="iss_nominal" selected>ISS Nominal (21%)</option>
+        <option value="saffire_v">Saffire V (Cygnus)</option>
+        <option value="psi117_cool">PSI-117 Cool Flame</option>
+        <option value="apollo13_h2">Apollo 13 (H₂ Blast)</option>
+        <option value="apollo1_o2">Apollo 1 (Flashover)</option>
+      </select>
     </div>
 
     <!-- TOP BAR ACTIONS -->

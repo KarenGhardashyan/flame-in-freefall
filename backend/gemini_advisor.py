@@ -454,7 +454,7 @@ def _generate_blueprint_fallback(
 
     bench_id = nearest_benchmark.get("benchmark_id", "PSI-117-01")
     bench_name = nearest_benchmark.get("investigation", "PSI-117 (FLEX Cool Flames CFD)")
-    bench_url = nearest_benchmark.get("url", "https://psi.nasa.gov/physci/repo/data/investigations/PSI-117")
+    bench_url = nearest_benchmark.get("url", "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation")
     bench_match = nearest_benchmark.get("match_pct", 95.0)
     bench_k = nearest_benchmark.get("nasa_burning_rate_k", 0.365)
     bench_regime = nearest_benchmark.get("nasa_regime", "cool_flame")

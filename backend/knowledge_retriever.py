@@ -33,7 +33,7 @@ OFFICIAL_NASA_REGISTRY = {
     "PSI-62": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi&data_type=investigation",
     "bass_ii": "https://ntrs.nasa.gov/citations/20210011385",
     "space_apps_resources": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
-    "saffire_ntrs": "https://ntrs.nasa.gov/citations/20210011385"
+    "saffire_ntrs": "https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation"
 }
 
 # Project paths
