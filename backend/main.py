@@ -19,7 +19,8 @@ from physics_engine.combustion_model import (
     DropletCombustionModel,
     bass_film_model,
     bass_rod_model,
-    saffire_flight_replay
+    saffire_flight_replay,
+    evaluate_fire_safety
 )
 
 BENCHMARKS_FILE = os.path.join(PROJECT_ROOT, "Resources", "nasa_psi_benchmarks.json")
@@ -158,6 +159,12 @@ if HAS_FASTAPI:
             validated_benchmarks.append(item)
 
         return validated_benchmarks
+
+    @app.post("/api/evaluate")
+    @app.post("/api/fire_safety")
+    def run_evaluate_fire_safety_endpoint(params: Dict[str, Any]):
+        """Predictive 5-module spacecraft fire and explosion safety evaluation."""
+        return evaluate_fire_safety(params)
 
     @app.post("/api/simulate")
     def simulate_droplet_combustion(req: SimulationRequest):

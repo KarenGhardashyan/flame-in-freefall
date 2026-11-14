@@ -27,7 +27,8 @@ from physics_engine.combustion_model import (
     DropletCombustionModel,
     bass_film_model,
     bass_rod_model,
-    saffire_flight_replay
+    saffire_flight_replay,
+    evaluate_fire_safety
 )
 from backend.gemini_advisor import ask_gemini_safety_officer
 
@@ -94,6 +95,8 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/simulate":
             self.handle_post_simulate()
+        elif path in ["/api/evaluate", "/api/fire_safety"]:
+            self.handle_post_evaluate()
         elif path == "/api/lab/film":
             self.handle_post_lab_film()
         elif path == "/api/lab/rod":
@@ -155,6 +158,25 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
                 validated_benchmarks.append(item)
 
             data_bytes = json.dumps(validated_benchmarks, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_post_evaluate(self):
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8")) if body else {}
+
+            result = evaluate_fire_safety(payload)
+            data_bytes = json.dumps(result, indent=2).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data_bytes)))
