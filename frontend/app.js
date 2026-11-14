@@ -237,7 +237,7 @@
     createDOM(headerExtra = '', portsHtml = '', bodyHtml = '') {
       const el = document.createElement('div');
       el.id = this.id;
-      el.className = `bp-node node-type-${this.type}`;
+      el.className = `bp-node node node-type-${this.type}`;
       el.style.left = `${this.x}px`;
       el.style.top = `${this.y}px`;
       el.style.width = `${this.width}px`;
@@ -791,7 +791,6 @@
       const fuelSel = this.element.querySelector(`#${this.id}-fuel-select`);
       if (fuelSel) fuelSel.value = this.params.fuel;
 
-      const isGas = ['h2', 'methane'].includes(this.params.fuel);
       const gasRow = this.element.querySelector(`#${this.id}-gas-row`);
       if (gasRow) gasRow.style.display = isGas ? 'flex' : 'none';
 
@@ -2735,8 +2734,12 @@
       updateWorldTransform();
       return true;
     } catch (e) {
-      console.warn('[Storage] Failed to load graph:', e);
-      return false;
+      console.warn('[Storage] Failed to load graph from localStorage, clearing cache & resetting default:', e);
+      try {
+        localStorage.clear();
+      } catch (_) {}
+      buildDefaultGraph();
+      return true;
     }
   }
 
@@ -2745,14 +2748,35 @@
   // =========================================================================
 
   function init() {
-    setupViewportInteractions();
-    setupTopBar();
+    try {
+      setupViewportInteractions();
+    } catch (e) {
+      console.warn('[Init] Viewport interaction setup warning:', e);
+    }
 
-    const loaded = loadGraphFromLocalStorage();
-    if (!loaded) {
+    try {
+      setupTopBar();
+    } catch (e) {
+      console.warn('[Init] Topbar setup warning:', e);
+    }
+
+    try {
+      const loaded = loadGraphFromLocalStorage();
+      if (!loaded || state.nodes.size === 0) {
+        buildDefaultGraph();
+      } else {
+        updateWorldTransform();
+      }
+    } catch (e) {
+      console.warn('[Init] LocalStorage load failed, clearing cache & building default graph:', e);
+      try {
+        localStorage.clear();
+      } catch (_) {}
       buildDefaultGraph();
-    } else {
-      updateWorldTransform();
+    }
+
+    if (state.nodes.size === 0) {
+      buildDefaultGraph();
     }
 
     console.log('[FLAME BLUEPRINT] Engine active on port 5000.');
