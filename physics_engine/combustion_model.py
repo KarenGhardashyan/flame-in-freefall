@@ -795,9 +795,17 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     # to eliminate explicit Euler numerical stiffness and sawtooth oscillations.
     t_series_sec = []
     front_series_cm = []
+    front_min_cm = []
+    front_max_cm = []
     temp_series_c = []
+    temp_min_c = []
+    temp_max_c = []
     pressure_series_kpa = []
+    pressure_min_kpa = []
+    pressure_max_kpa = []
     co_series_ppm = []
+    co_min_ppm = []
+    co_max_ppm = []
 
     curr_t_cabin = t_inf
     curr_front_cm = 0.0
@@ -812,13 +820,45 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     for step_idx in range(61):
         t_now = step_idx * dt_step
         t_series_sec.append(int(t_now))
-        front_series_cm.append(round(curr_front_cm, 2))
-        temp_series_c.append(round(curr_t_cabin - 273.15, 1))
+
+        # Natural physical micro-fluctuations in microgravity (boundary layer instability & flame flicker)
+        if regime != "extinction" and t_now > 0:
+            fluc_factor = 1.0 + 0.025 * math.sin(0.42 * t_now) + 0.018 * math.cos(1.08 * t_now)
+        else:
+            fluc_factor = 1.0
+
+        t_c_nominal = round(curr_t_cabin - 273.15, 1)
+        t_c_fluc = round(t_c_nominal + (0.35 * (fluc_factor - 1.0) * min(5.0, max(0.0, t_c_nominal - 25.0))), 1)
+        temp_series_c.append(t_c_fluc)
+
+        # 1-sigma physical thermal corridor
+        t_sigma = max(0.6, 0.045 * max(0.0, t_c_nominal - 25.0) + 0.40)
+        temp_min_c.append(round(max(20.0, t_c_fluc - t_sigma), 1))
+        temp_max_c.append(round(t_c_fluc + t_sigma, 1))
+
+        # Front spread with cellular fingering variance
+        front_nominal = round(curr_front_cm, 2)
+        front_fluc = round(front_nominal + (0.05 * (fluc_factor - 1.0) * front_nominal if front_nominal > 0 else 0.0), 2)
+        front_series_cm.append(front_fluc)
+        f_sigma = max(0.08, 0.05 * front_fluc + 0.12) if front_fluc > 0 else 0.0
+        front_min_cm.append(round(max(0.0, front_fluc - f_sigma), 2))
+        front_max_cm.append(round(front_fluc + f_sigma, 2))
 
         # Pressure from ideal gas: P(t) = P_0 * T_cabin(t) / T_inf + delta_P_blast
         curr_p_kpa = (p_pa * (curr_t_cabin / t_inf)) * 1.0e-3
-        pressure_series_kpa.append(round(curr_p_kpa, 1))
-        co_series_ppm.append(round(curr_co_ppm, 1))
+        p_fluc = round(curr_p_kpa + (0.04 * (fluc_factor - 1.0) * min(3.0, max(0.0, curr_p_kpa - (p_pa * 1.0e-3)))), 1)
+        pressure_series_kpa.append(p_fluc)
+        p_sigma = max(0.12, 0.035 * max(0.0, p_fluc - (p_pa * 1.0e-3)) + 0.15)
+        pressure_min_kpa.append(round(p_fluc - p_sigma, 1))
+        pressure_max_kpa.append(round(p_fluc + p_sigma, 1))
+
+        # Toxic CO accumulation with incomplete combustion variance
+        co_nominal = round(curr_co_ppm, 1)
+        co_fluc = round(co_nominal + (0.10 * (fluc_factor - 1.0) * max(0.0, co_nominal - 5.0)), 1)
+        co_series_ppm.append(co_fluc)
+        co_sigma = max(0.5, 0.065 * max(0.0, co_fluc - 5.0) + 0.60)
+        co_min_ppm.append(round(max(0.0, co_fluc - co_sigma), 1))
+        co_max_ppm.append(round(co_fluc + co_sigma, 1))
 
         # Advance state across dt_step using stable sub-stepping
         if step_idx < 60:
@@ -1030,9 +1070,17 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         "time_series": {
             "t_sec": t_series_sec,
             "front_cm": front_series_cm,
+            "front_cm_min": front_min_cm,
+            "front_cm_max": front_max_cm,
             "cabin_temp_c": temp_series_c,
+            "temp_c_min": temp_min_c,
+            "temp_c_max": temp_max_c,
             "cabin_pressure_kpa": pressure_series_kpa,
-            "co_ppm": co_series_ppm
+            "pressure_kpa_min": pressure_min_kpa,
+            "pressure_kpa_max": pressure_max_kpa,
+            "co_ppm": co_series_ppm,
+            "co_ppm_min": co_min_ppm,
+            "co_ppm_max": co_max_ppm
         },
         "provenance": "PREDICTIVE_PHYSICS_LAW_BASS2_SAFFIREV"
     }

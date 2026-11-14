@@ -83,43 +83,45 @@ def ask_gemini_safety_officer(
 """
 
     if api_key and api_key != "YOUR_GEMINI_API_KEY":
-        # 1. Primary: google-genai client
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.25,
-                )
-            )
-            if response and response.text:
-                return {
-                    "source": "gemini-2.5-flash",
-                    "status": "success",
-                    "advisory_text": response.text,
-                    "model": "gemini-2.5-flash"
-                }
-        except Exception as e_new:
-            print(f"[GEMINI ADVISOR] google-genai error: {e_new}. Trying legacy fallback...")
-
-            # 2. Secondary fallback: google.generativeai
+        # 1. Primary: google-genai client with multi-model fallback
+        for candidate_model in ["gemini-3.8-flash", "gemini-3.5-flash-lite"]:
             try:
-                import google.generativeai as genai_legacy
-                genai_legacy.configure(api_key=api_key)
-                model = genai_legacy.GenerativeModel("gemini-1.5-flash", system_instruction=SYSTEM_INSTRUCTION)
-                res = model.generate_content(prompt)
-                if res and res.text:
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=prompt,
+                    config=genai.types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.25,
+                    )
+                )
+                if response and response.text:
                     return {
-                        "source": "gemini-1.5-flash",
+                        "source": candidate_model,
                         "status": "success",
-                        "advisory_text": res.text,
-                        "model": "gemini-1.5-flash"
+                        "advisory_text": response.text,
+                        "model": candidate_model
                     }
-            except Exception as e_leg:
-                print(f"[GEMINI ADVISOR] Legacy API error: {e_leg}. Falling back to deterministic expert engine.")
+            except Exception as e_new:
+                print(f"[GEMINI ADVISOR] Model {candidate_model} failed: {e_new}")
+
+        # 2. Secondary fallback: google.generativeai legacy
+        try:
+            import google.generativeai as genai_legacy
+            genai_legacy.configure(api_key=api_key)
+            model = genai_legacy.GenerativeModel("gemini-1.5-flash", system_instruction=SYSTEM_INSTRUCTION)
+            res = model.generate_content(prompt)
+            if res and res.text:
+                return {
+                    "source": "gemini-1.5-flash",
+                    "status": "success",
+                    "advisory_text": res.text,
+                    "model": "gemini-1.5-flash"
+                }
+        except Exception as e_leg:
+            print(f"[GEMINI ADVISOR] Legacy API error: {e_leg}. Falling back to deterministic expert engine.")
 
     # 3. Deterministic High-Fidelity Physics Fallback Engine
     return _generate_deterministic_response(user_query, current_telemetry, selected_experiment, lang_code)
@@ -394,28 +396,30 @@ Remember:
 """
 
     if api_key and api_key != "YOUR_GEMINI_API_KEY":
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=BLUEPRINT_SYSTEM_INSTRUCTION,
-                    temperature=0.20,
+        for candidate_model in ["gemini-3.8-flash", "gemini-3.5-flash-lite"]:
+            try:
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=prompt,
+                    config=genai.types.GenerateContentConfig(
+                        system_instruction=BLUEPRINT_SYSTEM_INSTRUCTION,
+                        temperature=0.20,
+                    )
                 )
-            )
-            if response and response.text:
-                return {
-                    "source": "gemini-2.5-flash",
-                    "status": "success",
-                    "advisory_text": response.text,
-                    "model": "gemini-2.5-flash",
-                    "nearest_benchmark": nearest_benchmark,
-                    "retrieved_chunks": retrieved_chunks
-                }
-        except Exception as e:
-            print(f"[BLUEPRINT COPILOT] Live Gemini API error: {e}. Falling back to deterministic engine.")
+                if response and response.text:
+                    return {
+                        "source": candidate_model,
+                        "status": "success",
+                        "advisory_text": response.text,
+                        "model": candidate_model,
+                        "nearest_benchmark": nearest_benchmark,
+                        "retrieved_chunks": retrieved_chunks
+                    }
+            except Exception as e:
+                print(f"[BLUEPRINT COPILOT] Live Gemini API error ({candidate_model}): {e}. Trying next...")
 
     # High-Fidelity Deterministic Fallback
     return _generate_blueprint_fallback(
@@ -568,10 +572,23 @@ You MUST respond strictly with a valid JSON object in this format:
 def compile_note_to_blueprint(note_text: str, language: str = "ru") -> Dict[str, Any]:
     """
     Compiles free-form voice or text engineering notes into a structured Blueprint graph pipeline.
-    Uses Gemini 2.5 Flash if available, otherwise executes high-fidelity regex/keyword fallback.
+    Uses Gemini 3.8 Flash if available, otherwise executes high-fidelity regex/keyword fallback.
+    Detects out-of-domain materials and applies safety proxy mappings.
     """
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     lang_code = language.lower() if language else "ru"
+
+    # Out-of-domain materials detection (prohibited hazardous spacecraft payloads)
+    OUT_OF_DOMAIN_PATTERNS = [
+        "uranium", "plutonium", "nuclear", "thermite", "hydrazine", "rocket propellant",
+        "propellant", "уран", "плутоний", "ядерн", "термит", "гидразин", "ракетн"
+    ]
+    is_out_of_domain = any(k in note_text.lower() for k in OUT_OF_DOMAIN_PATTERNS)
+    warning_message = (
+        "⚠️ OUT-OF-DOMAIN MATERIAL DETECTED: Exotic/hazardous materials (e.g. radioactive actinides, thermites, hypergolic propellants) are strictly prohibited inside crewed spacecraft habitats under NASA STD-6001 / SSP 30233. Mapped to surrogate polymer PMMA thermal proxy with standard microgravity kinetics."
+        if is_out_of_domain else ""
+    )
+
     lang_instruction = (
         "Сформируй summary, suggested_query и followup_question на РУССКОМ ЯЗЫКЕ."
         if lang_code == "ru" else
@@ -588,41 +605,59 @@ Parse all physical parameters, select the primary telemetry channel for the grap
 """
 
     if api_key and api_key != "YOUR_GEMINI_API_KEY":
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=NOTE_ARCHITECT_SYSTEM_INSTRUCTION,
-                    temperature=0.10,
-                    response_mime_type="application/json"
+        for candidate_model in ["gemini-3.8-flash", "gemini-3.5-flash-lite"]:
+            try:
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=prompt,
+                    config=genai.types.GenerateContentConfig(
+                        system_instruction=NOTE_ARCHITECT_SYSTEM_INSTRUCTION,
+                        temperature=0.10,
+                        response_mime_type="application/json"
+                    )
                 )
-            )
-            if response and response.text:
-                parsed = json.loads(response.text)
-                return {
-                    "source": "gemini-2.5-flash",
-                    "status": "success",
-                    "params": parsed.get("params", {}),
-                    "pipeline": parsed.get("pipeline", {}),
-                    "summary": parsed.get("summary", "Compiled by Gemini AI Architect"),
-                    "suggested_query": parsed.get("suggested_query", "Assess microgravity fire safety"),
-                    "followup_question": parsed.get("followup_question", "")
-                }
-        except Exception as e:
-            print(f"[NOTE COMPILER] Gemini API error: {e}. Executing deterministic fallback parser.")
+                if response and response.text:
+                    parsed = json.loads(response.text)
+                    params = parsed.get("params", {})
+                    if is_out_of_domain:
+                        params["fuel"] = "pmma"
+                    return {
+                        "source": candidate_model,
+                        "status": "success",
+                        "params": params,
+                        "pipeline": parsed.get("pipeline", {}),
+                        "summary": parsed.get("summary", "Compiled by Gemini AI Architect"),
+                        "suggested_query": parsed.get("suggested_query", "Assess microgravity fire safety"),
+                        "followup_question": parsed.get("followup_question", ""),
+                        "out_of_domain_warning": is_out_of_domain,
+                        "warning_message": warning_message
+                    }
+            except Exception as e:
+                print(f"[NOTE COMPILER] Gemini API ({candidate_model}) error: {e}. Trying next...")
 
-    return _compile_note_fallback(note_text, lang_code)
+    return _compile_note_fallback(note_text, lang_code, is_out_of_domain, warning_message)
 
 
-def _compile_note_fallback(note_text: str, lang: str = "ru") -> Dict[str, Any]:
+def _compile_note_fallback(note_text: str, lang: str = "ru", is_out_of_domain: bool = False, warning_message: str = "") -> Dict[str, Any]:
     """
     High-fidelity deterministic parser for engineering notes when Gemini API is offline.
     Extracts physical parameters, cabin volume, fuel type, and target graph channel.
     """
     text = note_text.lower()
+
+    if not is_out_of_domain:
+        OUT_OF_DOMAIN_PATTERNS = [
+            "uranium", "plutonium", "nuclear", "thermite", "hydrazine", "rocket propellant",
+            "propellant", "уран", "плутоний", "ядерн", "термит", "гидразин", "ракетн"
+        ]
+        is_out_of_domain = any(k in text for k in OUT_OF_DOMAIN_PATTERNS)
+        if is_out_of_domain:
+            warning_message = (
+                "⚠️ OUT-OF-DOMAIN MATERIAL DETECTED: Exotic/hazardous materials (e.g. radioactive actinides, thermites, hypergolic propellants) are strictly prohibited inside crewed spacecraft habitats under NASA STD-6001 / SSP 30233. Mapped to surrogate polymer PMMA thermal proxy with standard microgravity kinetics."
+            )
 
     # Defaults
     o2_pct = 21.0
@@ -751,7 +786,9 @@ def _compile_note_fallback(note_text: str, lang: str = "ru") -> Dict[str, Any]:
         },
         "summary": summary,
         "suggested_query": suggested_query,
-        "followup_question": followup
+        "followup_question": followup,
+        "out_of_domain_warning": is_out_of_domain,
+        "warning_message": warning_message
     }
 
 

@@ -377,6 +377,9 @@
             <div class="note-preset-chip" data-note="Apollo 13: 21% O2, 1.0 atm, 5.0 cm/s, 6.5% H2 gas leak in 15 m3 cabin. Check explosion.">
               <span>▸ Apollo 13 H₂ Blast (6.5% H₂ leak, 15 m³ volume)</span>
             </div>
+            <div class="note-preset-chip" data-note="Hazard Audit: Uranium fuel pellet ignition at 35% O2, 1.2 atm, 15 cm/s flow. Check safety compliance.">
+              <span>▸ Hazard Test (Uranium fuel pellet, 35% O₂ [Out-of-Domain])</span>
+            </div>
           </div>
 
           <div class="note-summary-card" id="${this.id}-summary-card"></div>
@@ -497,6 +500,29 @@
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const compiled = await res.json();
+
+        // Render or update out-of-domain banner
+        let warnBanner = this.element.querySelector(`#${this.id}-warning-banner`);
+        if (compiled.out_of_domain_warning) {
+          if (!warnBanner) {
+            warnBanner = document.createElement('div');
+            warnBanner.id = `${this.id}-warning-banner`;
+            warnBanner.className = 'out-of-domain-banner';
+            const inputContainer = this.element.querySelector('.note-input-container');
+            const actionsRow = this.element.querySelector('.note-actions-row');
+            inputContainer.insertBefore(warnBanner, actionsRow);
+          }
+          warnBanner.style.display = 'flex';
+          warnBanner.innerHTML = `
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-content">
+              <div class="warning-title">OUT-OF-DOMAIN MATERIAL DETECTED</div>
+              <div class="warning-desc">${sanitize(compiled.warning_message || 'Exotic/hazardous materials prohibited under NASA STD-6001. Mapped to surrogate polymer PMMA thermal proxy with standard microgravity kinetics.')}</div>
+            </div>
+          `;
+        } else if (warnBanner) {
+          warnBanner.style.display = 'none';
+        }
 
         // Render summary card
         const card = this.element.querySelector(`#${this.id}-summary-card`);
@@ -923,14 +949,36 @@
 
   class SimNode extends BaseNode {
     constructor(id, x, y) {
-      super(id, 'sim', 'SIM // SPACECRAFT CUTAWAY', x, y, 440);
+      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, 440);
       this.animFrameId = null;
+      this.simGridMode = 'flame_o2'; // 'flame_o2' or 'thermal_hull'
+      this.gridNx = 48;
+      this.gridNy = 24;
+      this.fieldT = new Float32Array(this.gridNx * this.gridNy);
+      this.fieldO2 = new Float32Array(this.gridNx * this.gridNy);
+      this.fieldT_next = new Float32Array(this.gridNx * this.gridNy);
+      this.fieldO2_next = new Float32Array(this.gridNx * this.gridNy);
+      this.offscreenCanvas = document.createElement('canvas');
+      this.offscreenCanvas.width = this.gridNx;
+      this.offscreenCanvas.height = this.gridNy;
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+      this.offscreenImg = this.offscreenCtx.createImageData(this.gridNx, this.gridNy);
+      this.initGridFields(25.0, 0.21);
       this.particles = [];
       this.sootParticles = [];
       this.flamePulse = 0;
       this.blastWaveRadius = 0;
       this.stars = [];
       this.init();
+    }
+
+    initGridFields(initT, initO2) {
+      for (let i = 0; i < this.gridNx * this.gridNy; i++) {
+        this.fieldT[i] = initT;
+        this.fieldO2[i] = initO2;
+        this.fieldT_next[i] = initT;
+        this.fieldO2_next[i] = initO2;
+      }
     }
 
     init() {
@@ -942,6 +990,13 @@
         <div class="pin pin-out" data-pin="out">
           <span>OUT (Telemetry)</span>
           <div class="pin-socket"></div>
+        </div>
+      `;
+
+      const headerExtra = `
+        <div class="sim-mode-toggle">
+          <button class="btn-sim-mode active" id="${this.id}-btn-mode-flame" data-mode="flame_o2">FLAME + O₂ FIELD</button>
+          <button class="btn-sim-mode" id="${this.id}-btn-mode-hull" data-mode="thermal_hull">THERMAL HULL MAP</button>
         </div>
       `;
 
@@ -995,13 +1050,32 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(headerExtra, portsHtml, bodyHtml);
+      this.bindSimModeEvents();
       this.initParticles();
       this.startCanvasAnimation();
     }
 
+    bindSimModeEvents() {
+      const btnFlame = this.element.querySelector(`#${this.id}-btn-mode-flame`);
+      const btnHull = this.element.querySelector(`#${this.id}-btn-mode-hull`);
+      if (btnFlame && btnHull) {
+        btnFlame.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.simGridMode = 'flame_o2';
+          btnFlame.classList.add('active');
+          btnHull.classList.remove('active');
+        });
+        btnHull.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.simGridMode = 'thermal_hull';
+          btnHull.classList.add('active');
+          btnFlame.classList.remove('active');
+        });
+      }
+    }
+
     initParticles() {
-      // Background stars
       this.stars = [];
       for (let i = 0; i < 40; i++) {
         this.stars.push({
@@ -1011,18 +1085,15 @@
           alpha: Math.random() * 0.7 + 0.3
         });
       }
-
-      // Airflow stream particles
       this.particles = [];
       for (let i = 0; i < 24; i++) {
         this.particles.push({
-          x: 100 + Math.random() * 210,
+          x: 95 + Math.random() * 220,
           y: 40 + Math.random() * 140,
           speed: Math.random() * 0.8 + 0.4,
           alpha: Math.random() * 0.5 + 0.2
         });
       }
-
       this.sootParticles = [];
     }
 
@@ -1038,17 +1109,217 @@
       this.animFrameId = requestAnimationFrame(render);
     }
 
+    stepSolver(params, simTel) {
+      const Nx = this.gridNx;
+      const Ny = this.gridNy;
+      const vg = Math.max(0.1, parseFloat(params.flow_velocity_cms || 10.0));
+      const o2_raw = parseFloat(params.o2_percent || 21.0);
+      const Y_O2_inlet = Math.max(0.05, Math.min(1.0, o2_raw / 100.0));
+      const mode = simTel.flame_color_mode || 'sooty_yellow';
+      const isExtinguished = (mode === 'extinguished');
+      const isCoolFlame = (mode === 'cool_flame');
+      const isExplosion = (mode === 'explosion_flash');
+
+      let T_flame_target = 1650.0;
+      if (isExtinguished) T_flame_target = 25.0;
+      else if (isCoolFlame) T_flame_target = 680.0;
+      else if (isExplosion) T_flame_target = 2300.0;
+      else T_flame_target = 1350.0 + (o2_raw - 21.0) * 22.0;
+
+      const u0 = Math.min(0.42, Math.max(0.04, vg * 0.016));
+      const alpha_diff = 0.065;
+      const d_diff = 0.075;
+
+      const fcX = 13;
+      const fcY = 12;
+      this.flamePulse += 0.05;
+      const pulseMod = Math.sin(this.flamePulse * 3.0) * 0.12;
+
+      for (let i = 0; i < Nx; i++) {
+        for (let j = 0; j < Ny; j++) {
+          const idx = i * Ny + j;
+
+          // 1. Left Boundary: Inflow of fresh ECLSS air
+          if (i === 0) {
+            this.fieldT_next[idx] = 25.0;
+            this.fieldO2_next[idx] = Y_O2_inlet;
+            continue;
+          }
+
+          // 2. Right Boundary: Convective/Radiative Heat Transfer to Cabin Bulkhead
+          if (i === Nx - 1) {
+            const leftIdx = (Nx - 2) * Ny + j;
+            this.fieldT_next[idx] = this.fieldT[leftIdx] - 0.18 * (this.fieldT[leftIdx] - 25.0);
+            this.fieldO2_next[idx] = this.fieldO2[leftIdx];
+            continue;
+          }
+
+          // Top and Bottom Boundary Walls (adiabatic/cooled)
+          if (j === 0 || j === Ny - 1) {
+            const innerJ = j === 0 ? 1 : Ny - 2;
+            const innerIdx = i * Ny + innerJ;
+            this.fieldT_next[idx] = this.fieldT[innerIdx] * 0.94 + 25.0 * 0.06;
+            this.fieldO2_next[idx] = this.fieldO2[innerIdx];
+            continue;
+          }
+
+          const normY = j / (Ny - 1);
+          const u_local = 4.0 * u0 * normY * (1.0 - normY) + 0.06 * u0;
+
+          const idxL = (i - 1) * Ny + j;
+          const idxR = (i + 1) * Ny + j;
+          const idxB = i * Ny + (j - 1);
+          const idxT = i * Ny + (j + 1);
+
+          const T_c = this.fieldT[idx];
+          const O2_c = this.fieldO2[idx];
+
+          const advT = - u_local * (T_c - this.fieldT[idxL]);
+          const advO2 = - u_local * (O2_c - this.fieldO2[idxL]);
+
+          const lapT = this.fieldT[idxR] + this.fieldT[idxL] + this.fieldT[idxT] + this.fieldT[idxB] - 4.0 * T_c;
+          const lapO2 = this.fieldO2[idxR] + this.fieldO2[idxL] + this.fieldO2[idxT] + this.fieldO2[idxB] - 4.0 * O2_c;
+
+          const dx = i - fcX;
+          const dy = j - fcY;
+          const r2 = (dx * dx) / 1.5 + dy * dy;
+
+          let Q_chem = 0;
+          let S_O2 = 0;
+
+          if (!isExtinguished && O2_c > 0.02) {
+            if (isExplosion) {
+              if (r2 < 48.0) {
+                const w = Math.exp(- r2 / 24.0) * (O2_c / Y_O2_inlet);
+                Q_chem = w * (T_flame_target - T_c) * 0.35;
+                S_O2 = - w * O2_c * 0.25;
+              }
+            } else if (r2 < 28.0) {
+              const w = Math.exp(- r2 / (10.0 + pulseMod * 2.0)) * (O2_c / Y_O2_inlet);
+              Q_chem = w * (T_flame_target - T_c) * 0.22;
+              S_O2 = - w * O2_c * 0.16; // Oxygen sink generates downstream depleted oxygen shadow
+            }
+          }
+
+          const Q_rad = 0.0035 * (T_c - 25.0);
+
+          let nextT = T_c + advT + alpha_diff * lapT + Q_chem - Q_rad;
+          let nextO2 = O2_c + advO2 + d_diff * lapO2 + S_O2;
+
+          this.fieldT_next[idx] = Math.max(25.0, Math.min(2400.0, nextT));
+          this.fieldO2_next[idx] = Math.max(0.008, Math.min(1.0, nextO2));
+        }
+      }
+
+      const tmpT = this.fieldT;
+      this.fieldT = this.fieldT_next;
+      this.fieldT_next = tmpT;
+
+      const tmpO2 = this.fieldO2;
+      this.fieldO2 = this.fieldO2_next;
+      this.fieldO2_next = tmpO2;
+    }
+
+    renderSolverToImageData(isCoolFlame, Y_O2_inlet) {
+      const Nx = this.gridNx;
+      const Ny = this.gridNy;
+      const data = this.offscreenImg.data;
+      const isHullMap = (this.simGridMode === 'thermal_hull');
+
+      for (let j = 0; j < Ny; j++) {
+        for (let i = 0; i < Nx; i++) {
+          const idx = i * Ny + j;
+          const pixelIdx = (j * Nx + i) * 4;
+          const T = this.fieldT[idx];
+          const O2 = this.fieldO2[idx];
+
+          if (isHullMap) {
+            const tau = Math.min(1.0, Math.max(0.0, (T - 25.0) / 1400.0));
+            if (tau < 0.15) {
+              const f = tau / 0.15;
+              data[pixelIdx]     = Math.round(15 + f * 20);
+              data[pixelIdx + 1] = Math.round(25 + f * 100);
+              data[pixelIdx + 2] = Math.round(80 + f * 120);
+              data[pixelIdx + 3] = 230;
+            } else if (tau < 0.40) {
+              const f = (tau - 0.15) / 0.25;
+              data[pixelIdx]     = Math.round(20 + f * 30);
+              data[pixelIdx + 1] = Math.round(125 + f * 100);
+              data[pixelIdx + 2] = Math.round(200 - f * 150);
+              data[pixelIdx + 3] = 240;
+            } else if (tau < 0.70) {
+              const f = (tau - 0.40) / 0.30;
+              data[pixelIdx]     = Math.round(220 + f * 35);
+              data[pixelIdx + 1] = Math.round(180 - f * 80);
+              data[pixelIdx + 2] = 20;
+              data[pixelIdx + 3] = 250;
+            } else {
+              const f = (tau - 0.70) / 0.30;
+              data[pixelIdx]     = 255;
+              data[pixelIdx + 1] = Math.round(100 + f * 155);
+              data[pixelIdx + 2] = Math.round(40 + f * 215);
+              data[pixelIdx + 3] = 255;
+            }
+          } else {
+            if (T > 280.0) {
+              if (isCoolFlame) {
+                const f = Math.min(1.0, (T - 280.0) / 400.0);
+                data[pixelIdx]     = Math.round(40 + f * 120);
+                data[pixelIdx + 1] = Math.round(160 + f * 80);
+                data[pixelIdx + 2] = 255;
+                data[pixelIdx + 3] = Math.round(180 + f * 70);
+              } else if (T > 1200.0) {
+                const f = Math.min(1.0, (T - 1200.0) / 500.0);
+                data[pixelIdx]     = 255;
+                data[pixelIdx + 1] = Math.round(235 + f * 20);
+                data[pixelIdx + 2] = Math.round(150 + f * 105);
+                data[pixelIdx + 3] = 255;
+              } else if (T > 750.0) {
+                const f = (T - 750.0) / 450.0;
+                data[pixelIdx]     = 255;
+                data[pixelIdx + 1] = Math.round(140 + f * 95);
+                data[pixelIdx + 2] = Math.round(20 + f * 60);
+                data[pixelIdx + 3] = 250;
+              } else {
+                const f = (T - 280.0) / 470.0;
+                data[pixelIdx]     = Math.round(190 + f * 65);
+                data[pixelIdx + 1] = Math.round(25 + f * 95);
+                data[pixelIdx + 2] = 15;
+                data[pixelIdx + 3] = Math.round(190 + f * 55);
+              }
+            } else {
+              const o2Norm = Math.min(1.0, Math.max(0.0, O2 / Y_O2_inlet));
+              if (o2Norm > 0.65) {
+                const f = (o2Norm - 0.65) / 0.35;
+                data[pixelIdx]     = Math.round(8 + f * 8);
+                data[pixelIdx + 1] = Math.round(28 + f * 28);
+                data[pixelIdx + 2] = Math.round(55 + f * 65);
+                data[pixelIdx + 3] = Math.round(160 + f * 60);
+              } else {
+                const f = o2Norm / 0.65;
+                data[pixelIdx]     = Math.round(14 - f * 6);
+                data[pixelIdx + 1] = Math.round(12 + f * 16);
+                data[pixelIdx + 2] = Math.round(28 + f * 27);
+                data[pixelIdx + 3] = Math.round(210 - f * 50);
+              }
+            }
+          }
+        }
+      }
+      this.offscreenCtx.putImageData(this.offscreenImg, 0, 0);
+    }
+
     drawScene(ctx, w, h) {
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Deep Space Vacuum Background
+      // Deep Space Vacuum Background
       const spaceGrad = ctx.createLinearGradient(0, 0, 0, h);
       spaceGrad.addColorStop(0, '#030509');
       spaceGrad.addColorStop(1, '#070C18');
       ctx.fillStyle = spaceGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Stars
+      // Background stars
       ctx.fillStyle = '#FFFFFF';
       this.stars.forEach(st => {
         ctx.globalAlpha = st.alpha * (0.8 + Math.sin(Date.now() * 0.003 + st.x) * 0.2);
@@ -1058,25 +1329,31 @@
       });
       ctx.globalAlpha = 1.0;
 
-      // Extract telemetry
+      // Telemetry
       const evalData = this.data ? this.data.evaluation : null;
       const params = this.data ? this.data.params : { flow_velocity_cms: 10, o2_percent: 21 };
       const simTel = evalData ? (evalData.sim_telemetry || {}) : {};
 
       const vg = parseFloat(params.flow_velocity_cms || 10.0);
+      const o2_raw = parseFloat(params.o2_percent || 21.0);
+      const Y_O2_inlet = Math.max(0.05, Math.min(1.0, o2_raw / 100.0));
       const mode = simTel.flame_color_mode || 'sooty_yellow';
+      const isCoolFlame = (mode === 'cool_flame');
       const breach = evalData ? evalData.breach_outside_risk : false;
       const heatFlux = parseFloat(simTel.hull_heat_flux_kw_m2 || 0.5);
-      const fingering = parseFloat(simTel.fingering_instability || 0.1);
 
-      // 2. Spacecraft Hull Outer Geometry (Cylindrical Module Cutaway)
+      // Execute 2D Finite-Volume Advection-Diffusion Solver Step
+      this.stepSolver(params, simTel);
+      this.renderSolverToImageData(isCoolFlame, Y_O2_inlet);
+
+      // Spacecraft Hull Cutaway Geometry
       const cabinX = 85;
       const cabinY = 30;
       const cabinW = 246;
       const cabinH = 160;
       const radius = 24;
 
-      // Thermal hull wall radiation glow (outside wall heat flux)
+      // Thermal hull wall radiation glow
       if (heatFlux > 1.0) {
         ctx.save();
         const glowRad = Math.min(60, heatFlux * 0.35);
@@ -1090,7 +1367,7 @@
         ctx.restore();
       }
 
-      // Outer Structural Shell (Titanium & insulation blankets)
+      // Outer Structural Shell
       ctx.save();
       ctx.lineWidth = 6;
       ctx.strokeStyle = '#1E293B';
@@ -1106,30 +1383,16 @@
       ctx.stroke();
       ctx.restore();
 
-      // Atmospheric Cabin Interior (Air volume)
+      // 2D Finite-Volume Solver Layer inside Cabin Interior
       ctx.save();
-      const cabinGrad = ctx.createLinearGradient(cabinX, cabinY, cabinX, cabinY + cabinH);
-      cabinGrad.addColorStop(0, '#0B1324');
-      cabinGrad.addColorStop(1, '#080E1B');
-      ctx.fillStyle = cabinGrad;
       ctx.beginPath();
       ctx.roundRect(cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12, radius - 4);
-      ctx.fill();
-      ctx.restore();
+      ctx.clip();
 
-      // ECLSS Ventilation Ducts & Grilles (Top & Bottom)
-      ctx.fillStyle = '#172033';
-      ctx.fillRect(cabinX + 20, cabinY + 8, cabinW - 40, 6); // Top duct
-      ctx.fillRect(cabinX + 20, cabinY + cabinH - 14, cabinW - 40, 6); // Bottom duct
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.offscreenCanvas, cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12);
 
-      // Duct grille slots
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
-      for (let gx = cabinX + 28; gx < cabinX + cabinW - 30; gx += 16) {
-        ctx.fillRect(gx, cabinY + 8, 4, 6);
-        ctx.fillRect(gx, cabinY + cabinH - 14, 4, 6);
-      }
-
-      // 3. Airflow Streamlines & Particles (speed proportional to V_g)
+      // Draw Flow Streamlines & Dust Particles
       const flowSpeedFactor = Math.max(0.1, vg * 0.12);
       ctx.fillStyle = 'rgba(0, 229, 255, 0.6)';
       this.particles.forEach(p => {
@@ -1143,7 +1406,6 @@
         ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Particle trail
         if (vg > 2.0) {
           ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
           ctx.lineWidth = 1;
@@ -1155,139 +1417,56 @@
       });
       ctx.globalAlpha = 1.0;
 
-      // Equipment Rack / Sample Stand
-      const rackX = cabinX + 65;
-      const rackY = cabinY + 95;
-      ctx.fillStyle = '#1E293B';
-      ctx.fillRect(rackX - 12, rackY + 15, 24, 28);
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(rackX - 16, rackY + 12, 32, 4);
+      // Mode-specific labels inside solver viewport
+      if (this.simGridMode === 'thermal_hull') {
+        ctx.font = '8px "JetBrains Mono"';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'right';
+        ctx.fillText(`HULL FLUX: ${heatFlux.toFixed(1)} kW/m²`, cabinX + cabinW - 14, cabinY + 24);
+        ctx.fillStyle = heatFlux > 1.5 ? '#EF4444' : '#10B981';
+        ctx.fillText(`T_HULL: ${(25.0 + heatFlux * 14.5).toFixed(0)}°C`, cabinX + cabinW - 14, cabinY + 36);
 
-      // Flame Center Point
-      const flameX = rackX;
-      const flameY = rackY + 10;
-      this.flamePulse += 0.05;
-
-      // 4. Dynamic Combustion Modes
-      if (mode === 'extinguished') {
-        // Glowing ember bed, zero flame
-        ctx.fillStyle = '#C2410C';
-        ctx.beginPath();
-        ctx.arc(flameX, flameY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(234, 88, 12, 0.3)';
-        ctx.beginPath();
-        ctx.arc(flameX, flameY, 8 + Math.sin(this.flamePulse) * 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (mode === 'cool_flame') {
-        // Low-temperature NTC blue spherical glow (PSI-117)
-        const coolRadius = 18 + Math.sin(this.flamePulse * 1.8) * 3;
-        const coolGrad = ctx.createRadialGradient(flameX, flameY, 2, flameX, flameY, coolRadius);
-        coolGrad.addColorStop(0, 'rgba(180, 240, 255, 0.9)');
-        coolGrad.addColorStop(0.35, 'rgba(56, 189, 248, 0.7)');
-        coolGrad.addColorStop(0.7, 'rgba(3, 105, 161, 0.35)');
-        coolGrad.addColorStop(1, 'rgba(3, 105, 161, 0)');
-
-        ctx.fillStyle = coolGrad;
-        ctx.beginPath();
-        ctx.arc(flameX, flameY, coolRadius, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (mode === 'explosion_flash') {
-        // Deflagration / detonation shockwave flash
-        this.blastWaveRadius = (this.blastWaveRadius + 3.5) % 110;
-        ctx.save();
-        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0, 1 - this.blastWaveRadius / 110)})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(flameX, flameY, this.blastWaveRadius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        const blastGrad = ctx.createRadialGradient(flameX, flameY, 5, flameX, flameY, 65);
-        blastGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-        blastGrad.addColorStop(0.4, 'rgba(255, 170, 0, 0.7)');
-        blastGrad.addColorStop(0.8, 'rgba(255, 42, 84, 0.4)');
-        blastGrad.addColorStop(1, 'rgba(255, 42, 84, 0)');
-        ctx.fillStyle = blastGrad;
-        ctx.beginPath();
-        ctx.arc(flameX, flameY, 65, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        const barX = cabinX + cabinW - 10;
+        const barY = cabinY + 44;
+        const barH = 70;
+        const gradBar = ctx.createLinearGradient(0, barY, 0, barY + barH);
+        gradBar.addColorStop(0, '#FFFFFF');
+        gradBar.addColorStop(0.3, '#EF4444');
+        gradBar.addColorStop(0.6, '#F59E0B');
+        gradBar.addColorStop(1, '#06B6D4');
+        ctx.fillStyle = gradBar;
+        ctx.fillRect(barX - 4, barY, 4, barH);
       } else {
-        // mode === 'sooty_yellow' (Normal / Hot Flame with deflection & fingering)
-        const tiltX = Math.min(26, vg * 0.45);
-        const flicker = Math.sin(this.flamePulse * 4) * 2.5;
-
-        // Outer Flame Envelope
-        ctx.save();
-        const flameGrad = ctx.createRadialGradient(flameX + tiltX * 0.4, flameY - 14 + flicker, 2, flameX + tiltX * 0.5, flameY - 12, 28);
-        flameGrad.addColorStop(0, '#FEF08A');
-        flameGrad.addColorStop(0.35, '#F59E0B');
-        flameGrad.addColorStop(0.7, '#DC2626');
-        flameGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
-
-        ctx.fillStyle = flameGrad;
-        ctx.beginPath();
-        ctx.moveTo(flameX - 8, flameY);
-        // Cellular fingering instability waves
-        const fingerAmp = fingering * 6;
-        ctx.bezierCurveTo(
-          flameX - 12 - fingerAmp, flameY - 18,
-          flameX + tiltX - 6, flameY - 32 + flicker,
-          flameX + tiltX, flameY - 38 + flicker
-        );
-        ctx.bezierCurveTo(
-          flameX + tiltX + 8, flameY - 30 + flicker,
-          flameX + tiltX + 12 + fingerAmp, flameY - 16,
-          flameX + 8, flameY
-        );
-        ctx.closePath();
-        ctx.fill();
-
-        // Blue base flame (reaction zone)
+        ctx.font = '8px "JetBrains Mono"';
         ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
-        ctx.beginPath();
-        ctx.arc(flameX, flameY + 1, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        ctx.textAlign = 'left';
+        ctx.fillText(`INFLOW [${o2_raw.toFixed(1)}% O₂] →`, cabinX + 14, cabinY + 24);
 
-        // Soot emissions
-        if (Math.random() < 0.35) {
-          this.sootParticles.push({
-            x: flameX + tiltX,
-            y: flameY - 36 + flicker,
-            vx: (vg * 0.08) + (Math.random() * 0.4 - 0.2),
-            vy: -Math.random() * 0.8 - 0.3,
-            life: 1.0,
-            size: Math.random() * 3 + 1.5
-          });
+        if (mode !== 'extinguished') {
+          ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
+          ctx.fillText(`[O₂ SHADOW WAKE]`, cabinX + 120, cabinY + 24);
         }
       }
 
-      // Update and draw soot particles
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
-      for (let i = this.sootParticles.length - 1; i >= 0; i--) {
-        const sp = this.sootParticles[i];
-        sp.x += sp.vx;
-        sp.y += sp.vy;
-        sp.life -= 0.02;
-        if (sp.life <= 0 || sp.x > cabinX + cabinW - 10) {
-          this.sootParticles.splice(i, 1);
-          continue;
-        }
-        ctx.globalAlpha = sp.life * 0.75;
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1.0;
+      ctx.restore();
 
-      // 5. Exterior Spacecraft Hull Breach (Inside -> Outside Blowout into Vacuum)
+      // ECLSS Ventilation Ducts & Grilles (Top & Bottom)
+      ctx.fillStyle = '#172033';
+      ctx.fillRect(cabinX + 20, cabinY + 8, cabinW - 40, 6);
+      ctx.fillRect(cabinX + 20, cabinY + cabinH - 14, cabinW - 40, 6);
+
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
+      for (let gx = cabinX + 28; gx < cabinX + cabinW - 30; gx += 16) {
+        ctx.fillRect(gx, cabinY + 8, 4, 6);
+        ctx.fillRect(gx, cabinY + cabinH - 14, 4, 6);
+      }
+
+      // Exterior Spacecraft Hull Breach (Inside -> Outside Blowout into Vacuum)
       if (breach) {
         ctx.save();
         const breachX = cabinX + cabinW;
         const breachY = cabinY + 75;
 
-        // Ruptured Hull Hole
         ctx.fillStyle = '#05070B';
         ctx.beginPath();
         ctx.ellipse(breachX, breachY, 6, 18, 0, 0, Math.PI * 2);
@@ -1296,7 +1475,6 @@
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Venting Gas & Fire Jet into Vacuum
         const jetGrad = ctx.createLinearGradient(breachX, breachY, breachX + 65, breachY);
         jetGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
         jetGrad.addColorStop(0.3, 'rgba(255, 170, 0, 0.85)');
@@ -1313,7 +1491,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Vacuum jet sparks
         ctx.fillStyle = '#FEF08A';
         for (let s = 0; s < 6; s++) {
           ctx.beginPath();
@@ -1514,10 +1691,13 @@
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
       const simToReal = this.data ? this.data.sim_to_real : null;
       const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
+      const hasDirectFlightData = simToReal && (simToReal.has_direct_flight_data === true);
 
       const tSec = (series && series.t_sec) ? series.t_sec : [0, 100, 200, 300, 400, 500, 600];
       let yValues = [];
-      let yRealValues = [];
+      let yMinValues = [];
+      let yMaxValues = [];
+      let yRealPoints = [];
       let yUnit = '';
       let thresholdVal = null;
       let thresholdLabel = '';
@@ -1525,33 +1705,50 @@
 
       if (this.selectedChannel === 'spread') {
         yValues = (series && series.front_cm) ? series.front_cm : [0, 2, 4, 6, 8, 10, 12];
-        yRealValues = (overlay && overlay.measured_front_cm) ? overlay.measured_front_cm : [];
+        yMinValues = (series && series.front_cm_min) ? series.front_cm_min : yValues.map(v => v * 0.94);
+        yMaxValues = (series && series.front_cm_max) ? series.front_cm_max : yValues.map(v => v * 1.06);
         yUnit = 'cm';
         strokeColor = '#10B981';
       } else if (this.selectedChannel === 'temp') {
         yValues = (series && series.cabin_temp_c) ? series.cabin_temp_c : [25, 28, 32, 38, 45, 52, 60];
-        yRealValues = (overlay && overlay.measured_cabin_temp_c) ? overlay.measured_cabin_temp_c : [];
+        yMinValues = (series && series.temp_c_min) ? series.temp_c_min : yValues.map(v => Math.max(25, v - 2.5));
+        yMaxValues = (series && series.temp_c_max) ? series.temp_c_max : yValues.map(v => v + 2.5);
         yUnit = '°C';
         strokeColor = '#F59E0B';
       } else if (this.selectedChannel === 'pressure') {
         yValues = (series && series.cabin_pressure_kpa) ? series.cabin_pressure_kpa : [101, 101, 102, 102, 103, 104, 104];
-        yRealValues = (overlay && overlay.measured_cabin_pressure_kpa) ? overlay.measured_cabin_pressure_kpa : [];
+        yMinValues = (series && series.pressure_kpa_min) ? series.pressure_kpa_min : yValues.map(v => v - 0.2);
+        yMaxValues = (series && series.pressure_kpa_max) ? series.pressure_kpa_max : yValues.map(v => v + 0.2);
         yUnit = 'kPa';
-        thresholdVal = 146.0; // 101 + 45 kPa limit
+        thresholdVal = 146.0; // 101 + 45 kPa proof limit
         thresholdLabel = 'HULL PROOF LIMIT';
         strokeColor = '#EF4444';
       } else { // 'co'
         yValues = (series && series.co_ppm) ? series.co_ppm : [5, 12, 22, 34, 48, 62, 75];
-        yRealValues = (overlay && overlay.measured_co_ppm) ? overlay.measured_co_ppm : [];
+        yMinValues = (series && series.co_ppm_min) ? series.co_ppm_min : yValues.map(v => Math.max(0, v * 0.88));
+        yMaxValues = (series && series.co_ppm_max) ? series.co_ppm_max : yValues.map(v => v * 1.12);
         yUnit = 'ppm';
         thresholdVal = 55.0; // NASA SMAC 1-hr threshold
         thresholdLabel = 'NASA SMAC LIMIT (55 ppm)';
         strokeColor = '#A855F7';
       }
 
-      const allValues = [...yValues, ...(yRealValues || [])];
-      const maxYData = Math.max(...allValues, thresholdVal || 1);
-      const minYData = Math.min(...allValues, 0);
+      if (hasDirectFlightData && overlay && Array.isArray(overlay.points)) {
+        yRealPoints = overlay.points;
+      }
+
+      let allNumbers = [...yValues, ...yMaxValues, ...yMinValues];
+      if (hasDirectFlightData && yRealPoints.length > 0) {
+        yRealPoints.forEach(pt => {
+          const v = (this.selectedChannel === 'spread') ? pt.front_cm
+                  : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
+                  : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                  : pt.co_ppm;
+          if (v !== undefined) allNumbers.push(v);
+        });
+      }
+      const maxYData = Math.max(...allNumbers, thresholdVal || 1);
+      const minYData = Math.min(...allNumbers, 0);
       const yMax = Math.max(maxYData * 1.15, 1.0);
       const yMin = Math.min(minYData, 0);
 
@@ -1561,7 +1758,6 @@
       ctx.fillStyle = '#64748B';
       ctx.font = '9px "JetBrains Mono"';
 
-      // 4 horizontal gridlines
       for (let i = 0; i <= 4; i++) {
         const gy = padTop + (plotH / 4) * i;
         ctx.beginPath();
@@ -1574,7 +1770,6 @@
         ctx.fillText(val.toFixed(val >= 100 ? 0 : 1), padLeft - 6, gy + 3);
       }
 
-      // Vertical time gridlines
       for (let s = 0; s <= 600; s += 100) {
         const gx = padLeft + (s / 600) * plotW;
         ctx.beginPath();
@@ -1586,7 +1781,7 @@
         ctx.fillText(`${s}s`, gx, h - 8);
       }
 
-      // Draw Critical Safety Threshold (Dashed Line)
+      // Safety Threshold Dashed Line
       if (thresholdVal !== null && thresholdVal <= yMax && thresholdVal >= yMin) {
         const ty = padTop + plotH - ((thresholdVal - yMin) / (yMax - yMin)) * plotH;
         ctx.save();
@@ -1605,39 +1800,29 @@
         ctx.restore();
       }
 
-      // Draw Real NASA Flight Overlay (Dashed line with circular marker points)
-      const hasReal = yRealValues && yRealValues.length === tSec.length;
-      if (hasReal) {
+      // Draw SIM ±1σ Uncertainty Corridor Fill
+      if (tSec.length > 1 && yMinValues.length === tSec.length && yMaxValues.length === tSec.length) {
         ctx.save();
-        ctx.strokeStyle = '#F59E0B'; // Amber Real Line
-        ctx.lineWidth = 1.8;
-        ctx.setLineDash([5, 3]);
+        ctx.fillStyle = strokeColor + '22';
         ctx.beginPath();
-
         tSec.forEach((t, idx) => {
           const px = padLeft + (t / 600) * plotW;
-          const py = padTop + plotH - ((yRealValues[idx] - yMin) / (yMax - yMin)) * plotH;
+          const py = padTop + plotH - ((yMaxValues[idx] - yMin) / (yMax - yMin)) * plotH;
           if (idx === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         });
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Points
-        ctx.fillStyle = '#F59E0B';
-        tSec.forEach((t, idx) => {
-          if (t % 100 === 0) {
-            const px = padLeft + (t / 600) * plotW;
-            const py = padTop + plotH - ((yRealValues[idx] - yMin) / (yMax - yMin)) * plotH;
-            ctx.beginPath();
-            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
+        for (let idx = tSec.length - 1; idx >= 0; idx--) {
+          const t = tSec[idx];
+          const px = padLeft + (t / 600) * plotW;
+          const py = padTop + plotH - ((yMinValues[idx] - yMin) / (yMax - yMin)) * plotH;
+          ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
       }
 
-      // Draw Main Curve (Sim Model)
+      // Draw Main SIM (Physics) Line
       if (tSec.length > 1 && yValues.length === tSec.length) {
         ctx.save();
         ctx.strokeStyle = strokeColor;
@@ -1652,9 +1837,8 @@
         });
         ctx.stroke();
 
-        // Area gradient fill
         const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
-        areaGrad.addColorStop(0, strokeColor + '40');
+        areaGrad.addColorStop(0, strokeColor + '30');
         areaGrad.addColorStop(1, strokeColor + '00');
         ctx.fillStyle = areaGrad;
         ctx.lineTo(padLeft + plotW, padTop + plotH);
@@ -1664,20 +1848,96 @@
         ctx.restore();
       }
 
-      // Top Right Legend
+      // Draw REAL (NASA Flight) or Extrapolation Banner
+      if (hasDirectFlightData && yRealPoints.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        yRealPoints.forEach((pt, pIdx) => {
+          const t = pt.t_sec;
+          const val = (this.selectedChannel === 'spread') ? pt.front_cm
+                    : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
+                    : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                    : pt.co_ppm;
+          const px = padLeft + (t / 600) * plotW;
+          const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+          if (pIdx === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.restore();
+
+        yRealPoints.forEach(pt => {
+          const t = pt.t_sec;
+          const val = (this.selectedChannel === 'spread') ? pt.front_cm
+                    : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
+                    : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                    : pt.co_ppm;
+          const sigma = pt.sensor_sigma || 0.5;
+          const sigmaScale = (this.selectedChannel === 'spread') ? sigma * 0.85
+                           : (this.selectedChannel === 'temp') ? sigma * 2.2
+                           : (this.selectedChannel === 'pressure') ? sigma * 0.35
+                           : sigma * 1.8;
+
+          const px = padLeft + (t / 600) * plotW;
+          const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+          const pyTop = padTop + plotH - ((val + sigmaScale - yMin) / (yMax - yMin)) * plotH;
+          const pyBot = padTop + plotH - ((val - sigmaScale - yMin) / (yMax - yMin)) * plotH;
+
+          ctx.save();
+          ctx.strokeStyle = '#F59E0B';
+          ctx.lineWidth = 1.2;
+
+          ctx.beginPath();
+          ctx.moveTo(px, pyTop);
+          ctx.lineTo(px, pyBot);
+          ctx.moveTo(px - 3, pyTop); ctx.lineTo(px + 3, pyTop);
+          ctx.moveTo(px - 3, pyBot); ctx.lineTo(px + 3, pyBot);
+          ctx.stroke();
+
+          ctx.fillStyle = '#F59E0B';
+          ctx.beginPath();
+          ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      } else {
+        ctx.save();
+        const bannerW = 270;
+        const bannerH = 24;
+        const bx = padLeft + (plotW - bannerW) / 2;
+        const by = padTop + (plotH - bannerH) / 2;
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bannerW, bannerH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#F59E0B';
+        ctx.font = '8.5px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠ NO MATCHING NASA FLIGHT DATA (EXTRAPOLATION ZONE)', bx + bannerW / 2, by + 15);
+        ctx.restore();
+      }
+
+      // Legend
       ctx.save();
       ctx.font = '9px "JetBrains Mono"';
       ctx.textAlign = 'right';
 
-      if (hasReal) {
+      if (hasDirectFlightData && yRealPoints.length > 0) {
         ctx.fillStyle = '#F59E0B';
-        ctx.fillText('● REAL (NASA Flight)', w - padRight, padTop - 6);
+        ctx.fillText('● REAL (NASA Flight ±σ)', w - padRight, padTop - 6);
 
         ctx.fillStyle = strokeColor;
-        ctx.fillText('■ SIM (Physics)', w - padRight - 116, padTop - 6);
+        ctx.fillText('■ SIM ±1σ (Physics)', w - padRight - 130, padTop - 6);
       } else {
         ctx.fillStyle = strokeColor;
-        ctx.fillText('■ SIM (Physics Model)', w - padRight, padTop - 6);
+        ctx.fillText('■ SIM ±1σ (Pure Physics Extrapolation)', w - padRight, padTop - 6);
       }
       ctx.restore();
 
@@ -1709,43 +1969,56 @@
       const tHover = Math.max(0, Math.min(600, ((mx - padLeft) / plotW) * 600));
       this.renderGraph(tHover);
 
-      // Find nearest point
       const evalData = this.data ? this.data.evaluation : null;
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
       const simToReal = this.data ? this.data.sim_to_real : null;
       const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
-
-      const tSec = (series && series.t_sec) ? series.t_sec : [0, 100, 200, 300, 400, 500, 600];
+      const hasDirectFlightData = simToReal && (simToReal.has_direct_flight_data === true);
 
       let yValues = [];
-      let yReal = [];
       let unit = '';
       if (this.selectedChannel === 'spread') {
         yValues = series ? series.front_cm : [];
-        yReal = overlay ? overlay.measured_front_cm : [];
         unit = 'cm';
       } else if (this.selectedChannel === 'temp') {
         yValues = series ? series.cabin_temp_c : [];
-        yReal = overlay ? overlay.measured_cabin_temp_c : [];
         unit = '°C';
       } else if (this.selectedChannel === 'pressure') {
         yValues = series ? series.cabin_pressure_kpa : [];
-        yReal = overlay ? overlay.measured_cabin_pressure_kpa : [];
         unit = 'kPa';
       } else {
         yValues = series ? series.co_ppm : [];
-        yReal = overlay ? overlay.measured_co_ppm : [];
         unit = 'ppm';
       }
 
       const idx = Math.min(yValues.length - 1, Math.max(0, Math.round(tHover / 10)));
       const val = yValues[idx] !== undefined ? yValues[idx] : 0;
-      const realVal = (yReal && yReal[idx] !== undefined) ? yReal[idx] : null;
+
+      let realStr = '';
+      if (hasDirectFlightData && overlay && Array.isArray(overlay.points)) {
+        let closestPt = null;
+        let minDt = 9999;
+        overlay.points.forEach(pt => {
+          const dt = Math.abs(pt.t_sec - tHover);
+          if (dt < minDt) {
+            minDt = dt;
+            closestPt = pt;
+          }
+        });
+        if (closestPt && minDt <= 30) {
+          const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
+                     : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
+                     : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                     : closestPt.co_ppm;
+          const sigma = closestPt.sensor_sigma || 0.5;
+          realStr = `<br><span style="color: #F59E0B;">REAL: <b>${rVal} ${unit}</b> (±${sigma})</span>`;
+        }
+      }
 
       tooltip.style.display = 'block';
       tooltip.style.left = `${mx + 10}px`;
       tooltip.style.top = `30px`;
-      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${val} ${unit}</b>${realVal !== null ? `<br><span style="color: #F59E0B;">REAL: <b>${realVal} ${unit}</b></span>` : ''}`;
+      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${val} ${unit}</b>${realStr}`;
     }
   }
 

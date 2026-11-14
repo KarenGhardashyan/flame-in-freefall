@@ -908,7 +908,50 @@ class NASACombustionKnowledgeRetriever:
     def __init__(self):
         self.index = BM25InvertedIndex()
         self.experiments: List[Dict[str, Any]] = list(NASA_FLIGHT_EXPERIMENTS_DATABASE)
+        self.telemetry_db_path = os.path.join(RESOURCES_DIR, "nasa_flight_telemetry.json")
+        self.flight_telemetry_runs: List[Dict[str, Any]] = []
+        self._load_flight_telemetry_db()
         self._initialize()
+
+    def _load_flight_telemetry_db(self):
+        """Loads and normalizes the 35+ empirical NASA flight runs database."""
+        if os.path.exists(self.telemetry_db_path):
+            try:
+                with open(self.telemetry_db_path, "r", encoding="utf-8") as f:
+                    raw_runs = json.load(f)
+                    normalized_runs = []
+                    for r in raw_runs:
+                        cond = r.get("conditions", {})
+                        summ = r.get("measured_summary", {})
+                        run_id = r.get("run_id", "RUN-01")
+                        norm_exp = {
+                            "id": run_id,
+                            "run_id": run_id,
+                            "title": f"{r.get('mission', 'NASA Flight')} - {cond.get('fuel_display', cond.get('fuel_type', 'PMMA'))}",
+                            "mission": r.get("mission", "NASA Flight"),
+                            "investigation": r.get("investigation", "NASA Microgravity Investigation"),
+                            "fuel": cond.get("fuel_type", "pmma"),
+                            "fuel_display": cond.get("fuel_display", cond.get("fuel_type", "PMMA")),
+                            "o2_percent": float(cond.get("o2_pct", 21.0)),
+                            "pressure_atm": float(cond.get("pressure_atm", 1.0)),
+                            "flow_velocity_cms": float(cond.get("vg_cm_s", 10.0)),
+                            "cabin_volume_m3": float(cond.get("cabin_volume_m3", 28.0)),
+                            "gravity": "1g" if "1g" in run_id.lower() or "ground" in r.get("mission", "").lower() else "0g",
+                            "measured_vf_mm_s": float(summ.get("vf_mm_s", 1.5)),
+                            "measured_tf_k": float(summ.get("tf_k", 1800.0)),
+                            "measured_regime": summ.get("regime", "hot_flame"),
+                            "measured_burning_rate_k": 0.50,
+                            "url": r.get("verified_url", OFFICIAL_NASA_REGISTRY.get("bass_ii", "")),
+                            "notes": r.get("notes", r.get("investigation", "")),
+                            "discrete_telemetry": r.get("discrete_telemetry", [])
+                        }
+                        normalized_runs.append(norm_exp)
+                    if normalized_runs:
+                        self.experiments = normalized_runs
+                        self.flight_telemetry_runs = normalized_runs
+                        print(f"[KNOWLEDGE_RETRIEVER] Loaded {len(normalized_runs)} documented empirical flight runs from {self.telemetry_db_path}.")
+            except Exception as e:
+                print(f"[KNOWLEDGE_RETRIEVER] Warning loading telemetry json: {e}")
 
     def _initialize(self):
         t0 = time.time()
@@ -1082,9 +1125,11 @@ class NASACombustionKnowledgeRetriever:
         """
         Computes Sim-to-Real Calibration & Reality Gap against 40+ real NASA flight runs:
         - Finds Top-3 nearest NASA flight runs by normalized state-space distance
-        - Calculates reality_gap_pct & sim_to_real_confidence_pct
-        - Formulates physical explanation for any reality gap
-        - Generates real_data_overlay for dual-layer graph plotting
+        - Exponential similarity match_pct (0-100%)
+        - Strict Extrapolation Zone cutoff (< 55% match)
+        - Empirical MAPE-based reality_gap_pct from discrete telemetry checkpoints
+        - Aligned confidence = max(5, 100 - reality_gap_pct)
+        - Discrete experimental points overlay with sensor sigma error bars
         """
         # Normalize target parameters
         o2_input = params.get("o2_vol_fraction")
@@ -1101,10 +1146,10 @@ class NASACombustionKnowledgeRetriever:
 
         scored_runs = []
         for exp in self.experiments:
-            b_o2 = float(exp["o2_percent"])
-            b_p = float(exp["pressure_atm"])
-            b_vg = float(exp["flow_velocity_cms"])
-            b_fuel = str(exp["fuel"]).lower()
+            b_o2 = float(exp.get("o2_percent", 21.0))
+            b_p = float(exp.get("pressure_atm", 1.0))
+            b_vg = float(exp.get("flow_velocity_cms", 10.0))
+            b_fuel = str(exp.get("fuel", "pmma")).lower()
 
             # Normalized distance in (O2, P, Vg)
             d_o2 = (tgt_o2 - b_o2) / 10.0
@@ -1112,21 +1157,25 @@ class NASACombustionKnowledgeRetriever:
             d_vg = (tgt_vg - b_vg) / 10.0
             dist = math.sqrt(d_o2 * d_o2 + d_p * d_p + d_vg * d_vg)
 
-            # Fuel match bonus
+            # Fuel match bonus / penalty
             if tgt_fuel and b_fuel:
                 if tgt_fuel == b_fuel:
                     dist = max(0.0, dist - 0.40)
                 elif (tgt_fuel in ["pmma", "sibal"] and b_fuel in ["pmma", "sibal"]):
                     dist = max(0.0, dist - 0.20)
+                else:
+                    dist += 0.50
 
             # Gas explosive match bonus
-            if h2_pct >= 4.0 and "APOLLO-13" in exp["id"]:
+            if h2_pct >= 4.0 and "APOLLO-13" in exp.get("id", ""):
                 dist = max(0.0, dist - 0.60)
 
-            match_pct = max(0.0, min(100.0, round(100.0 - 15.0 * dist, 1)))
+            # Exponential smooth similarity (0 - 100%)
+            match_pct = round(100.0 * math.exp(-0.45 * dist), 1)
+            match_pct = max(0.0, min(100.0, match_pct))
             scored_runs.append((dist, match_pct, exp))
 
-        # Sort by distance
+        # Sort by distance (lowest dist / highest match)
         scored_runs.sort(key=lambda item: item[0])
         top_3 = scored_runs[:3]
 
@@ -1137,94 +1186,127 @@ class NASACombustionKnowledgeRetriever:
             top_matches.append(item)
 
         best_match = top_matches[0]
+        best_match_pct = best_match.get("match_pct", 0.0)
 
-        # Extract simulation values
         sim_tel = sim_result.get("sim_telemetry", {})
         sim_vf = float(sim_tel.get("spread_rate_mm_s", 0.0))
         real_vf = float(best_match.get("measured_vf_mm_s", 0.0))
         sim_tf = float(sim_tel.get("flame_temp_k", 298.0))
         real_tf = float(best_match.get("measured_tf_k", 298.0))
 
-        # Calculate Reality Gap (%)
-        if real_vf == 0.0 and sim_vf == 0.0:
-            reality_gap_pct = 0.0
-        elif real_vf > 0.0:
-            reality_gap_pct = round(abs(sim_vf - real_vf) / max(0.2, real_vf) * 100.0, 1)
+        # Check Extrapolation Zone threshold (55.0%)
+        if best_match_pct < 55.0:
+            has_direct_flight_data = False
+            reality_gap_pct = round(max(35.0, (100.0 - best_match_pct) * 0.75), 1)
+            sim_to_real_confidence_pct = max(5.0, min(99.5, round(100.0 - reality_gap_pct, 1)))
+            gap_explanation = (
+                f"EXTRAPOLATION ZONE — NO DIRECT FLIGHT TELEMETRY (match: {best_match_pct:.1f}% < 55.0% threshold). "
+                f"Operational conditions (O₂={tgt_o2:.1f}%, P={tgt_p:.2f} atm, Vg={tgt_vg:.1f} cm/s, fuel={tgt_fuel}) "
+                f"fall outside empirical flight boundaries of NASA BASS-II, Saffire, and CIR archives. "
+                f"Predictions operate in purely analytical physics extrapolation mode."
+            )
+            real_data_overlay = {
+                "has_direct_flight_data": False,
+                "status": "extrapolation_zone",
+                "label": "EXTRAPOLATION ZONE — NO DIRECT FLIGHT TELEMETRY",
+                "points": [],
+                "t_sec": [],
+                "measured_front_cm": [],
+                "measured_cabin_temp_c": [],
+                "measured_cabin_pressure_kpa": [],
+                "measured_co_ppm": [],
+                "sensor_sigma": []
+            }
         else:
-            reality_gap_pct = round(min(100.0, sim_vf * 35.0), 1)
+            has_direct_flight_data = True
+            discrete_pts = best_match.get("discrete_telemetry", [])
+            sim_ts = sim_result.get("time_series", {})
+            sim_t = sim_ts.get("t_sec", [i * 10 for i in range(61)])
+            sim_front = sim_ts.get("front_cm", [0.0] * len(sim_t))
+            sim_temp = sim_ts.get("cabin_temp_c", [25.0] * len(sim_t))
+            sim_press = sim_ts.get("cabin_pressure_kpa", [101.3] * len(sim_t))
+            sim_co = sim_ts.get("co_ppm", [5.0] * len(sim_t))
 
-        reality_gap_pct = min(100.0, max(0.0, reality_gap_pct))
+            # Compute empirical MAPE against discrete flight telemetry checkpoints
+            if discrete_pts:
+                point_errors = []
+                for pt in discrete_pts:
+                    t_pt = pt.get("t_sec", 0)
+                    idx = min(len(sim_t) - 1, max(0, int(round(t_pt / 10.0))))
+                    f_s = sim_front[idx]
+                    t_s = sim_temp[idx]
+                    p_s = sim_press[idx]
+                    c_s = sim_co[idx]
 
-        # Confidence: scales with benchmark match and inversely with gap
-        confidence_raw = best_match["match_pct"] - (reality_gap_pct * 0.45)
-        sim_to_real_confidence_pct = round(max(15.0, min(99.5, confidence_raw)), 1)
+                    f_r = pt.get("front_cm", 0.0)
+                    t_r = pt.get("cabin_temp_c", 25.0)
+                    p_r = pt.get("cabin_pressure_kpa", 101.3)
+                    c_r = pt.get("co_ppm", 5.0)
 
-        # Scientific explanation of Reality Gap
-        if reality_gap_pct < 8.0:
-            gap_explanation = (
-                f"Minimal reality gap ({reality_gap_pct:.1f}%): Theoretical de Ris/Arrhenius kinetic prediction "
-                f"closely reproduces empirical flight telemetry from {best_match['investigation']}."
-            )
-        elif best_match.get("measured_regime") == "cool_flame":
-            gap_explanation = (
-                f"Reality gap ({reality_gap_pct:.1f}%) is governed by low-temperature negative temperature coefficient (NTC) "
-                f"kinetics and non-luminous CO radical recombination matching NASA PSI-117 CIR flight data."
-            )
-        elif tgt_vg < 2.5:
-            gap_explanation = (
-                f"Reality gap ({reality_gap_pct:.1f}%) arises from diffusive-thermal cellular fingering instability "
-                f"and large spherical radiative standoff losses (rf/rs ~ 10) in quiescent microgravity."
-            )
-        elif "SAFFIRE" in best_match["id"]:
-            gap_explanation = (
-                f"Reality gap ({reality_gap_pct:.1f}%) is attributed to thick PMMA heat-sink conduction "
-                f"and Cygnus flow-tunnel boundary layer velocity gradients (h = 150 W/m²·K)."
-            )
-        else:
-            gap_explanation = (
-                f"Reality gap ({reality_gap_pct:.1f}%) reflects three-dimensional radiative cooling from microgravity "
-                f"soot envelopes and convective strain rate deviations."
-            )
+                    e_f = abs(f_s - f_r) / max(1.0, f_r) * 100.0
+                    e_t = abs(t_s - t_r) / max(25.0, t_r) * 100.0
+                    e_p = abs(p_s - p_r) / max(101.3, p_r) * 100.0
+                    e_c = abs(c_s - c_r) / max(10.0, c_r) * 100.0
 
-        # Generate real empirical telemetry overlay (0 to 600s, 61 points)
-        real_front_cm = []
-        real_temp_c = []
-        real_press_kpa = []
-        real_co_ppm = []
+                    pt_err = 0.40 * e_f + 0.30 * e_t + 0.15 * e_p + 0.15 * e_c
+                    point_errors.append(pt_err)
 
-        curr_rf = 0.0
-        curr_rt = (best_match["measured_tf_k"] - 273.15) if real_vf > 0 else 25.0
-        curr_rp = best_match["pressure_atm"] * 101.3
-        curr_rco = 5.0
+                mape_pct = sum(point_errors) / max(1, len(point_errors))
+                reality_gap_pct = round(min(100.0, max(2.1, mape_pct)), 1)
+            else:
+                if real_vf > 0.0:
+                    reality_gap_pct = round(abs(sim_vf - real_vf) / max(0.2, real_vf) * 100.0, 1)
+                else:
+                    reality_gap_pct = round(min(100.0, sim_vf * 35.0), 1)
 
-        for s_idx in range(61):
-            t_s = s_idx * 10
-            real_front_cm.append(round(curr_rf, 2))
-            # Real temperature decay/saturation
-            t_eff = 25.0 + (curr_rt - 25.0) * min(1.0, (t_s / 120.0)) * 0.15 if real_vf > 0 else 25.0
-            real_temp_c.append(round(t_eff, 1))
-            real_press_kpa.append(round(curr_rp + (t_eff - 25.0) * 0.18, 1))
-            real_co_ppm.append(round(curr_rco, 1))
+            sim_to_real_confidence_pct = max(5.0, min(99.5, round(100.0 - reality_gap_pct, 1)))
 
-            curr_rf = min(100.0, curr_rf + real_vf * 0.1 * 10.0)
-            if real_vf > 0:
-                curr_rco += 0.07 * 10.0
+            # Formulate physical explanation of gap
+            if reality_gap_pct < 8.0:
+                gap_explanation = (
+                    f"Minimal reality gap ({reality_gap_pct:.1f}%): Theoretical de Ris/Arrhenius kinetic prediction "
+                    f"closely reproduces empirical flight telemetry from {best_match.get('investigation', best_match.get('title'))}."
+                )
+            elif best_match.get("measured_regime") == "cool_flame":
+                gap_explanation = (
+                    f"Reality gap ({reality_gap_pct:.1f}%) is governed by low-temperature negative temperature coefficient (NTC) "
+                    f"kinetics and non-luminous CO radical recombination matching NASA PSI-117 CIR flight data."
+                )
+            elif tgt_vg < 2.5:
+                gap_explanation = (
+                    f"Reality gap ({reality_gap_pct:.1f}%) arises from diffusive-thermal cellular fingering instability "
+                    f"and large spherical radiative standoff losses (rf/rs ~ 10) in quiescent microgravity."
+                )
+            elif "SAFFIRE" in best_match.get("id", ""):
+                gap_explanation = (
+                    f"Reality gap ({reality_gap_pct:.1f}%) is attributed to thick PMMA heat-sink conduction "
+                    f"and Cygnus flow-tunnel boundary layer velocity gradients (h = 150 W/m²·K)."
+                )
+            else:
+                gap_explanation = (
+                    f"Reality gap ({reality_gap_pct:.1f}%) reflects three-dimensional radiative cooling from microgravity "
+                    f"soot envelopes and convective strain rate deviations."
+                )
 
-        real_data_overlay = {
-            "time_s": [s_idx * 10 for s_idx in range(61)],
-            "t_sec": [s_idx * 10 for s_idx in range(61)],
-            "front_cm": real_front_cm,
-            "measured_front_cm": real_front_cm,
-            "cabin_temp_c": real_temp_c,
-            "measured_cabin_temp_c": real_temp_c,
-            "cabin_pressure_kpa": real_press_kpa,
-            "measured_cabin_pressure_kpa": real_press_kpa,
-            "co_ppm": real_co_ppm,
-            "measured_co_ppm": real_co_ppm
-        }
+            real_data_overlay = {
+                "has_direct_flight_data": True,
+                "status": "calibrated",
+                "run_id": best_match.get("id"),
+                "mission": best_match.get("mission", ""),
+                "investigation": best_match.get("investigation", ""),
+                "verified_url": best_match.get("url", ""),
+                "points": discrete_pts,
+                "t_sec": [pt.get("t_sec", 0) for pt in discrete_pts],
+                "measured_front_cm": [pt.get("front_cm", 0.0) for pt in discrete_pts],
+                "measured_cabin_temp_c": [pt.get("cabin_temp_c", 25.0) for pt in discrete_pts],
+                "measured_cabin_pressure_kpa": [pt.get("cabin_pressure_kpa", 101.3) for pt in discrete_pts],
+                "measured_co_ppm": [pt.get("co_ppm", 5.0) for pt in discrete_pts],
+                "sensor_sigma": [pt.get("sensor_sigma", 0.5) for pt in discrete_pts]
+            }
 
         return {
             "status": "calibrated",
+            "has_direct_flight_data": has_direct_flight_data,
             "top_matches": top_matches,
             "best_match": best_match,
             "reality_gap_pct": reality_gap_pct,
@@ -1236,7 +1318,7 @@ class NASACombustionKnowledgeRetriever:
                 "sim_flame_temp_k": sim_tf,
                 "real_flame_temp_k": real_tf,
                 "sim_regime": sim_tel.get("flame_color_mode", "sooty_yellow"),
-                "real_regime": best_match["measured_regime"]
+                "real_regime": best_match.get("measured_regime", "hot_flame")
             },
             "real_data_overlay": real_data_overlay
         }
