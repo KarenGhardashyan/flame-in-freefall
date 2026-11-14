@@ -186,7 +186,13 @@ if HAS_FASTAPI:
         Consumes 0 LLM tokens.
         """
         t0 = time.time()
-        params = payload.get("params", payload) if "params" in payload and isinstance(payload.get("params"), dict) else payload
+        raw_params = payload.get("params", payload) if "params" in payload and isinstance(payload.get("params"), dict) else payload
+        params = dict(raw_params) if isinstance(raw_params, dict) else {}
+        if isinstance(payload, dict):
+            if "match_by" in payload and "match_by" not in params:
+                params["match_by"] = payload["match_by"]
+            if "active_benchmark_id" in payload and "active_benchmark_id" not in params:
+                params["active_benchmark_id"] = payload["active_benchmark_id"]
         eval_res = evaluate_fire_safety(params)
         nearest = find_nearest_nasa_benchmark(params)
         sim_to_real = compute_sim_to_real(params, eval_res)

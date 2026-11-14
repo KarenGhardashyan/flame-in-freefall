@@ -88,7 +88,7 @@ def ask_gemini_safety_officer(
             try:
                 from google import genai
                 from google.genai import types
-                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=15000))
                 response = client.models.generate_content(
                     model=candidate_model,
                     contents=prompt,
@@ -400,7 +400,7 @@ Remember:
             try:
                 from google import genai
                 from google.genai import types
-                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=15000))
                 response = client.models.generate_content(
                     model=candidate_model,
                     contents=prompt,
@@ -543,6 +543,8 @@ Pipeline & Graph options:
 - needs_prompt: bool (true)
 - needs_sim_to_real: bool (true)
 - graph_metric: string in ["temp", "pressure", "co", "spread"]. Choose the most relevant parameter mentioned.
+- match_by: string in ["physics", "safety", "telemetry"]. Default: "physics"
+- active_benchmark_id: optional string with historical flight test ID (e.g. "SAFFIRE-V-02", "SAFFIRE-V-01", "PSI-117-01", "BASS-II-R09", "APOLLO-13").
 
 You MUST respond strictly with a valid JSON object in this format:
 {
@@ -560,7 +562,9 @@ You MUST respond strictly with a valid JSON object in this format:
     "needs_graph": true,
     "needs_prompt": true,
     "needs_sim_to_real": true,
-    "graph_metric": "temp"
+    "graph_metric": "temp",
+    "match_by": "physics",
+    "active_benchmark_id": null
   },
   "summary": "Engineering summary of the mission scenario",
   "suggested_query": "Precise question for the Gemini AI Safety Officer",
@@ -609,7 +613,7 @@ Parse all physical parameters, select the primary telemetry channel for the grap
             try:
                 from google import genai
                 from google.genai import types
-                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=4000))
+                client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=15000))
                 response = client.models.generate_content(
                     model=candidate_model,
                     contents=prompt,
@@ -734,6 +738,24 @@ def _compile_note_fallback(note_text: str, lang: str = "ru", is_out_of_domain: b
     else:
         graph_metric = "temp"
 
+    # 7. Match criteria & Benchmark selection
+    match_by = "physics"
+    if any(k in text for k in ["safety", "безопасност", "риск", "пожарн"]):
+        match_by = "safety"
+    elif any(k in text for k in ["telemetry", "телеметри", "кривы", "динамик"]):
+        match_by = "telemetry"
+
+    # Active benchmark ID extraction (e.g. "saffire-v-02", "psi-117", "apollo-13", "bass-ii-r09")
+    active_benchmark_id = None
+    bench_match = re.search(r"(saffire-[i|v|x]+-\d+|saffire\s+[i|v|x]+\s+\d+|psi-\d+(?:-\d+)?|bass-ii-r\d+|apollo-13|apollo\s+13|mir-1997|mir\s+1997)", text, re.IGNORECASE)
+    if bench_match:
+        raw_b = bench_match.group(1).upper().replace(" ", "-")
+        if "SAFFIRE-V-" in raw_b and len(raw_b.split("-")[-1]) == 1:
+            parts = raw_b.split("-")
+            parts[-1] = f"0{parts[-1]}"
+            raw_b = "-".join(parts)
+        active_benchmark_id = raw_b
+
     # Summaries & queries
     fuel_labels = {
         "pmma": "PMMA Solid (Оргстекло)",
@@ -746,7 +768,9 @@ def _compile_note_fallback(note_text: str, lang: str = "ru", is_out_of_domain: b
     if lang == "ru":
         summary = (
             f"Скомпилирована миссия: O₂={o2_pct:.1f}%, P={pressure_atm:.2f} атм, "
-            f"обдув={flow_velocity_cms:.1f} см/с, топливо={fuel_labels.get(fuel, fuel)}, V={cabin_volume_m3:.0f} м³."
+            f"обдув={flow_velocity_cms:.1f} см/с, топливо={fuel_labels.get(fuel, fuel)}, V={cabin_volume_m3:.0f} м³"
+            + (f", эталон={active_benchmark_id}" if active_benchmark_id else "")
+            + f", критерий={match_by.upper()}."
         )
         if graph_metric == "pressure":
             suggested_query = f"Оценить динамику нарастания избыточного давления в отсеке V={cabin_volume_m3:.0f} м³ и риск гидродинамического пробоя гермооболочки."
@@ -756,14 +780,16 @@ def _compile_note_fallback(note_text: str, lang: str = "ru", is_out_of_domain: b
             suggested_query = f"Рассчитать скорость распространения фронта пламени по U-кривой обдува при V_g={flow_velocity_cms:.1f} см/с."
         else:
             suggested_query = f"Оценить пожарный риск, тепловую нагрузку на корпус и статус безопасности при O₂={o2_pct:.1f}% и P={pressure_atm:.2f} атм."
-        followup = "Рекомендуется проверить калибровку с ближайшим летным эталоном NASA в узле Sim-to-Real."
+        followup = f"Калибровка Sim-to-Real настроена по критерию {match_by.upper()}" + (f" с эталоном {active_benchmark_id}." if active_benchmark_id else ".")
     else:
         summary = (
             f"Mission compiled: O₂={o2_pct:.1f}%, P={pressure_atm:.2f} atm, "
-            f"drift={flow_velocity_cms:.1f} cm/s, fuel={fuel}, volume={cabin_volume_m3:.0f} m³."
+            f"drift={flow_velocity_cms:.1f} cm/s, fuel={fuel}, volume={cabin_volume_m3:.0f} m³"
+            + (f", benchmark={active_benchmark_id}" if active_benchmark_id else "")
+            + f", match_by={match_by.upper()}."
         )
         suggested_query = f"Evaluate spacecraft fire safety margins and {graph_metric} telemetry under current ECLSS flow conditions."
-        followup = "Verify empirical fidelity against closest flight benchmark via the Sim-to-Real node."
+        followup = f"Sim-to-Real calibration configured by {match_by.upper()}."
 
     return {
         "source": "deterministic-note-compiler",
@@ -782,7 +808,9 @@ def _compile_note_fallback(note_text: str, lang: str = "ru", is_out_of_domain: b
             "needs_graph": True,
             "needs_prompt": True,
             "needs_sim_to_real": True,
-            "graph_metric": graph_metric
+            "graph_metric": graph_metric,
+            "match_by": match_by,
+            "active_benchmark_id": active_benchmark_id
         },
         "summary": summary,
         "suggested_query": suggested_query,

@@ -1124,12 +1124,11 @@ class NASACombustionKnowledgeRetriever:
     def compute_sim_to_real(self, params: Dict[str, Any], sim_result: Dict[str, Any]) -> Dict[str, Any]:
         """
         Computes Sim-to-Real Calibration & Reality Gap against 40+ real NASA flight runs:
-        - Finds Top-3 nearest NASA flight runs by normalized state-space distance
-        - Exponential similarity match_pct (0-100%)
+        - Honest, differentiated similarity scoring based on criteria: 'physics', 'safety', or 'telemetry'
+        - Sensitive confidence responding immediately to pressure, O2, and fuel type
+        - Clickable active benchmark selection for calibrated stream overlay
         - Strict Extrapolation Zone cutoff (< 55% match)
         - Empirical MAPE-based reality_gap_pct from discrete telemetry checkpoints
-        - Aligned confidence = max(5, 100 - reality_gap_pct)
-        - Discrete experimental points overlay with sensor sigma error bars
         """
         # Normalize target parameters
         o2_input = params.get("o2_vol_fraction")
@@ -1144,35 +1143,105 @@ class NASACombustionKnowledgeRetriever:
         tgt_fuel = str(params.get("fuel", "pmma")).lower()
         h2_pct = float(params.get("h2_conc_pct", params.get("flammable_gas_pct", 0.0)))
 
+        match_by = str(params.get("match_by", "physics")).lower()
+        if match_by not in ["physics", "safety", "telemetry"]:
+            match_by = "physics"
+
+        active_id = params.get("active_benchmark_id")
+
+        sim_tel = sim_result.get("sim_telemetry", {})
+        sim_safe = sim_result.get("safety_metrics", {})
+        sim_vf = float(sim_tel.get("spread_rate_mm_s", 0.0))
+        sim_tf = float(sim_tel.get("flame_temp_k", 298.0))
+        sim_fire_risk = float(sim_safe.get("fire_risk_pct", 50.0))
+        sim_expl_risk = float(sim_safe.get("explosion_risk_pct", 0.0))
+        sim_heat_flux = float(sim_safe.get("hull_heat_flux_kw_m2", 0.0))
+
         scored_runs = []
         for exp in self.experiments:
             b_o2 = float(exp.get("o2_percent", 21.0))
             b_p = float(exp.get("pressure_atm", 1.0))
             b_vg = float(exp.get("flow_velocity_cms", 10.0))
             b_fuel = str(exp.get("fuel", "pmma")).lower()
+            b_vf = float(exp.get("measured_vf_mm_s", 0.0))
+            b_tf = float(exp.get("measured_tf_k", 298.0))
+            b_regime = str(exp.get("measured_regime", "hot_flame")).lower()
+            exp_id = str(exp.get("id", "")).upper()
 
-            # Normalized distance in (O2, P, Vg)
-            d_o2 = (tgt_o2 - b_o2) / 10.0
-            d_p = (tgt_p - b_p) / 0.5
-            d_vg = (tgt_vg - b_vg) / 10.0
-            dist = math.sqrt(d_o2 * d_o2 + d_p * d_p + d_vg * d_vg)
+            if match_by == "physics":
+                # Thermodynamic state distance: (O2, P, Vg, fuel)
+                d_o2 = abs(tgt_o2 - b_o2) / 8.0
+                d_p = abs(tgt_p - b_p) / 0.35
+                d_vg = abs(tgt_vg - b_vg) / 8.0
 
-            # Fuel match bonus / penalty
-            if tgt_fuel and b_fuel:
                 if tgt_fuel == b_fuel:
-                    dist = max(0.0, dist - 0.40)
+                    d_fuel = 0.0
                 elif (tgt_fuel in ["pmma", "sibal"] and b_fuel in ["pmma", "sibal"]):
-                    dist = max(0.0, dist - 0.20)
+                    d_fuel = 0.35
                 else:
-                    dist += 0.50
+                    d_fuel = 1.20
 
-            # Gas explosive match bonus
-            if h2_pct >= 4.0 and "APOLLO-13" in exp.get("id", ""):
-                dist = max(0.0, dist - 0.60)
+                # Microgravity vs 1g mismatch penalty
+                d_grav = 0.60 if exp.get("gravity") == "1g" else 0.0
 
-            # Exponential smooth similarity (0 - 100%)
-            match_pct = round(100.0 * math.exp(-0.45 * dist), 1)
-            match_pct = max(0.0, min(100.0, match_pct))
+                # Gas leak match bonus/penalty
+                if h2_pct >= 4.0:
+                    if "APOLLO-13" in exp_id or "H2" in exp_id:
+                        d_fuel = 0.0
+                    else:
+                        d_fuel += 0.80
+
+                dist = math.sqrt(0.35 * (d_o2 ** 2) + 0.25 * (d_p ** 2) + 0.25 * (d_vg ** 2) + 0.15 * (d_fuel ** 2) + (d_grav ** 2))
+                match_pct = round(max(5.0, min(99.4, 100.0 * math.exp(-0.55 * dist))), 1)
+
+            elif match_by == "safety":
+                # Risk profile distance: Fire Risk, Explosion Risk, Heat Flux, Flame Temp
+                if b_regime == "extinction":
+                    b_fire_risk = 5.0
+                    b_expl_risk = 0.0
+                    b_flux = 0.2
+                elif b_regime == "cool_flame":
+                    b_fire_risk = 28.0
+                    b_expl_risk = 5.0
+                    b_flux = 1.2
+                else:
+                    b_fire_risk = min(95.0, max(20.0, 30.0 + b_vf * 15.0 + (b_o2 - 18.0) * 2.5))
+                    b_expl_risk = 92.0 if "APOLLO-13" in exp_id else 0.0
+                    b_flux = min(35.0, max(1.5, b_vf * 3.5 + (b_tf - 1200.0) / 40.0))
+
+                d_fire = abs(sim_fire_risk - b_fire_risk) / 30.0
+                d_expl = abs(sim_expl_risk - b_expl_risk) / 25.0
+                d_flux = abs(sim_heat_flux - b_flux) / 12.0
+                d_tf = abs(sim_tf - b_tf) / 450.0
+
+                dist = math.sqrt(0.35 * (d_fire ** 2) + 0.25 * (d_expl ** 2) + 0.20 * (d_flux ** 2) + 0.20 * (d_tf ** 2))
+                match_pct = round(max(5.0, min(99.4, 100.0 * math.exp(-0.50 * dist))), 1)
+
+            else:  # telemetry
+                # Telemetry dynamics distance: spread rate Vf, peak Tf, trajectory deviation
+                d_vf = abs(sim_vf - b_vf) / max(0.4, b_vf)
+                d_tf = abs(sim_tf - b_tf) / 450.0
+
+                disc_pts = exp.get("discrete_telemetry", [])
+                d_curve = 0.0
+                if disc_pts:
+                    sim_ts = sim_result.get("time_series", {})
+                    sim_f = sim_ts.get("front_cm", [])
+                    errs = []
+                    for pt in disc_pts:
+                        t_sec = pt.get("t_sec", 0)
+                        idx = min(len(sim_f) - 1, max(0, int(round(t_sec / 10.0)))) if sim_f else 0
+                        f_sim = sim_f[idx] if idx < len(sim_f) else 0.0
+                        f_real = pt.get("front_cm", 0.0)
+                        errs.append(abs(f_sim - f_real) / max(2.0, f_real))
+                    if errs:
+                        d_curve = sum(errs) / len(errs)
+                else:
+                    d_curve = d_vf
+
+                dist = math.sqrt(0.45 * (d_vf ** 2) + 0.30 * (d_tf ** 2) + 0.25 * (d_curve ** 2))
+                match_pct = round(max(5.0, min(99.4, 100.0 * math.exp(-0.55 * dist))), 1)
+
             scored_runs.append((dist, match_pct, exp))
 
         # Sort by distance (lowest dist / highest match)
@@ -1185,20 +1254,37 @@ class NASACombustionKnowledgeRetriever:
             item["match_pct"] = m_pct
             top_matches.append(item)
 
-        best_match = top_matches[0]
+        # Active benchmark selection (if specified by user click or Jarvis)
+        best_match = None
+        if active_id:
+            for m in top_matches:
+                if str(m.get("id", "")).upper() == str(active_id).upper():
+                    best_match = m
+                    break
+            if not best_match:
+                for d, m_pct, exp in scored_runs:
+                    if str(exp.get("id", "")).upper() == str(active_id).upper():
+                        best_match = dict(exp)
+                        best_match["match_pct"] = m_pct
+                        break
+
+        if not best_match:
+            best_match = top_matches[0]
+
+        active_match_id = best_match.get("id")
+        for m in top_matches:
+            m["is_active"] = (m.get("id") == active_match_id)
+
         best_match_pct = best_match.get("match_pct", 0.0)
 
-        sim_tel = sim_result.get("sim_telemetry", {})
-        sim_vf = float(sim_tel.get("spread_rate_mm_s", 0.0))
         real_vf = float(best_match.get("measured_vf_mm_s", 0.0))
-        sim_tf = float(sim_tel.get("flame_temp_k", 298.0))
         real_tf = float(best_match.get("measured_tf_k", 298.0))
 
         # Check Extrapolation Zone threshold (55.0%)
         if best_match_pct < 55.0:
             has_direct_flight_data = False
             reality_gap_pct = round(max(35.0, (100.0 - best_match_pct) * 0.75), 1)
-            sim_to_real_confidence_pct = max(5.0, min(99.5, round(100.0 - reality_gap_pct, 1)))
+            sim_to_real_confidence_pct = max(5.0, min(99.4, round(0.50 * best_match_pct + 0.50 * (100.0 - reality_gap_pct), 1)))
             gap_explanation = (
                 f"EXTRAPOLATION ZONE — NO DIRECT FLIGHT TELEMETRY (match: {best_match_pct:.1f}% < 55.0% threshold). "
                 f"Operational conditions (O₂={tgt_o2:.1f}%, P={tgt_p:.2f} atm, Vg={tgt_vg:.1f} cm/s, fuel={tgt_fuel}) "
@@ -1259,7 +1345,8 @@ class NASACombustionKnowledgeRetriever:
                 else:
                     reality_gap_pct = round(min(100.0, sim_vf * 35.0), 1)
 
-            sim_to_real_confidence_pct = max(5.0, min(99.5, round(100.0 - reality_gap_pct, 1)))
+            # Sensitive sim_to_real_confidence: weighted average of parameter match & trajectory accuracy
+            sim_to_real_confidence_pct = max(5.0, min(99.4, round(0.50 * best_match_pct + 0.50 * (100.0 - reality_gap_pct), 1)))
 
             # Formulate physical explanation of gap
             if reality_gap_pct < 8.0:
@@ -1307,6 +1394,8 @@ class NASACombustionKnowledgeRetriever:
         return {
             "status": "calibrated",
             "has_direct_flight_data": has_direct_flight_data,
+            "match_by": match_by,
+            "active_benchmark_id": active_match_id,
             "top_matches": top_matches,
             "best_match": best_match,
             "reality_gap_pct": reality_gap_pct,

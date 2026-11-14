@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v2';
+  const STORAGE_KEY = 'flame_blueprint_graph_v3';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -590,15 +590,31 @@
         targetVar.setParams(compiled.params);
       }
 
-      // Set graph channel if specified
-      if (compiled.pipeline && compiled.pipeline.graph_metric) {
+      // Set graph channel and Sim-to-Real criteria/benchmark if specified
+      if (compiled.pipeline) {
         state.nodes.forEach(n => {
-          if (n.type === 'graph') {
+          if (n.type === 'simtoreal') {
+            if (compiled.pipeline.match_by && typeof n.setMatchBy === 'function') {
+              n.setMatchBy(compiled.pipeline.match_by);
+            }
+            if (compiled.pipeline.active_benchmark_id && typeof n.setActiveBenchmark === 'function') {
+              n.setActiveBenchmark(compiled.pipeline.active_benchmark_id);
+            }
+          } else if (n.type === 'graph' && compiled.pipeline.graph_metric) {
             n.setChannel(compiled.pipeline.graph_metric);
           } else if (n.type === 'prompt' && compiled.suggested_query) {
             n.setQuery(compiled.suggested_query);
           }
         });
+      }
+    }
+  }
+
+  function triggerVariableEvaluate() {
+    for (const n of state.nodes.values()) {
+      if (n.type === 'variable') {
+        n.queueEvaluate();
+        return;
       }
     }
   }
@@ -816,10 +832,16 @@
 
     async evaluate() {
       try {
+        const s2rNode = Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+        const payload = Object.assign({}, this.params, {
+          match_by: s2rNode ? s2rNode.matchBy : 'physics',
+          active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null
+        });
+
         const res = await fetch(API_EVAL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.params)
+          body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -847,6 +869,8 @@
   class SimToRealNode extends BaseNode {
     constructor(id, x, y) {
       super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, 420);
+      this.matchBy = 'physics';
+      this.activeBenchmarkId = null;
       this.init();
     }
 
@@ -885,8 +909,22 @@
           </div>
         </div>
 
-        <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; margin-top: 4px;">
-          Top-3 Flight Benchmarks (NASA PSI & Saffire):
+        <div class="s2r-match-by-container">
+          <span class="s2r-match-by-label">MATCH BY:</span>
+          <div class="s2r-match-by-toggle">
+            <button class="btn-match-by ${this.matchBy === 'physics' ? 'active' : ''}" id="${this.id}-btn-physics" data-match="physics">PHYSICS</button>
+            <button class="btn-match-by ${this.matchBy === 'safety' ? 'active' : ''}" id="${this.id}-btn-safety" data-match="safety">SAFETY</button>
+            <button class="btn-match-by ${this.matchBy === 'telemetry' ? 'active' : ''}" id="${this.id}-btn-telemetry" data-match="telemetry">TELEMETRY</button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">
+            Top-3 Flight Benchmarks:
+          </div>
+          <div style="font-size: 9px; font-family: var(--font-mono); color: #06B6D4;">
+            (Click to set Active Benchmark)
+          </div>
         </div>
         <div class="s2r-matches-list" id="${this.id}-matches-list">
           <div class="s2r-match-item">Awaiting physical evaluation stream...</div>
@@ -898,6 +936,33 @@
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
+      this.bindCriteriaEvents();
+    }
+
+    bindCriteriaEvents() {
+      const matchBtns = this.element.querySelectorAll('.btn-match-by');
+      matchBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const mode = btn.dataset.match;
+          if (mode) this.setMatchBy(mode);
+        });
+      });
+    }
+
+    setMatchBy(mode) {
+      if (!['physics', 'safety', 'telemetry'].includes(mode)) return;
+      this.matchBy = mode;
+      const matchBtns = this.element.querySelectorAll('.btn-match-by');
+      matchBtns.forEach(b => {
+        b.classList.toggle('active', b.dataset.match === mode);
+      });
+      triggerVariableEvaluate();
+    }
+
+    setActiveBenchmark(benchmarkId) {
+      this.activeBenchmarkId = benchmarkId;
+      triggerVariableEvaluate();
     }
 
     onReceiveData(data) {
@@ -910,6 +975,18 @@
       if (!this.data) return;
       const s2r = this.data.sim_to_real;
       if (!s2r) return;
+
+      if (s2r.match_by && s2r.match_by !== this.matchBy) {
+        this.matchBy = s2r.match_by;
+        const matchBtns = this.element.querySelectorAll('.btn-match-by');
+        matchBtns.forEach(b => {
+          b.classList.toggle('active', b.dataset.match === this.matchBy);
+        });
+      }
+
+      if (s2r.active_benchmark_id) {
+        this.activeBenchmarkId = s2r.active_benchmark_id;
+      }
 
       const confVal = s2r.sim_to_real_confidence_pct || 85.0;
       const gapVal = s2r.reality_gap_pct || 15.0;
@@ -950,15 +1027,19 @@
         }
       }
 
-      // Top matches
+      // Top matches with clickable cards and active benchmark highlight
       const matchesList = this.element.querySelector(`#${this.id}-matches-list`);
       if (matchesList && Array.isArray(s2r.top_matches)) {
-        matchesList.innerHTML = s2r.top_matches.slice(0, 3).map((m, idx) => `
-          <div class="s2r-match-item">
+        const activeId = s2r.active_benchmark_id || this.activeBenchmarkId || (s2r.best_match ? s2r.best_match.id : null);
+        matchesList.innerHTML = s2r.top_matches.slice(0, 3).map((m, idx) => {
+          const isActive = (m.id === activeId || m.is_active === true);
+          return `
+          <div class="s2r-match-item ${isActive ? 'active-benchmark' : ''}" data-benchmark-id="${sanitize(m.id || '')}">
             <div class="s2r-match-top">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span class="s2r-rank-tag">#${idx + 1}</span>
                 <span class="s2r-match-title">${sanitize(m.id || '')} &middot; ${sanitize(m.investigation || m.title || '')}</span>
+                ${isActive ? '<span class="s2r-active-badge">ACTIVE BENCHMARK</span>' : ''}
               </div>
               <span class="s2r-match-score">${(m.match_pct || 90).toFixed(1)}%</span>
             </div>
@@ -968,13 +1049,29 @@
               <span>V_g: ${m.flow_velocity_cms} cm/s</span>
               <span>Regime: ${(m.measured_regime || 'nominal').toUpperCase()}</span>
             </div>
-            <div>
-              <a href="${m.url || 'https://psi.nasa.gov'}" target="_blank" rel="noopener noreferrer" class="s2r-link">
-                View Official Investigation Telemetry ↗
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <a href="${m.url || 'https://psi.nasa.gov'}" target="_blank" rel="noopener noreferrer" class="s2r-link" onclick="event.stopPropagation()">
+                View Investigation Telemetry ↗
               </a>
+              <span style="font-family: var(--font-mono); font-size: 9px; color: ${isActive ? '#06B6D4' : 'var(--text-muted)'}; font-weight: ${isActive ? '700' : '400'};">
+                ${isActive ? '● Active Calibration Reference' : 'Click to select as reference'}
+              </span>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
+
+        // Attach click listeners to cards
+        const cardEls = matchesList.querySelectorAll('.s2r-match-item');
+        cardEls.forEach(card => {
+          card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bId = card.dataset.benchmarkId;
+            if (bId) {
+              this.setActiveBenchmark(bId);
+            }
+          });
+        });
       }
 
       // Explanation
@@ -1735,6 +1832,17 @@
       const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
       const hasDirectFlightData = simToReal && (simToReal.has_direct_flight_data === true);
 
+      // Check stream source: 'calibrated' if incoming wire from simtoreal, 'eval' if from variable or direct
+      const incomingWires = state.wires.filter(w => w.toNode === this.id);
+      let streamSource = 'eval';
+      for (const w of incomingWires) {
+        const src = state.nodes.get(w.fromNode);
+        if (src && src.type === 'simtoreal') {
+          streamSource = 'calibrated';
+          break;
+        }
+      }
+
       const tSec = (series && series.t_sec) ? series.t_sec : [0, 100, 200, 300, 400, 500, 600];
       let yValues = [];
       let yMinValues = [];
@@ -1776,12 +1884,38 @@
         strokeColor = '#A855F7';
       }
 
-      if (hasDirectFlightData && overlay && Array.isArray(overlay.points)) {
+      // Discrete flight points only if in calibrated stream
+      if (streamSource === 'calibrated' && hasDirectFlightData && overlay && Array.isArray(overlay.points)) {
         yRealPoints = overlay.points;
       }
 
-      let allNumbers = [...yValues, ...yMaxValues, ...yMinValues];
-      if (hasDirectFlightData && yRealPoints.length > 0) {
+      // Compute calibrated series against active benchmark points
+      let yCalibrated = [];
+      if (streamSource === 'calibrated' && hasDirectFlightData && overlay && Array.isArray(overlay.points) && overlay.points.length > 0) {
+        yCalibrated = tSec.map((t, idx) => {
+          const rawVal = yValues[idx];
+          let closestPt = overlay.points[0];
+          let minDt = Math.abs(closestPt.t_sec - t);
+          for (const pt of overlay.points) {
+            const dt = Math.abs(pt.t_sec - t);
+            if (dt < minDt) {
+              minDt = dt;
+              closestPt = pt;
+            }
+          }
+          const realVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
+                        : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
+                        : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                        : closestPt.co_ppm;
+          if (realVal !== undefined) {
+            return rawVal + 0.70 * (realVal - rawVal);
+          }
+          return rawVal;
+        });
+      }
+
+      let allNumbers = [...yValues, ...yMaxValues, ...yMinValues, ...yCalibrated];
+      if (streamSource === 'calibrated' && hasDirectFlightData && yRealPoints.length > 0) {
         yRealPoints.forEach(pt => {
           const v = (this.selectedChannel === 'spread') ? pt.front_cm
                   : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
@@ -1865,11 +1999,14 @@
         ctx.restore();
       }
 
-      // Draw Main SIM (Physics) Line
+      // 1. Draw SIM RAW Line (dashed in Calibrated Stream, solid in Eval Stream)
       if (tSec.length > 1 && yValues.length === tSec.length) {
         ctx.save();
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2.0;
+        ctx.lineWidth = streamSource === 'calibrated' ? 1.6 : 2.0;
+        if (streamSource === 'calibrated') {
+          ctx.setLineDash([5, 4]);
+        }
         ctx.beginPath();
 
         tSec.forEach((t, idx) => {
@@ -1880,9 +2017,36 @@
         });
         ctx.stroke();
 
+        if (streamSource === 'eval') {
+          const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
+          areaGrad.addColorStop(0, strokeColor + '30');
+          areaGrad.addColorStop(1, strokeColor + '00');
+          ctx.fillStyle = areaGrad;
+          ctx.lineTo(padLeft + plotW, padTop + plotH);
+          ctx.lineTo(padLeft, padTop + plotH);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 2. Draw SIM CALIBRATED Line (ONLY in Calibrated Stream)
+      if (streamSource === 'calibrated' && yCalibrated.length === tSec.length) {
+        ctx.save();
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        tSec.forEach((t, idx) => {
+          const px = padLeft + (t / 600) * plotW;
+          const py = padTop + plotH - ((yCalibrated[idx] - yMin) / (yMax - yMin)) * plotH;
+          if (idx === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+
         const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotH);
-        areaGrad.addColorStop(0, strokeColor + '30');
-        areaGrad.addColorStop(1, strokeColor + '00');
+        areaGrad.addColorStop(0, 'rgba(0, 229, 255, 0.22)');
+        areaGrad.addColorStop(1, 'rgba(0, 229, 255, 0.00)');
         ctx.fillStyle = areaGrad;
         ctx.lineTo(padLeft + plotW, padTop + plotH);
         ctx.lineTo(padLeft, padTop + plotH);
@@ -1891,80 +2055,82 @@
         ctx.restore();
       }
 
-      // Draw REAL (NASA Flight) or Extrapolation Banner
-      if (hasDirectFlightData && yRealPoints.length > 0) {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        yRealPoints.forEach((pt, pIdx) => {
-          const t = pt.t_sec;
-          const val = (this.selectedChannel === 'spread') ? pt.front_cm
-                    : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
-                    : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
-                    : pt.co_ppm;
-          const px = padLeft + (t / 600) * plotW;
-          const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
-          if (pIdx === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.stroke();
-        ctx.restore();
-
-        yRealPoints.forEach(pt => {
-          const t = pt.t_sec;
-          const val = (this.selectedChannel === 'spread') ? pt.front_cm
-                    : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
-                    : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
-                    : pt.co_ppm;
-          const sigma = pt.sensor_sigma || 0.5;
-          const sigmaScale = (this.selectedChannel === 'spread') ? sigma * 0.85
-                           : (this.selectedChannel === 'temp') ? sigma * 2.2
-                           : (this.selectedChannel === 'pressure') ? sigma * 0.35
-                           : sigma * 1.8;
-
-          const px = padLeft + (t / 600) * plotW;
-          const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
-          const pyTop = padTop + plotH - ((val + sigmaScale - yMin) / (yMax - yMin)) * plotH;
-          const pyBot = padTop + plotH - ((val - sigmaScale - yMin) / (yMax - yMin)) * plotH;
-
+      // 3. Draw REAL (NASA Flight) or Extrapolation Banner (ONLY in Calibrated Stream)
+      if (streamSource === 'calibrated') {
+        if (hasDirectFlightData && yRealPoints.length > 0) {
           ctx.save();
-          ctx.strokeStyle = '#F59E0B';
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
           ctx.lineWidth = 1.2;
-
+          ctx.setLineDash([4, 4]);
           ctx.beginPath();
-          ctx.moveTo(px, pyTop);
-          ctx.lineTo(px, pyBot);
-          ctx.moveTo(px - 3, pyTop); ctx.lineTo(px + 3, pyTop);
-          ctx.moveTo(px - 3, pyBot); ctx.lineTo(px + 3, pyBot);
+          yRealPoints.forEach((pt, pIdx) => {
+            const t = pt.t_sec;
+            const val = (this.selectedChannel === 'spread') ? pt.front_cm
+                      : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
+                      : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                      : pt.co_ppm;
+            const px = padLeft + (t / 600) * plotW;
+            const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+            if (pIdx === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          ctx.restore();
+
+          yRealPoints.forEach(pt => {
+            const t = pt.t_sec;
+            const val = (this.selectedChannel === 'spread') ? pt.front_cm
+                      : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
+                      : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                      : pt.co_ppm;
+            const sigma = pt.sensor_sigma || 0.5;
+            const sigmaScale = (this.selectedChannel === 'spread') ? sigma * 0.85
+                             : (this.selectedChannel === 'temp') ? sigma * 2.2
+                             : (this.selectedChannel === 'pressure') ? sigma * 0.35
+                             : sigma * 1.8;
+
+            const px = padLeft + (t / 600) * plotW;
+            const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+            const pyTop = padTop + plotH - ((val + sigmaScale - yMin) / (yMax - yMin)) * plotH;
+            const pyBot = padTop + plotH - ((val - sigmaScale - yMin) / (yMax - yMin)) * plotH;
+
+            ctx.save();
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 1.2;
+
+            ctx.beginPath();
+            ctx.moveTo(px, pyTop);
+            ctx.lineTo(px, pyBot);
+            ctx.moveTo(px - 3, pyTop); ctx.lineTo(px + 3, pyTop);
+            ctx.moveTo(px - 3, pyBot); ctx.lineTo(px + 3, pyBot);
+            ctx.stroke();
+
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          });
+        } else {
+          ctx.save();
+          const bannerW = 270;
+          const bannerH = 24;
+          const bx = padLeft + (plotW - bannerW) / 2;
+          const by = padTop + (plotH - bannerH) / 2;
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+          ctx.strokeStyle = '#F59E0B';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(bx, by, bannerW, bannerH, 4);
+          ctx.fill();
           ctx.stroke();
 
           ctx.fillStyle = '#F59E0B';
-          ctx.beginPath();
-          ctx.arc(px, py, 3.2, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.font = '8.5px "JetBrains Mono"';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠ NO MATCHING NASA FLIGHT DATA (EXTRAPOLATION ZONE)', bx + bannerW / 2, by + 15);
           ctx.restore();
-        });
-      } else {
-        ctx.save();
-        const bannerW = 270;
-        const bannerH = 24;
-        const bx = padLeft + (plotW - bannerW) / 2;
-        const by = padTop + (plotH - bannerH) / 2;
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
-        ctx.strokeStyle = '#F59E0B';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(bx, by, bannerW, bannerH, 4);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#F59E0B';
-        ctx.font = '8.5px "JetBrains Mono"';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠ NO MATCHING NASA FLIGHT DATA (EXTRAPOLATION ZONE)', bx + bannerW / 2, by + 15);
-        ctx.restore();
+        }
       }
 
       // Carbon-Free H2 Banner for CO Channel
@@ -1995,15 +2161,23 @@
       ctx.font = '9px "JetBrains Mono"';
       ctx.textAlign = 'right';
 
-      if (hasDirectFlightData && yRealPoints.length > 0) {
-        ctx.fillStyle = '#F59E0B';
-        ctx.fillText('● REAL (NASA Flight ±σ)', w - padRight, padTop - 6);
+      if (streamSource === 'calibrated') {
+        if (hasDirectFlightData && yRealPoints.length > 0) {
+          ctx.fillStyle = '#F59E0B';
+          ctx.fillText('● REAL NASA FLIGHT (±σ)', w - padRight, padTop - 6);
 
-        ctx.fillStyle = strokeColor;
-        ctx.fillText('■ SIM ±1σ (Physics)', w - padRight - 130, padTop - 6);
+          ctx.fillStyle = '#00E5FF';
+          ctx.fillText('━ SIM CALIBRATED', w - padRight - 145, padTop - 6);
+
+          ctx.fillStyle = strokeColor;
+          ctx.fillText('┄ SIM RAW', w - padRight - 250, padTop - 6);
+        } else {
+          ctx.fillStyle = strokeColor;
+          ctx.fillText('┄ SIM RAW (Physics Extrapolation)', w - padRight, padTop - 6);
+        }
       } else {
         ctx.fillStyle = strokeColor;
-        ctx.fillText('■ SIM ±1σ (Pure Physics Extrapolation)', w - padRight, padTop - 6);
+        ctx.fillText('━ SIM RAW (Physical Model)', w - padRight, padTop - 6);
       }
       ctx.restore();
 
@@ -2083,12 +2257,47 @@
 
       const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
       const isH2 = this.selectedChannel === 'co' && isH2Fuel;
-      const simValDisplay = isH2 ? 'N/A (carbon-free H2 fuel)' : `${val} ${unit}`;
+      const simValDisplay = isH2 ? 'N/A (carbon-free H2 fuel)' : `${val.toFixed(1)} ${unit}`;
+
+      // Check stream source
+      const incomingWires = state.wires.filter(w => w.toNode === this.id);
+      let streamSource = 'eval';
+      for (const w of incomingWires) {
+        const src = state.nodes.get(w.fromNode);
+        if (src && src.type === 'simtoreal') {
+          streamSource = 'calibrated';
+          break;
+        }
+      }
 
       tooltip.style.display = 'block';
       tooltip.style.left = `${mx + 10}px`;
       tooltip.style.top = `30px`;
-      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${simValDisplay}</b>${realStr}`;
+
+      if (streamSource === 'calibrated') {
+        let calValDisplay = simValDisplay;
+        if (!isH2 && hasDirectFlightData && overlay && Array.isArray(overlay.points) && overlay.points.length > 0) {
+          let closestPt = overlay.points[0];
+          let minDt = Math.abs(closestPt.t_sec - tHover);
+          for (const pt of overlay.points) {
+            const dt = Math.abs(pt.t_sec - tHover);
+            if (dt < minDt) {
+              minDt = dt;
+              closestPt = pt;
+            }
+          }
+          const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
+                     : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
+                     : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                     : closestPt.co_ppm;
+          if (rVal !== undefined && typeof val === 'number') {
+            calValDisplay = `${(val + 0.70 * (rVal - val)).toFixed(1)} ${unit}`;
+          }
+        }
+        tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; <span style="color:#00E5FF; font-weight:700;">CALIBRATED: ${calValDisplay}</span> &middot; SIM RAW: <b>${simValDisplay}</b>${realStr}`;
+      } else {
+        tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM RAW: <b>${simValDisplay}</b>`;
+      }
     }
   }
 
@@ -2705,6 +2914,9 @@
     try {
       if (localStorage.getItem('flame_blueprint_graph')) {
         localStorage.removeItem('flame_blueprint_graph');
+      }
+      if (localStorage.getItem('flame_blueprint_graph_v2')) {
+        localStorage.removeItem('flame_blueprint_graph_v2');
       }
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;

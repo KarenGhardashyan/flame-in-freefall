@@ -76,15 +76,19 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   box-sizing: border-box;
   z-index: 1000;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  gap: 8px;
 }
 
 .brand-section, .topbar-brand, .topbar .brand-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: max-content;
   flex-shrink: 0;
 }
@@ -127,11 +131,20 @@ html, body {
 .scenarios-section {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: rgba(15, 23, 42, 0.6);
-  padding: 3px 6px;
+  padding: 2px 5px;
   border-radius: 6px;
   border: 1px solid #1E293B;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.scenarios-section::-webkit-scrollbar {
+  display: none;
 }
 
 .scenario-label {
@@ -147,10 +160,11 @@ html, body {
   border: 1px solid transparent;
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 4px 8px;
+  font-size: 10px;
+  padding: 3px 6px;
   border-radius: 4px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
 
@@ -171,7 +185,8 @@ html, body {
 .actions-section {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
 .btn-bar {
@@ -179,13 +194,14 @@ html, body {
   border: 1px solid var(--border-card);
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 5px 10px;
+  font-size: 10px;
+  padding: 4px 7px;
   border-radius: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
 
@@ -205,14 +221,15 @@ html, body {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.05em;
-  padding: 3px 8px;
+  padding: 3px 7px;
   border-radius: 4px;
   background: rgba(0, 229, 255, 0.08);
   color: var(--color-go);
   border: 1px solid rgba(0, 229, 255, 0.25);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .connection-dot {
@@ -1247,6 +1264,56 @@ select {
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
+.s2r-match-by-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+}
+
+.s2r-match-by-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.s2r-match-by-toggle {
+  display: flex;
+  gap: 3px;
+}
+
+.btn-match-by {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-match-by:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-match-by.active {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: #06B6D4;
+  color: #00E5FF;
+  font-weight: 700;
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.35);
+}
+
 .s2r-matches-list {
   display: flex;
   flex-direction: column;
@@ -1261,11 +1328,31 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: border-color 0.15s ease;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .s2r-match-item:hover {
   border-color: #06B6D4;
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.s2r-match-item.active-benchmark {
+  border-color: #06B6D4 !important;
+  background: rgba(6, 182, 212, 0.10) !important;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
+}
+
+.s2r-active-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #06B6D4;
+  color: #05070B;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .s2r-match-top {
