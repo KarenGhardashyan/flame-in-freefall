@@ -10,6 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Three.js + OrbitControls CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
     body {
       background-color: #060913;
@@ -20,17 +23,9 @@
       background: linear-gradient(135deg, rgba(16, 24, 48, 0.9) 0%, rgba(10, 15, 30, 0.95) 100%);
       border: 1px solid rgba(59, 130, 246, 0.2);
     }
-    .glow-cyan {
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
-    }
-    .glow-orange {
-      box-shadow: 0 0 20px rgba(249, 115, 22, 0.25);
-    }
-    .glow-red {
-      box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
-    }
-    canvas#flameCanvas {
-      background: radial-gradient(circle, #0a0e1f 0%, #03060f 100%);
+    #threeContainer canvas {
+      border-radius: 0.5rem;
+      outline: none;
     }
   </style>
 </head>
@@ -59,7 +54,7 @@
       </div>
       <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
         <i data-lucide="cloud" class="w-3.5 h-3.5 text-blue-400"></i>
-        <span class="text-slate-300">FIREBASE: <span class="text-blue-400 font-bold">microgravitational-flame</span></span>
+        <span class="text-slate-300">HOSTING: <span class="text-blue-400 font-bold">microgravitational-flame</span></span>
       </div>
       <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
         <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -71,34 +66,42 @@
   <!-- MAIN DASHBOARD CONTENT -->
   <main class="flex-1 p-6 grid grid-cols-12 gap-6 max-w-[1720px] mx-auto w-full">
 
-    <!-- LEFT COLUMN: CONTROLS & FLAME VIEW (5 Cols) -->
+    <!-- LEFT COLUMN: CONTROLS & THREE.JS 3D FLAME VIEW (5 Cols) -->
     <div class="col-span-12 lg:col-span-5 flex flex-col space-y-6">
 
-      <!-- FLAME CANVAS & PHYSICAL REGIME -->
+      <!-- 3D FLAME VIEWPORT & REGIME -->
       <div class="nasa-gradient rounded-xl p-5 flex flex-col relative overflow-hidden">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center space-x-2">
-            <i data-lucide="eye" class="w-4 h-4 text-cyan-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Microgravity Flame Dynamics</h2>
+            <i data-lucide="box" class="w-4 h-4 text-cyan-400"></i>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Interactive 3D Microgravity Simulation</h2>
           </div>
           <span id="flameRegimeBadge" class="text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
             0g SPHERICAL DIFFUSION
           </span>
         </div>
 
-        <div class="relative w-full aspect-square max-h-[340px] rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center">
-          <canvas id="flameCanvas" width="400" height="340" class="w-full h-full"></canvas>
+        <!-- 3D Container -->
+        <div class="relative w-full aspect-square max-h-[360px] rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center bg-slate-950">
+          <div id="threeContainer" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
           
-          <div class="absolute bottom-3 left-3 bg-black/60 backdrop-blur px-3 py-1.5 rounded text-[11px] font-mono border border-slate-800/80 space-y-0.5">
+          <div class="absolute bottom-3 left-3 bg-black/70 backdrop-blur px-3 py-1.5 rounded text-[11px] font-mono border border-slate-800/80 space-y-0.5 pointer-events-none">
             <div>Droplet $d(t)$: <span id="dispDiameter" class="text-cyan-300 font-bold">2.00 mm</span></div>
             <div>Standoff $r_f/r_s$: <span id="dispStandoff" class="text-amber-300 font-bold">8.42</span></div>
             <div>Flame Temp: <span id="dispTemp" class="text-rose-400 font-bold">1812 K</span></div>
           </div>
 
-          <div class="absolute top-3 right-3 flex flex-col space-y-1">
-            <button id="toggleGravityBtn" class="bg-slate-900/80 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-cyan-500/40 text-cyan-300 font-mono transition">
+          <div class="absolute top-3 right-3 flex flex-col space-y-2">
+            <button id="toggleGravityBtn" class="bg-slate-900/90 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-cyan-500/50 text-cyan-300 font-mono transition shadow-lg">
               SWITCH TO 1g
             </button>
+            <button id="toggleCoolFlameBtn" class="bg-slate-900/90 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-indigo-500/50 text-indigo-300 font-mono transition shadow-lg">
+              TEST COOL FLAME
+            </button>
+          </div>
+
+          <div class="absolute top-3 left-3 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-0.5 rounded pointer-events-none">
+            Rotate: Left Click + Drag | Zoom: Scroll
           </div>
         </div>
 
@@ -108,7 +111,7 @@
             <div id="dispK" class="text-cyan-400 font-bold mt-0.5">0.512 mm²/s</div>
           </div>
           <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
-            <span class="text-slate-400 text-[10px]">LIFETIME (tb)</span>
+            <span class="text-slate-400 text-[10px]">BURNOUT TIME (tb)</span>
             <div id="dispTb" class="text-amber-400 font-bold mt-0.5">7.81 s</div>
           </div>
           <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
@@ -123,11 +126,11 @@
         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-2">
             <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Boundary & Atmospheric Controls</h2>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Atmospheric & Droplet Boundary Controls</h2>
           </div>
-          <button id="btnRunSim" class="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-4 py-1.5 rounded transition text-white flex items-center space-x-1.5">
+          <button id="btnRunSim" class="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-4 py-1.5 rounded transition text-white flex items-center space-x-1.5 shadow-md shadow-blue-600/30">
             <i data-lucide="play" class="w-3.5 h-3.5"></i>
-            <span>RUN SIMULATION</span>
+            <span>START BURNING (d²)</span>
           </button>
         </div>
 
@@ -145,13 +148,13 @@
           <!-- Oxygen Concentration -->
           <div>
             <div class="flex justify-between text-slate-300 font-mono mb-1">
-              <span>Cabin Oxygen ($X_{O_2}$) — Limit: 15%</span>
+              <span>Cabin Oxygen ($X_{O_2}$) — Extinction Limit: 15%</span>
               <span id="labelO2" class="text-cyan-400 font-bold">21.0%</span>
             </div>
             <input id="sliderO2" type="range" min="10" max="30" step="0.5" value="21" class="w-full accent-blue-500 cursor-pointer">
             <div id="flammabilityAlert" class="mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-              <span>O2 > 15% (Chung K. Law Flammable Regime)</span>
+              <span>O2 > 15% (Chung K. Law: Active Flammability Regime)</span>
             </div>
           </div>
 
@@ -175,7 +178,7 @@
         <!-- d^2 Trajectory Chart -->
         <div class="nasa-gradient rounded-xl p-4 flex flex-col">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Droplet Vaporization $d^2(t)$</span>
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Droplet Evaporation $d^2(t)$</span>
             <span class="text-[10px] text-cyan-400 font-mono">Chung K. Law Ch. 6</span>
           </div>
           <div class="h-44 w-full">
@@ -186,7 +189,7 @@
         <!-- S-Curve Limit Phenomena Chart -->
         <div class="nasa-gradient rounded-xl p-4 flex flex-col">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Combustion S-Curve (Da vs T)</span>
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Damköhler S-Curve (Da vs T)</span>
             <span class="text-[10px] text-amber-400 font-mono">NASA PSI-117 Extinction</span>
           </div>
           <div class="h-44 w-full">
@@ -218,11 +221,11 @@
           <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
             <div class="text-slate-400 text-[10px]">BLUE/IR SCATTERING</div>
             <div id="valScatterRatio" class="text-slate-200 font-bold text-sm mt-0.5">1.25</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">> 2.4 = Soot / < 1.6 = Dust</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">&gt; 2.4 = Soot / &lt; 1.6 = Dust</div>
           </div>
           <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
             <div class="text-slate-400 text-[10px]">FALSE ALARM FILTER</div>
-            <div id="valFilterStatus" class="text-emerald-400 font-bold text-sm mt-0.5">SUPPRESSION OFF</div>
+            <div id="valFilterStatus" class="text-emerald-400 font-bold text-sm mt-0.5">FILTER OFF</div>
             <div class="text-[10px] text-slate-500 mt-0.5">Rejects zero-g dust</div>
           </div>
           <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
@@ -245,7 +248,7 @@
             <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
             <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Gemini AI Spacecraft Fire Safety Officer</h2>
           </div>
-          <button id="btnAskGemini" class="bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/50 text-purple-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5">
+          <button id="btnAskGemini" class="bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/50 text-purple-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5 shadow-md">
             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i>
             <span>GENERATE ADVISORY</span>
           </button>
@@ -274,24 +277,22 @@
     </div>
   </footer>
 
-  <!-- SCRIPT LOGIC -->
+  <!-- THREE.JS 3D SCENE & APPLICATION LOGIC -->
   <script>
     lucide.createIcons();
 
     // State Variables
-    let currentGravity = 0.0; // 0g
+    let currentGravity = 0.0; // 0.0 = 0g, 1.0 = 1g
     let d0 = 2.0;
     let o2Frac = 0.21;
     let pressure = 1.0;
+    let isCoolFlame = false;
     let isSimulating = false;
-    let animationFrameId = null;
-
-    // Canvas & Context
-    const canvas = document.getElementById("flameCanvas");
-    const ctx = canvas.getContext("2d");
+    let simInterval = null;
 
     // UI Elements
     const toggleGravityBtn = document.getElementById("toggleGravityBtn");
+    const toggleCoolFlameBtn = document.getElementById("toggleCoolFlameBtn");
     const flameRegimeBadge = document.getElementById("flameRegimeBadge");
     const sliderD0 = document.getElementById("sliderD0");
     const labelD0 = document.getElementById("labelD0");
@@ -305,7 +306,187 @@
     const btnAskGemini = document.getElementById("btnAskGemini");
     const geminiOutput = document.getElementById("geminiOutput");
 
-    // Charts Setup
+    // ==========================================
+    // THREE.JS 3D INITIALIZATION
+    // ==========================================
+    const container = document.getElementById("threeContainer");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040714);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(0, 0, 16);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 25;
+    controls.minDistance = 5;
+
+    // Ambient & Point Lights
+    const ambientLight = new THREE.AmbientLight(0x223355, 1.5);
+    scene.add(ambientLight);
+
+    const coreLight = new THREE.PointLight(0x38bdf8, 2, 20);
+    coreLight.position.set(0, 0, 0);
+    scene.add(coreLight);
+
+    // 1. Central Fuel Droplet (Liquid n-heptane)
+    const dropletGeo = new THREE.SphereGeometry(1, 32, 32);
+    const dropletMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.1,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.9,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.4
+    });
+    const dropletMesh = new THREE.Mesh(dropletGeo, dropletMat);
+    scene.add(dropletMesh);
+
+    // 2. Inner Reaction Zone (Blue/Radical Chemiluminescence Shell)
+    const innerFlameGeo = new THREE.SphereGeometry(1, 32, 32);
+    const innerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0x2563eb,
+      transparent: true,
+      opacity: 0.35,
+      wireframe: false,
+      side: THREE.BackSide
+    });
+    const innerFlameMesh = new THREE.Mesh(innerFlameGeo, innerFlameMat);
+    scene.add(innerFlameMesh);
+
+    // 3. Outer Flame Envelope (Hot Yellow-Orange Soot in 0g or Buoyant Plume in 1g)
+    const outerFlameGeo = new THREE.SphereGeometry(1, 32, 32);
+    const outerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending,
+      side: THREE.FrontSide
+    });
+    const outerFlameMesh = new THREE.Mesh(outerFlameGeo, outerFlameMat);
+    scene.add(outerFlameMesh);
+
+    // 4. Standoff Boundary Ring
+    const ringGeo = new THREE.RingGeometry(0.98, 1.0, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xfb923c,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.3
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.rotation.x = Math.PI / 2;
+    scene.add(ringMesh);
+
+    // 5. Surrounding Soot Particle System
+    const particleCount = 200;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      particlePositions[i] = (Math.random() - 0.5) * 8;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 8;
+      particlePositions[i + 2] = (Math.random() - 0.5) * 8;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xfbbf24,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending
+    });
+    const particleSystem = new THREE.Points(particleGeo, particleMat);
+    scene.add(particleSystem);
+
+    function update3DFlame(diamMm, standoff, gravity, coolFlame) {
+      const scale = 0.5; // visual units per mm
+      const dropRadius = (diamMm / 2) * scale;
+      dropletMesh.scale.set(dropRadius, dropRadius, dropRadius);
+
+      const flameRadius = dropRadius * standoff;
+
+      if (gravity === 0.0) {
+        // MICROGRAVITY (0g): Pure Sphericity
+        if (coolFlame) {
+          // Cool Flame (PSI-117): Low temperature, faint cyan glow, no soot
+          innerFlameMat.color.setHex(0x06b6d4);
+          innerFlameMat.opacity = 0.25;
+          outerFlameMat.color.setHex(0x38bdf8);
+          outerFlameMat.opacity = 0.18;
+          ringMat.color.setHex(0x22d3ee);
+          particleMat.opacity = 0.05; // No soot particles
+          coreLight.color.setHex(0x22d3ee);
+          coreLight.intensity = 0.8;
+          innerFlameMesh.scale.set(flameRadius * 0.7, flameRadius * 0.7, flameRadius * 0.7);
+          outerFlameMesh.scale.set(flameRadius, flameRadius, flameRadius);
+        } else {
+          // Hot diffusion flame in 0g
+          innerFlameMat.color.setHex(0x2563eb);
+          innerFlameMat.opacity = 0.35;
+          outerFlameMat.color.setHex(0xf97316);
+          outerFlameMat.opacity = 0.45;
+          ringMat.color.setHex(0xfb923c);
+          particleMat.opacity = 0.5;
+          coreLight.color.setHex(0xf97316);
+          coreLight.intensity = 2.5;
+          innerFlameMesh.scale.set(flameRadius * 0.6, flameRadius * 0.6, flameRadius * 0.6);
+          outerFlameMesh.scale.set(flameRadius, flameRadius, flameRadius);
+        }
+        ringMesh.scale.set(flameRadius * 0.95, flameRadius * 0.95, 1);
+        outerFlameMesh.position.set(0, 0, 0);
+        innerFlameMesh.position.set(0, 0, 0);
+      } else {
+        // NORMAL GRAVITY (1g): Buoyant Plume (Teardrop shape via stretch)
+        innerFlameMat.color.setHex(0x3b82f6);
+        outerFlameMat.color.setHex(0xef4444);
+        particleMat.opacity = 0.7;
+        coreLight.color.setHex(0xf59e0b);
+        coreLight.intensity = 3.0;
+
+        // Elongate along Y axis for buoyancy chimney
+        innerFlameMesh.scale.set(flameRadius * 0.7, flameRadius * 1.8, flameRadius * 0.7);
+        outerFlameMesh.scale.set(flameRadius * 0.9, flameRadius * 2.4, flameRadius * 0.9);
+        outerFlameMesh.position.set(0, flameRadius * 0.7, 0);
+        innerFlameMesh.position.set(0, flameRadius * 0.5, 0);
+        ringMesh.scale.set(flameRadius, flameRadius, 1);
+      }
+    }
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      // Subtle flame pulsation
+      const time = Date.now() * 0.003;
+      const pulse = 1.0 + Math.sin(time) * 0.03;
+      outerFlameMesh.scale.multiplyScalar(pulse);
+
+      // Rotate particle cloud slowly
+      particleSystem.rotation.y += 0.002;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize Handler
+    window.addEventListener('resize', () => {
+      if (!container) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // ==========================================
+    // CHARTS & UI INTERACTIONS
+    // ==========================================
     let d2Chart, sCurveChart, telemetryChart;
 
     function initCharts() {
@@ -406,86 +587,17 @@
       });
     }
 
-    // DRAW FLAME ON CANVAS
-    function drawFlame(diamMm, standoff, gravity, regime) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
-      // Scale: 1 mm ~ 12 pixels
-      const scale = 14;
-      const dropletRadiusPx = Math.max((diamMm / 2) * scale, 3);
-      const flameRadiusPx = dropletRadiusPx * standoff;
-
-      if (gravity === 0.0) {
-        // MICROGRAVITY (0g): Pure Spherical Symmetry
-        const grad = ctx.createRadialGradient(cx, cy, dropletRadiusPx, cx, cy, flameRadiusPx);
-        if (regime === 'COOL_FLAME') {
-          grad.addColorStop(0, 'rgba(34, 211, 238, 0.05)');
-          grad.addColorStop(0.7, 'rgba(56, 189, 248, 0.25)');
-          grad.addColorStop(1, 'rgba(14, 165, 233, 0)');
-        } else {
-          // Hot diffusion flame in 0g
-          grad.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
-          grad.addColorStop(0.5, 'rgba(37, 99, 235, 0.4)');
-          grad.addColorStop(0.85, 'rgba(249, 115, 22, 0.7)');
-          grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-        }
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, flameRadiusPx, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Standoff boundary ring
-        ctx.beginPath();
-        ctx.arc(cx, cy, flameRadiusPx * 0.9, 0, Math.PI * 2);
-        ctx.strokeStyle = regime === 'COOL_FLAME' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(251, 146, 60, 0.5)';
-        ctx.setLineDash([4, 4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else {
-        // NORMAL GRAVITY (1g): Buoyant Plume (Teardrop shape)
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.beginPath();
-        ctx.moveTo(0, dropletRadiusPx);
-        ctx.bezierCurveTo(flameRadiusPx * 0.8, 0, flameRadiusPx * 0.5, -flameRadiusPx * 2.2, 0, -flameRadiusPx * 2.8);
-        ctx.bezierCurveTo(-flameRadiusPx * 0.5, -flameRadiusPx * 2.2, -flameRadiusPx * 0.8, 0, 0, dropletRadiusPx);
-        
-        const plumeGrad = ctx.createLinearGradient(0, dropletRadiusPx, 0, -flameRadiusPx * 2.8);
-        plumeGrad.addColorStop(0, 'rgba(37, 99, 235, 0.8)');
-        plumeGrad.addColorStop(0.3, 'rgba(245, 158, 11, 0.8)');
-        plumeGrad.addColorStop(0.8, 'rgba(239, 68, 68, 0.7)');
-        plumeGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-        
-        ctx.fillStyle = plumeGrad;
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Draw Central Liquid Droplet
-      ctx.beginPath();
-      ctx.arc(cx, cy, dropletRadiusPx, 0, Math.PI * 2);
-      ctx.fillStyle = '#38bdf8';
-      ctx.shadowColor = '#0284c7';
-      ctx.shadowBlur = 8;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#e0f2fe';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
     // Toggle Gravity 0g <-> 1g
     toggleGravityBtn.addEventListener('click', () => {
       if (currentGravity === 0.0) {
         currentGravity = 1.0;
+        isCoolFlame = false;
         toggleGravityBtn.innerText = "SWITCH TO 0g";
         flameRegimeBadge.innerText = "1g BUOYANT PLUME";
         flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-amber-950 text-amber-300 border border-amber-800";
         document.getElementById("dispStandoff").innerText = "2.85";
         document.getElementById("dispK").innerText = "0.890 mm²/s";
+        document.getElementById("dispTemp").innerText = "1920 K";
       } else {
         currentGravity = 0.0;
         toggleGravityBtn.innerText = "SWITCH TO 1g";
@@ -493,18 +605,42 @@
         flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800";
         document.getElementById("dispStandoff").innerText = "8.42";
         document.getElementById("dispK").innerText = "0.512 mm²/s";
+        document.getElementById("dispTemp").innerText = "1812 K";
       }
-      drawFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, 'HOT_DIFFUSION');
+      update3DFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, isCoolFlame);
     });
 
-    // Slider Listeners
+    // Toggle Cool Flame
+    toggleCoolFlameBtn.addEventListener('click', () => {
+      if (currentGravity !== 0.0) {
+        currentGravity = 0.0;
+        toggleGravityBtn.innerText = "SWITCH TO 1g";
+      }
+      isCoolFlame = !isCoolFlame;
+      if (isCoolFlame) {
+        flameRegimeBadge.innerText = "COOL FLAME (NASA PSI-117)";
+        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse";
+        document.getElementById("dispTemp").innerText = "740 K";
+        document.getElementById("dispK").innerText = "0.185 mm²/s";
+        toggleCoolFlameBtn.innerText = "EXIT COOL FLAME";
+      } else {
+        flameRegimeBadge.innerText = "0g SPHERICAL DIFFUSION";
+        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800";
+        document.getElementById("dispTemp").innerText = "1812 K";
+        document.getElementById("dispK").innerText = "0.512 mm²/s";
+        toggleCoolFlameBtn.innerText = "TEST COOL FLAME";
+      }
+      update3DFlame(d0, 8.42, 0.0, isCoolFlame);
+    });
+
+    // Sliders
     sliderD0.addEventListener('input', (e) => {
       d0 = parseFloat(e.target.value);
       labelD0.innerText = d0.toFixed(1) + " mm";
       document.getElementById("dispDiameter").innerText = d0.toFixed(2) + " mm";
       const tb = (d0 * d0) / (currentGravity === 0 ? 0.512 : 0.890);
       document.getElementById("dispTb").innerText = tb.toFixed(2) + " s";
-      drawFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, 'HOT_DIFFUSION');
+      update3DFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, isCoolFlame);
     });
 
     sliderO2.addEventListener('input', (e) => {
@@ -512,10 +648,10 @@
       o2Frac = pct / 100.0;
       labelO2.innerText = pct.toFixed(1) + "%";
       if (pct < 15.0) {
-        flammabilityAlert.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i><span class="text-blue-400">O2 < 15%: SELF-EXTINGUISHED (Chung K. Law Safety Limit)</span>`;
+        flammabilityAlert.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i><span class="text-blue-400">O2 < 15%: INHERENTLY SELF-EXTINGUISHED (Chung K. Law Limit)</span>`;
         flammabilityAlert.className = "mt-1 text-[11px] font-mono text-blue-400 flex items-center space-x-1";
       } else {
-        flammabilityAlert.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">O2 ≥ 15%: Flammable Atmosphere Supported</span>`;
+        flammabilityAlert.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">O2 ≥ 15%: Active Combustion Supported</span>`;
         flammabilityAlert.className = "mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1";
       }
       lucide.createIcons();
@@ -526,7 +662,7 @@
       labelP.innerText = pressure.toFixed(1) + " bar";
     });
 
-    // Run Simulation Animation
+    // Run Simulation Animation (d^2 law burnout)
     btnRunSim.addEventListener('click', () => {
       let t = 0;
       let currD2 = d0 * d0;
@@ -536,25 +672,26 @@
       const timeArr = [];
       const d2Arr = [];
 
-      clearInterval(animationFrameId);
-      animationFrameId = setInterval(() => {
+      clearInterval(simInterval);
+      simInterval = setInterval(() => {
         t += dt;
         currD2 -= k * dt;
         if (currD2 <= 0) {
           currD2 = 0;
-          clearInterval(animationFrameId);
+          clearInterval(simInterval);
         }
         const currD = Math.sqrt(currD2);
-        const regime = (currentGravity === 0 && currD < 0.85 && currD > 0.1) ? 'COOL_FLAME' : 'HOT_DIFFUSION';
+        const autoCoolFlame = (currentGravity === 0 && currD < 0.85 && currD > 0.1);
         
         document.getElementById("dispDiameter").innerText = currD.toFixed(2) + " mm";
-        document.getElementById("dispTemp").innerText = regime === 'COOL_FLAME' ? '740 K' : '1812 K';
-        if (regime === 'COOL_FLAME') {
+        document.getElementById("dispTemp").innerText = autoCoolFlame ? '740 K' : (currentGravity === 0 ? '1812 K' : '1920 K');
+        
+        if (autoCoolFlame) {
           flameRegimeBadge.innerText = "COOL FLAME TRANSITION (PSI-117)";
-          flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-900 text-cyan-200 border border-cyan-500 animate-pulse";
+          flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse";
         }
         
-        drawFlame(currD, currentGravity === 0 ? 8.42 : 2.85, currentGravity, regime);
+        update3DFlame(currD, currentGravity === 0 ? 8.42 : 2.85, currentGravity, autoCoolFlame);
 
         timeArr.push(t.toFixed(1));
         d2Arr.push(Math.max(currD2, 0).toFixed(2));
@@ -566,13 +703,13 @@
       }, 50);
     });
 
-    // Run 30s Telemetry Test
+    // 30s Telemetry Test
     btnStreamDemo.addEventListener('click', () => {
       const phases = [
-        { name: "Phase 1: Nominal ISS Cabin", co: 2.5, ratio: 1.1, alert: "ALL_CLEAR", score: 0.04, color: "text-emerald-400", filter: "SUPPRESSION OFF" },
+        { name: "Phase 1: Nominal ISS Cabin", co: 2.5, ratio: 1.1, alert: "ALL_CLEAR", score: 0.04, color: "text-emerald-400", filter: "FILTER OFF" },
         { name: "Phase 2: Crew Dust Disturbance (False Alarm)", co: 3.2, ratio: 1.05, alert: "FALSE ALARM SUPPRESSED", score: 0.22, color: "text-blue-400", filter: "FILTER ENGAGED (DUST)" },
-        { name: "Phase 3: Rack Smoldering / Cool Flame Incubation", co: 18.5, ratio: 2.8, alert: "COOL FLAME INCUBATION", score: 0.58, color: "text-amber-400", filter: "SUPPRESSION OFF" },
-        { name: "Phase 4: Active 0g Combustion Outbreak", co: 64.0, ratio: 4.2, alert: "FIRE ALARM CRITICAL", score: 0.94, color: "text-rose-400", filter: "SUPPRESSION OFF" }
+        { name: "Phase 3: Rack Smoldering / Cool Flame Incubation", co: 18.5, ratio: 2.8, alert: "COOL FLAME INCUBATION", score: 0.58, color: "text-amber-400", filter: "FILTER OFF" },
+        { name: "Phase 4: Active 0g Combustion Outbreak", co: 64.0, ratio: 4.2, alert: "FIRE ALARM CRITICAL", score: 0.94, color: "text-rose-400", filter: "FILTER OFF" }
       ];
 
       let step = 0;
@@ -595,8 +732,8 @@
       }, 2500);
     });
 
-    // Gemini AI Trigger
-    function generateAiAdvisory(lastTelemetry) {
+    // Gemini AI Advisory Generator
+    function generateAiAdvisory() {
       geminiOutput.innerHTML = `
         <div class="text-cyan-400 font-bold flex items-center space-x-2">
           <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
@@ -636,10 +773,10 @@
       generateAiAdvisory();
     });
 
-    // Initialize Canvas & Charts on load
+    // Initialize on load
     window.addEventListener('load', () => {
       initCharts();
-      drawFlame(d0, 8.42, 0.0, 'HOT_DIFFUSION');
+      update3DFlame(d0, 8.42, 0.0, false);
     });
   </script>
 </body>
