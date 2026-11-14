@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f3ee;
+  --surface: #fffefa;
+  --line: #d9d5cd;
+  --text: #25231f;
+  --muted: #5e5b53;
+  --accent: #923813;
+}
+html { scroll-behavior: auto; }
+body { background: var(--bg); }
+.wrap { width: min(1190px, calc(100% - 48px)); }
+.top { background: #fdfbf6; }
+.bar { min-height: 56px; }
+.brand { color: #2e251d; }
+.mark { color: #9d411d; background: #f6e8da; border-color: #e5cbb9; }
+.header-link { color: #605144; font-size: 13px; }
+.intro { display: block; padding: 25px 0 19px; }
+.intro h1 {
+  font: 500 clamp(36px, 6.5vw, 65px)/1.03 Georgia, serif;
+  letter-spacing: -.047em;
+  margin: 0 0 6px;
+}
+.intro p { max-width: 720px; color: #5c574e; }
+.lab-nav {
+  display: flex;
+  border-bottom: 1px solid #cfc8bb;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+.lab-nav a {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 8px 4px 10px;
+  margin-bottom: -1px;
+  font-size: 15px;
+  border-bottom: 2px solid transparent;
+  font-weight: 650;
+}
+.lab-nav a span { font-size: 11px; color: #696154; font-weight: 500; }
+.lab-nav a[aria-current="page"] { color: var(--accent); border-color: #a6471c; }
+.lab-task { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; }
+.field-label { font-size: 13px; font-weight: 680; color: #3e372f; }
+.lab-task p { margin: 0 0 0 3px; color: var(--muted); font-size: 13px; }
+select {
+  background: #fffefa;
+  color: #25231f;
+  border-color: #beb7a9;
+  padding: 5px 8px;
+}
+#lab-case { width: min(254px,100%); }
+.workspace,.ship-layout { grid-template-columns: minmax(0, 1fr) minmax(295px, 325px); }
+.panel { border-radius: 10px; }
+.panelhead { padding: 9px 13px; }
+.panelhead h2 { font-size: 17px; margin: 0; }
+.panelhead .eyebrow { font-size: 10px; color: #61594e; letter-spacing: .045em; }
+.viewport,.ship-viewport { min-height: 285px; background: #101820; }
+.viewport-top { text-transform: none; }
+.viewport-bottom { color: #d6e3ea; }
+.scope-values b { color: #acdbea; }
+.phase,.phase[data-state="off"],.phase[data-state="warning"] {
+  color: #234b3b; background: #ebf3ec; border-color: #cdded0;
+  font-size: 12px;
+}
+.phase:before { background: #367d55; box-shadow: none; }
+.phase[data-state="off"] { color: #5e5a53; background: #efede7; border-color: #ddd6ca; }
+.phase[data-state="off"]:before { background: #777168; }
+.phase[data-state="warning"] { color: #833e1c; background: #fbefe3; border-color: #eed8c0; }
+.phase[data-state="warning"]:before { background: #bb611e; }
+.transport button,.presets button,#ship-cut {
+  background: #f6f3ed; border: 1px solid #cfc8bb; border-radius: 6px;
+  color: #43392e; min-height: 34px; padding: 5px 9px; font-size: 12px;
+}
+.transport button:hover,.presets button:hover,#ship-cut:hover { background: #ede7dc; filter: none; }
+#ship-cut[aria-pressed="true"] { background: #faecdf; border-color: #ba7856; }
+.transport #play,.transport #ignite,.ship-chamber .primary {
+  background: #963c17; border-color: #963c17; color: #fffaf3;
+}
+.transport #ignite:disabled { color: #6a6359; background: #eeebe4; border-color: #d7d1c5; }
+.transport #hold { color: #51483a; }
+.transport output { color: #4e473b; white-space: nowrap; }
+.slider output { color: #8b3d1d; }
+.preset-label,.model-label { color: #6a6054; font-family: inherit; letter-spacing: 0; font-size: 11px; }
+.params div { border-color: #e5dfd5; }
+.note { color: #60584c; }
+.source,.inline-source,.ship-method a { color: #833719; }
+.source { font-size: 12px; }
+.reference button,.evidence-mini img { border-color: #cfc8bb; }
+.evidence-mini,.vehicle-photo { color: #61594d; }
+.readouts { gap: 8px; margin-block: 9px; }
+.metric { background: #fffefa; padding: 7px 12px; }
+.metric>span { font: 600 12px/1.4 system-ui,sans-serif; letter-spacing: 0; color: #5e554a; }
+.metric strong { font-size: 23px; }
+.metric strong span { color: #665c4d; }
+.telemetry .plot { height: 235px; }
+.caption { color: #61584d; }
+.section { margin-top: 24px; }
+.section h2 { font: 500 27px Georgia,serif; letter-spacing: -.025em; }
+.report { color: #644b39; border-color: #c6b6a6; }
+.source-details { border-top: 1px solid var(--line); padding-top: 9px; }
+.source-details summary { cursor: pointer; color: #663820; font-weight: 650; margin-bottom: 10px; }
+.figure { color: #2e2a23; }
+.figure img,.ship-evidence img { background: #151b1f; }
+.ship-controls { padding: 10px 13px; }
+.ship-controls select { display: block; width: 100%; margin-top: 4px; }
+.end-note { font-size: 12px; margin: 8px 0; color: #413a30; padding: 7px 8px; border-left: 2px solid #b98564; background: #f7f0e7; }
+.inline-source { font-size: 12px; }
+.vehicle-photo img { border-color: #c7bdae; }
+.ship-evidence img { height: 218px; }
+footer { color: #645b4e; }
+dialog { background: #fffaf3; color: #25231f; border-color: #cec2b0; }
+dialog button { background: #f0e5d8; }
+@media(max-width: 740px) {
+  .wrap { width: calc(100% - 26px); }
+  .workspace,.ship-layout { grid-template-columns: minmax(0,1fr); }
+  .viewport,.ship-viewport { min-height: 235px; }
+  .lab-task { flex-wrap: wrap; }
+  .lab-task p { width: 100%; margin-left: 0; }
+}
+@media(max-width: 480px) {
+  .lab-nav { gap: 17px; }
+  .lab-nav a { flex-direction: column; gap: 0; font-size: 14px; }
+  .lab-task select { flex: 1; }
+  .metric { padding-inline: 6px; }
+  .metric>span { font-size: 10px; }
+  .metric strong { font-size: 19px; }
+  .ship-chamber .transport output { font-size: 11px; }
+  .viewport-top { top: 11px; }
+  .viewport-top span { font-size: 9px; }
+}
+.ship-milestones { display: flex; gap: 5px; flex-wrap: wrap; margin: 7px 0; }
+.ship-milestones button { color: #733818; background: #f6eee4; border: 1px solid #d9c4b4; padding: 4px 7px; border-radius: 5px; font-size: 11px; }
+.previous-releases summary { cursor: pointer; }
+.previous-releases a { display: inline-block; margin: 2px 7px 0 0; }
