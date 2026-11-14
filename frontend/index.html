@@ -24,16 +24,16 @@
       </div>
     </div>
 
-    <!-- QUICK SCENARIOS -->
-    <div class="scenarios-section">
-      <label class="scenario-label" for="scenario-select">Scenarios:</label>
-      <select id="scenario-select" class="scenario-dropdown" title="Select Flight / Hazard Scenario">
-        <option value="iss_nominal" selected>ISS Nominal (21%)</option>
-        <option value="saffire_v">Saffire V (Cygnus)</option>
-        <option value="psi117_cool">PSI-117 Cool Flame</option>
-        <option value="apollo13_h2">Apollo 13 (H₂ Blast)</option>
-        <option value="apollo1_o2">Apollo 1 (Flashover)</option>
-      </select>
+    <!-- ADD NODE TOOLBAR -->
+    <div class="add-nodes-section" title="Add node to blueprint canvas">
+      <span class="add-node-label">+ ADD NODE:</span>
+      <button class="btn-add-node" data-type="variable" title="Add Environment & Inflow Variables Node">+ ENV</button>
+      <button class="btn-add-node" data-type="sim" title="Add 2D Finite-Volume Physical Solver Node">+ SIM 2D</button>
+      <button class="btn-add-node" data-type="simtoreal" title="Add NASA Flight Grounding & Benchmarks Node">+ SIM-TO-REAL</button>
+      <button class="btn-add-node" data-type="graph" title="Add Time-Series Telemetry & Uncertainty Curve Node">+ GRAPH</button>
+      <button class="btn-add-node" data-type="table" title="Add NASA PSI Matrix 41-Run Table Node">+ TABLE</button>
+      <button class="btn-add-node" data-type="aidiff" title="Add 2-Pin Differential Safety Comparator Node">+ AI DIFF (2-PIN)</button>
+      <button class="btn-add-node" data-type="note" title="Add NOTE AI JARVIS Architect Node">+ NOTE AI</button>
     </div>
 
     <!-- TOP BAR ACTIONS -->
@@ -112,6 +112,14 @@
     <div class="context-item" data-action="spawn_graph">
       <div class="context-dot graph"></div>
       <span>+ Graph (Time Telemetry)</span>
+    </div>
+    <div class="context-item" data-action="spawn_table">
+      <div class="context-dot table"></div>
+      <span>+ Table (NASA PSI Matrix)</span>
+    </div>
+    <div class="context-item" data-action="spawn_aidiff">
+      <div class="context-dot aidiff"></div>
+      <span>+ AI Diff (2-Pin Comparator)</span>
     </div>
     <div class="context-item" data-action="spawn_prompt">
       <div class="context-dot prompt"></div>

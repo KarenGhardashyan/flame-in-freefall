@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v5';
+  const STORAGE_KEY = 'flame_blueprint_graph_v6';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -103,6 +103,38 @@
     const temp = document.createElement('div');
     temp.textContent = str;
     return temp.innerHTML;
+  }
+
+  // -------------------------------------------------------------------------
+  // GRAPH DAG TRAVERSAL HELPERS (BRANCH ISOLATION)
+  // -------------------------------------------------------------------------
+
+  function findDownstreamNode(startNodeId, targetType, visited = new Set()) {
+    if (visited.has(startNodeId)) return null;
+    visited.add(startNodeId);
+    const outgoing = state.wires.filter(w => w.fromNode === startNodeId);
+    for (const w of outgoing) {
+      const target = state.nodes.get(w.toNode);
+      if (!target) continue;
+      if (target.type === targetType) return target;
+      const deeper = findDownstreamNode(w.toNode, targetType, visited);
+      if (deeper) return deeper;
+    }
+    return null;
+  }
+
+  function findUpstreamNode(startNodeId, targetType, visited = new Set()) {
+    if (visited.has(startNodeId)) return null;
+    visited.add(startNodeId);
+    const incoming = state.wires.filter(w => w.toNode === startNodeId);
+    for (const w of incoming) {
+      const source = state.nodes.get(w.fromNode);
+      if (!source) continue;
+      if (source.type === targetType) return source;
+      const deeper = findUpstreamNode(w.fromNode, targetType, visited);
+      if (deeper) return deeper;
+    }
+    return null;
   }
 
   // =========================================================================
@@ -197,7 +229,7 @@
     const sender = state.nodes.get(fromNode);
     const receiver = state.nodes.get(toNode);
     if (sender && receiver && sender.data) {
-      receiver.onReceiveData(sender.data);
+      receiver.onReceiveData(sender.data, toPin);
     }
   }
 
@@ -213,7 +245,7 @@
     outgoing.forEach(w => {
       const target = state.nodes.get(w.toNode);
       if (target) {
-        target.onReceiveData(data);
+        target.onReceiveData(data, w.toPin);
       }
     });
   }
@@ -223,24 +255,26 @@
   // =========================================================================
 
   class BaseNode {
-    constructor(id, type, title, x, y, width = 340) {
+    constructor(id, type, title, x, y, width = 340, height = null) {
       this.id = id;
       this.type = type;
       this.title = title;
       this.x = x;
       this.y = y;
       this.width = width;
+      this.height = height;
       this.data = null;
       this.element = null;
     }
 
-    createDOM(headerExtra = '', portsHtml = '', bodyHtml = '') {
+    createDOM(headerExtra = '', portsHtml = '', bodyHtml = '', portsExtraClass = '') {
       const el = document.createElement('div');
       el.id = this.id;
       el.className = `bp-node node node-type-${this.type}`;
       el.style.left = `${this.x}px`;
       el.style.top = `${this.y}px`;
       el.style.width = `${this.width}px`;
+      if (this.height) el.style.height = `${this.height}px`;
 
       el.innerHTML = `
         <div class="node-header">
@@ -251,12 +285,14 @@
           </div>
           <button class="btn-node-close" title="Delete node">&times;</button>
         </div>
-        ${portsHtml ? `<div class="node-ports-bar">${portsHtml}</div>` : ''}
+        ${portsHtml ? `<div class="node-ports-bar ${portsExtraClass}">${portsHtml}</div>` : ''}
         <div class="node-body">${bodyHtml}</div>
+        <div class="node-resizer" title="Drag to resize card"></div>
       `;
 
       this.element = el;
       this.bindDragEvents();
+      this.bindResizeEvents();
 
       // Close button
       el.querySelector('.btn-node-close').addEventListener('click', (e) => {
@@ -280,6 +316,50 @@
       });
 
       return el;
+    }
+
+    bindResizeEvents() {
+      const resizer = this.element.querySelector('.node-resizer');
+      if (!resizer) return;
+      let startX = 0, startY = 0;
+      let startW = 0, startH = 0;
+      let isResizing = false;
+
+      resizer.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isResizing = true;
+        resizer.classList.add('resizing');
+        startX = e.clientX;
+        startY = e.clientY;
+        startW = this.element.offsetWidth;
+        startH = this.element.offsetHeight;
+
+        const onMouseMove = (ev) => {
+          if (!isResizing) return;
+          const dw = (ev.clientX - startX) / state.scale;
+          const dh = (ev.clientY - startY) / state.scale;
+          this.width = Math.max(260, Math.round(startW + dw));
+          this.height = Math.max(160, Math.round(startH + dh));
+          this.element.style.width = `${this.width}px`;
+          this.element.style.height = `${this.height}px`;
+          renderAllWires();
+          if (typeof this.onResize === 'function') {
+            this.onResize(this.width, this.height);
+          }
+        };
+
+        const onMouseUp = () => {
+          isResizing = false;
+          resizer.classList.remove('resizing');
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          saveGraphToLocalStorage();
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
     }
 
     bindDragEvents() {
@@ -324,9 +404,11 @@
       });
     }
 
-    onReceiveData(data) {
+    onReceiveData(data, toPin = 'in') {
       this.data = data;
     }
+
+    onResize(w, h) {}
 
     onDestroy() {}
   }
@@ -336,11 +418,12 @@
   // -------------------------------------------------------------------------
 
   class NoteNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, 380);
+    constructor(id, x, y, initialData = {}, width = 380, height = null) {
+      super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, width, height);
       this.noteText = 'Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s flow of PMMA in 28 m3. Check cabin pressure.';
       this.isRecording = false;
       this.recognition = null;
+      this.selectedLang = 'ru-RU';
       this.init();
     }
 
@@ -361,9 +444,17 @@
               <span class="voice-icon">🎙</span>
               <span class="voice-btn-text">VOICE INPUT</span>
             </button>
+            <div class="voice-lang-group">
+              <button class="btn-lang-toggle active" data-lang="ru-RU" id="${this.id}-lang-ru" title="Russian Language">RU</button>
+              <button class="btn-lang-toggle" data-lang="en-US" id="${this.id}-lang-en" title="English Language">EN</button>
+            </div>
             <button class="btn-compile-note" id="${this.id}-btn-compile" title="Compile note into Blueprint Architecture">
               <span>COMPILE TO BLUEPRINT</span>
             </button>
+          </div>
+
+          <div class="voice-status-wrapper">
+            <span class="voice-status-text" id="${this.id}-voice-status">Ready for voice input or typing</span>
           </div>
 
           <div class="note-presets-group">
@@ -393,15 +484,19 @@
 
     initSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const statusEl = this.element.querySelector(`#${this.id}-voice-status`);
       if (!SpeechRecognition) {
         this.recognition = null;
+        if (statusEl) {
+          statusEl.textContent = '⚠ Web Speech API not supported - type text manually';
+        }
         return;
       }
       try {
         const r = new SpeechRecognition();
         r.continuous = false;
         r.interimResults = false;
-        r.lang = 'ru-RU';
+        r.lang = this.selectedLang || 'ru-RU';
 
         r.onstart = () => {
           this.isRecording = true;
@@ -410,33 +505,60 @@
             btn.classList.add('recording');
             btn.querySelector('.voice-btn-text').textContent = 'LISTENING...';
           }
+          if (statusEl) {
+            statusEl.className = 'voice-status-text listening';
+            statusEl.textContent = '🎙 Listening... Speak flight parameters';
+          }
           showToast('Recording voice note... Speak flight parameters');
         };
 
         r.onresult = (e) => {
-          const transcript = e.results[0][0].transcript;
+          const transcript = e.results && e.results[0] && e.results[0][0] ? e.results[0][0].transcript : '';
           const textarea = this.element.querySelector(`#${this.id}-note-text`);
-          if (textarea) {
-            textarea.value = (textarea.value ? textarea.value + ' ' : '') + transcript;
+          if (textarea && transcript) {
+            textarea.value = (textarea.value ? textarea.value.trim() + ' ' : '') + transcript;
             this.noteText = textarea.value;
           }
+          if (statusEl) {
+            statusEl.className = 'voice-status-text success';
+            statusEl.textContent = '✓ Voice captured: "' + transcript + '". Compiling...';
+          }
           showToast('Voice note captured');
+          // Automatically trigger compilation to blueprint
+          setTimeout(() => {
+            this.compile();
+          }, 200);
         };
 
         r.onerror = (e) => {
           console.warn('[SpeechRec] Error:', e.error);
-          showToast('Voice note error: ' + e.error);
+          if (statusEl) {
+            statusEl.className = 'voice-status-text';
+            if (e.error === 'not-allowed') {
+              statusEl.textContent = '⚠ Microphone permission denied in browser';
+            } else {
+              statusEl.textContent = `⚠ Voice input notice: ${e.error}`;
+            }
+          }
+          showToast('Voice note notice: ' + e.error);
           this.resetVoiceButton();
         };
 
         r.onend = () => {
           this.resetVoiceButton();
+          if (statusEl && !statusEl.classList.contains('success')) {
+            statusEl.className = 'voice-status-text';
+            statusEl.textContent = 'Ready for voice input or typing';
+          }
         };
 
         this.recognition = r;
       } catch (err) {
         console.warn('[SpeechRec] Init failed:', err);
         this.recognition = null;
+        if (statusEl) {
+          statusEl.textContent = '⚠ Speech recognition unavailable';
+        }
       }
     }
 
@@ -455,9 +577,32 @@
         this.noteText = textarea.value;
       });
 
+      const langRu = this.element.querySelector(`#${this.id}-lang-ru`);
+      const langEn = this.element.querySelector(`#${this.id}-lang-en`);
+      if (langRu && langEn) {
+        langRu.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectedLang = 'ru-RU';
+          langRu.classList.add('active');
+          langEn.classList.remove('active');
+          if (this.recognition) this.recognition.lang = 'ru-RU';
+          showToast('Voice language set to RU');
+        });
+        langEn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectedLang = 'en-US';
+          langEn.classList.add('active');
+          langRu.classList.remove('active');
+          if (this.recognition) this.recognition.lang = 'en-US';
+          showToast('Voice language set to EN');
+        });
+      }
+
       const voiceBtn = this.element.querySelector(`#${this.id}-btn-voice`);
       voiceBtn.addEventListener('click', () => {
         if (!this.recognition) {
+          const statusEl = this.element.querySelector(`#${this.id}-voice-status`);
+          if (statusEl) statusEl.textContent = '⚠ Web Speech API not supported - type text manually';
           showToast('SpeechRecognition API not available in this browser. Please type.');
           return;
         }
@@ -465,6 +610,7 @@
           this.recognition.stop();
         } else {
           try {
+            this.recognition.lang = this.selectedLang || 'ru-RU';
             this.recognition.start();
           } catch (e) {
             console.warn('[SpeechRec] Start error:', e);
@@ -502,12 +648,13 @@
       compileBtn.innerHTML = `<div class="spinner"></div> <span>COMPILING...</span>`;
 
       try {
+        const lang = (this.selectedLang === 'en-US') ? 'en' : 'ru';
         const res = await fetch(API_NOTE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             note_text: this.noteText,
-            language: 'ru'
+            language: lang
           })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -565,18 +712,10 @@
     }
 
     applyCompiledPlan(compiled) {
-      // Find connected nodes from this node's out pin
-      const outgoingWires = state.wires.filter(w => w.fromNode === this.id);
-      let targetVar = null;
+      // Find connected variable node down the wire
+      let targetVar = findDownstreamNode(this.id, 'variable');
 
-      outgoingWires.forEach(w => {
-        const target = state.nodes.get(w.toNode);
-        if (target && target.type === 'variable') {
-          targetVar = target;
-        }
-      });
-
-      // If no directly wired Variable node, find the first Variable node on the canvas
+      // If no directly wired Variable node, fallback to the first Variable node
       if (!targetVar) {
         for (const n of state.nodes.values()) {
           if (n.type === 'variable') {
@@ -590,27 +729,37 @@
         targetVar.setParams(compiled.params);
       }
 
-      // Set graph channel and Sim-to-Real criteria/benchmark if specified
-      if (compiled.pipeline) {
-        state.nodes.forEach(n => {
-          if (n.type === 'simtoreal') {
-            if (compiled.pipeline.match_by && typeof n.setMatchBy === 'function') {
-              n.setMatchBy(compiled.pipeline.match_by);
-            }
-            if (compiled.pipeline.active_benchmark_id && typeof n.setActiveBenchmark === 'function') {
-              n.setActiveBenchmark(compiled.pipeline.active_benchmark_id);
-            }
-          } else if (n.type === 'graph' && compiled.pipeline.graph_metric) {
-            n.setChannel(compiled.pipeline.graph_metric);
-          } else if (n.type === 'prompt' && compiled.suggested_query) {
-            n.setQuery(compiled.suggested_query);
+      // Set downstream Sim-to-Real criteria/benchmark if specified in pipeline
+      if (compiled.pipeline && targetVar) {
+        const targetS2r = findDownstreamNode(targetVar.id, 'simtoreal');
+        if (targetS2r) {
+          if (compiled.pipeline.match_by && typeof targetS2r.setMatchBy === 'function') {
+            targetS2r.setMatchBy(compiled.pipeline.match_by);
           }
-        });
+          if (compiled.pipeline.active_benchmark_id && typeof targetS2r.setActiveBenchmark === 'function') {
+            targetS2r.setActiveBenchmark(compiled.pipeline.active_benchmark_id);
+          }
+        }
+        const targetGraph = findDownstreamNode(targetVar.id, 'graph');
+        if (targetGraph && compiled.pipeline.graph_metric) {
+          targetGraph.setChannel(compiled.pipeline.graph_metric);
+        }
+        const targetPrompt = findDownstreamNode(targetVar.id, 'prompt');
+        if (targetPrompt && compiled.suggested_query) {
+          targetPrompt.setQuery(compiled.suggested_query);
+        }
       }
     }
   }
 
-  function triggerVariableEvaluate() {
+  function triggerVariableEvaluate(sourceNodeId = null) {
+    if (sourceNodeId) {
+      const varNode = findUpstreamNode(sourceNodeId, 'variable');
+      if (varNode) {
+        varNode.queueEvaluate();
+        return;
+      }
+    }
     for (const n of state.nodes.values()) {
       if (n.type === 'variable') {
         n.queueEvaluate();
@@ -624,8 +773,8 @@
   // -------------------------------------------------------------------------
 
   class VariableNode extends BaseNode {
-    constructor(id, x, y, initialParams = {}) {
-      super(id, 'variable', 'ENV VARIABLES // FEED', x, y, 320);
+    constructor(id, x, y, initialParams = {}, width = 320, height = null) {
+      super(id, 'variable', 'ENV VARIABLES // FEED', x, y, width, height);
       this.params = Object.assign({
         o2_percent: 21.0,
         pressure_atm: 1.0,
@@ -832,7 +981,7 @@
 
     async evaluate() {
       try {
-        const s2rNode = Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+        const s2rNode = findDownstreamNode(this.id, 'simtoreal') || Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
         const payload = Object.assign({}, this.params, {
           match_by: s2rNode ? s2rNode.matchBy : 'physics',
           active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null,
@@ -869,13 +1018,20 @@
   // -------------------------------------------------------------------------
 
   class SimToRealNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, 440);
+    constructor(id, x, y, initialData = {}, width = 440, height = null) {
+      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, width, height);
       this.matchBy = 'physics';
       this.filterMission = 'all';
       this.filterFuel = 'all';
       this.activeBenchmarkId = null;
       this.init();
+    }
+
+    triggerBranchEvaluate() {
+      const varNode = findUpstreamNode(this.id, 'variable') || Array.from(state.nodes.values()).find(n => n.type === 'variable');
+      if (varNode) {
+        varNode.queueEvaluate();
+      }
     }
 
     init() {
@@ -978,13 +1134,13 @@
             this.element.querySelectorAll(`#${this.id}-filter-mission .btn-s2r-filter`).forEach(b => {
               b.classList.toggle('active', b.dataset.val === val);
             });
-            triggerVariableEvaluate();
+            this.triggerBranchEvaluate();
           } else if (fType === 'fuel') {
             this.filterFuel = val;
             this.element.querySelectorAll(`#${this.id}-filter-fuel .btn-s2r-filter`).forEach(b => {
               b.classList.toggle('active', b.dataset.val === val);
             });
-            triggerVariableEvaluate();
+            this.triggerBranchEvaluate();
           } else if (fType === 'match') {
             this.setMatchBy(val);
           }
@@ -999,16 +1155,16 @@
       matchBtns.forEach(b => {
         b.classList.toggle('active', b.dataset.val === mode);
       });
-      triggerVariableEvaluate();
+      this.triggerBranchEvaluate();
     }
 
     setActiveBenchmark(benchmarkId) {
       this.activeBenchmarkId = benchmarkId;
-      triggerVariableEvaluate();
+      this.triggerBranchEvaluate();
     }
 
-    onReceiveData(data) {
-      super.onReceiveData(data);
+    onReceiveData(data, toPin = 'in') {
+      super.onReceiveData(data, toPin);
       this.updateSimToRealDisplay();
       propagateDataFrom(this.id, data);
     }
@@ -1121,6 +1277,434 @@
       if (explCard && s2r.gap_explanation) {
         explCard.innerHTML = `<span style="font-family: var(--font-mono); font-size: 10px; color: #06B6D4; font-weight: 700;">PHYSICAL GROUNDING ANALYSIS:</span><br>${sanitize(s2r.gap_explanation)}`;
       }
+
+      // Check if a TABLE node is already connected
+      const hasConnectedTable = findDownstreamNode(this.id, 'table') || findUpstreamNode(this.id, 'table');
+      let tableBanner = this.element.querySelector(`#${this.id}-table-banner`);
+      if (!hasConnectedTable) {
+        if (!tableBanner) {
+          tableBanner = document.createElement('div');
+          tableBanner.id = `${this.id}-table-banner`;
+          tableBanner.className = 'smart-connect-banner';
+          if (explCard && explCard.parentNode) {
+            explCard.parentNode.insertBefore(tableBanner, explCard.nextSibling);
+          }
+        }
+        tableBanner.style.display = 'flex';
+        tableBanner.innerHTML = `
+          <span>NASA PSI Matrix table available</span>
+          <button class="smart-connect-btn" id="${this.id}-btn-connect-table">[+ Connect TABLE]</button>
+        `;
+        const btnConnect = tableBanner.querySelector(`#${this.id}-btn-connect-table`);
+        if (btnConnect) {
+          btnConnect.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tableNode = spawnNode('table', this.x + this.width + 30, this.y);
+            addWire(this.id, 'out', tableNode.id, 'in');
+            tableBanner.style.display = 'none';
+            showToast('Connected TABLE // NASA PSI MATRIX node');
+          });
+        }
+      } else if (tableBanner) {
+        tableBanner.style.display = 'none';
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // NODE 1.75: TABLE (NASA PSI Flight Matrix)
+  // -------------------------------------------------------------------------
+
+  class TableNode extends BaseNode {
+    constructor(id, x, y, initialData = {}, width = 580, height = 440) {
+      super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height);
+      this.activeBenchmarkId = null;
+      this.filterText = '';
+      this.init();
+    }
+
+    init() {
+      const portsHtml = `
+        <div class="pin pin-in" data-pin="in">
+          <div class="pin-socket"></div>
+          <span>IN (Eval Stream)</span>
+        </div>
+        <div class="pin pin-out" data-pin="out">
+          <span>OUT (Selected Benchmark)</span>
+          <div class="pin-socket"></div>
+        </div>
+      `;
+
+      const bodyHtml = `
+        <div class="table-node-toolbar">
+          <input type="text" class="table-node-search" id="${this.id}-search" placeholder="Filter 41 runs (e.g. Saffire, PMMA, BASS, H2, 21%)...">
+          <div class="table-node-stats" id="${this.id}-stats">41 EXPERIMENTS</div>
+        </div>
+        <div class="table-node-container" id="${this.id}-table-container"></div>
+      `;
+
+      this.createDOM('', portsHtml, bodyHtml);
+      this.bindTableEvents();
+      this.renderMatrix();
+    }
+
+    bindTableEvents() {
+      const searchInput = this.element.querySelector(`#${this.id}-search`);
+      if (searchInput) {
+        searchInput.addEventListener('input', () => {
+          this.filterText = searchInput.value.toLowerCase().trim();
+          this.renderMatrix();
+        });
+      }
+    }
+
+    renderMatrix() {
+      const container = this.element.querySelector(`#${this.id}-table-container`);
+      const stats = this.element.querySelector(`#${this.id}-stats`);
+      if (!container) return;
+
+      const runs = (window.StandaloneAPI && window.StandaloneAPI.NASA_EXPERIMENTS)
+        ? window.StandaloneAPI.NASA_EXPERIMENTS
+        : (this.data && this.data.sim_to_real && this.data.sim_to_real.all_runs ? this.data.sim_to_real.all_runs : []);
+
+      let filtered = runs;
+      if (this.filterText) {
+        filtered = runs.filter(r => {
+          const s = `${r.id} ${r.mission} ${r.investigation} ${r.fuel} ${r.fuel_display || ''} ${r.outcome || ''} ${r.measured_regime || ''}`.toLowerCase();
+          return s.includes(this.filterText);
+        });
+      }
+
+      if (stats) {
+        stats.textContent = `${filtered.length} / ${runs.length} RUNS`;
+      }
+
+      let html = `
+        <table class="psi-matrix-table">
+          <thead>
+            <tr>
+              <th>Run ID</th>
+              <th>Mission</th>
+              <th>Fuel / Specimen</th>
+              <th>O₂ %</th>
+              <th>P atm</th>
+              <th>V_g cm/s</th>
+              <th>V_f mm/s</th>
+              <th>CO Ratio</th>
+              <th>Outcome</th>
+              <th>Verified URL</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      filtered.forEach(r => {
+        const isActive = (r.id === this.activeBenchmarkId);
+        const reg = String(r.measured_regime || 'nominal').toLowerCase();
+        let outcomeClass = 'outcome-nominal';
+        if (reg.includes('extinct')) outcomeClass = 'outcome-extinction';
+        else if (reg.includes('cool')) outcomeClass = 'outcome-cool';
+        else if (reg.includes('blast') || reg.includes('breach') || reg.includes('critical')) outcomeClass = 'outcome-breach';
+
+        const outcomeText = r.outcome || reg.toUpperCase();
+        const coRatio = r.co_ratio !== undefined ? r.co_ratio : '—';
+        const vf = (r.measured_vf_mm_s !== undefined && r.measured_vf_mm_s !== null) ? Number(r.measured_vf_mm_s).toFixed(2) : '0.00';
+        const url = r.url || 'https://psi.nasa.gov/physci/repo/search?q=Saffire';
+
+        html += `
+          <tr class="${isActive ? 'active-psi-row' : ''}" data-run-id="${sanitize(r.id)}">
+            <td style="font-weight: 700; color: ${isActive ? '#00E5FF' : '#FFFFFF'};">${sanitize(r.id)}</td>
+            <td>${sanitize(r.mission || '')}</td>
+            <td>${sanitize(r.fuel_display || r.fuel || '')}</td>
+            <td>${Number(r.o2_percent || 21.0).toFixed(1)}%</td>
+            <td>${Number(r.pressure_atm || 1.0).toFixed(2)}</td>
+            <td>${Number(r.flow_velocity_cms || 10.0).toFixed(1)}</td>
+            <td>${vf}</td>
+            <td>${coRatio}</td>
+            <td><span class="psi-outcome-tag ${outcomeClass}">${sanitize(outcomeText)}</span></td>
+            <td><a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa" style="font-size: 8.5px;" onclick="event.stopPropagation();">NASA PSI ↗</a></td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+
+      // Bind row clicks
+      container.querySelectorAll('tbody tr').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rId = tr.dataset.runId;
+          if (!rId) return;
+
+          this.activeBenchmarkId = rId;
+          container.querySelectorAll('tbody tr').forEach(r => r.classList.remove('active-psi-row'));
+          tr.classList.add('active-psi-row');
+
+          // Notify upstream or downstream simtoreal
+          const s2rNode = findUpstreamNode(this.id, 'simtoreal') || findDownstreamNode(this.id, 'simtoreal');
+          if (s2rNode && typeof s2rNode.setActiveBenchmark === 'function') {
+            s2rNode.setActiveBenchmark(rId);
+          } else {
+            const varNode = findUpstreamNode(this.id, 'variable');
+            if (varNode) varNode.queueEvaluate();
+          }
+
+          const selectedRun = runs.find(r => r.id === rId);
+          this.data = { selected_run: selectedRun, active_benchmark_id: rId };
+          propagateDataFrom(this.id, this.data);
+          showToast(`Selected benchmark: ${rId}`);
+        });
+      });
+    }
+
+    onReceiveData(data, toPin = 'in') {
+      super.onReceiveData(data, toPin);
+      if (data && data.nearest_benchmark && data.nearest_benchmark.id) {
+        if (!this.activeBenchmarkId) {
+          this.activeBenchmarkId = data.nearest_benchmark.id;
+        }
+      }
+      if (data && data.sim_to_real && data.sim_to_real.active_benchmark_id) {
+        this.activeBenchmarkId = data.sim_to_real.active_benchmark_id;
+      }
+      this.renderMatrix();
+      propagateDataFrom(this.id, data);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // NODE 1.85: AI DIFF // COMPARATOR (2-Pin Differential Safety)
+  // -------------------------------------------------------------------------
+
+  class AiDiffNode extends BaseNode {
+    constructor(id, x, y, initialData = {}, width = 520, height = null) {
+      super(id, 'aidiff', 'AI DIFF // COMPARATOR', x, y, width, height);
+      this.dataA = null;
+      this.dataB = null;
+      this.diffQuery = 'Compare Branch A and Branch B microgravity fire risks';
+      this.init();
+    }
+
+    init() {
+      const portsHtml = `
+        <div class="pins-group-in">
+          <div class="pin pin-in pin-in-a" data-pin="in_a" title="Wire Branch A / Network 1">
+            <div class="pin-socket"></div>
+            <span>IN A (Network 1)</span>
+          </div>
+          <div class="pin pin-in pin-in-b" data-pin="in_b" title="Wire Branch B / Network 2">
+            <div class="pin-socket"></div>
+            <span>IN B (Network 2)</span>
+          </div>
+        </div>
+        <div class="pins-group-out">
+          <div class="pin pin-out" data-pin="out" title="Differential Safety Output">
+            <span>OUT (Diff Report)</span>
+            <div class="pin-socket"></div>
+          </div>
+        </div>
+      `;
+
+      const bodyHtml = `
+        <div class="diff-grid-container">
+          <div class="diff-verdict-banner">
+            <div>
+              <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">Safer Configuration:</div>
+              <div style="font-size: 13px; font-weight: 700; color: #FFFFFF;" id="${this.id}-verdict-text">Awaiting Dual Inputs...</div>
+            </div>
+            <div class="diff-verdict-tag equal" id="${this.id}-verdict-tag">CONNECT A & B</div>
+          </div>
+
+          <table class="diff-matrix-table" id="${this.id}-matrix-table">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Branch A (Net 1)</th>
+                <th>Branch B (Net 2)</th>
+                <th>Delta (B - A)</th>
+              </tr>
+            </thead>
+            <tbody id="${this.id}-matrix-tbody">
+              <tr><td colspan="4" style="color: var(--text-muted); text-align: center; padding: 12px;">Connect wires from two branches to IN A and IN B to compare deltas</td></tr>
+            </tbody>
+          </table>
+
+          <div class="diff-query-box">
+            <input type="text" class="diff-query-input" id="${this.id}-query-input" value="${sanitize(this.diffQuery)}" placeholder="Ask AI Safety Officer differential comparison...">
+            <button class="btn-diff-compare" id="${this.id}-btn-compare">COMPARE BLUEPRINTS</button>
+          </div>
+
+          <div class="diff-output-box" id="${this.id}-output-box">
+            <div style="color: var(--text-muted); font-style: italic;">
+              Differential flight safety advisory will appear here once compared.
+            </div>
+          </div>
+        </div>
+      `;
+
+      this.createDOM('', portsHtml, bodyHtml, 'two-inputs');
+      this.bindDiffEvents();
+    }
+
+    bindDiffEvents() {
+      const qInput = this.element.querySelector(`#${this.id}-query-input`);
+      if (qInput) {
+        qInput.addEventListener('input', () => {
+          this.diffQuery = qInput.value;
+        });
+      }
+
+      const cmpBtn = this.element.querySelector(`#${this.id}-btn-compare`);
+      if (cmpBtn) {
+        cmpBtn.addEventListener('click', () => {
+          this.executeComparison();
+        });
+      }
+    }
+
+    onReceiveData(data, toPin = 'in_a') {
+      if (toPin === 'in_b') {
+        this.dataB = data;
+      } else if (toPin === 'in_a') {
+        this.dataA = data;
+      } else {
+        if (!this.dataA) this.dataA = data;
+        else this.dataB = data;
+      }
+      this.updateDiffView();
+    }
+
+    updateDiffView() {
+      const pA = this.dataA ? (this.dataA.params || {}) : null;
+      const pB = this.dataB ? (this.dataB.params || {}) : null;
+      const eA = this.dataA ? (this.dataA.evaluation || {}) : null;
+      const eB = this.dataB ? (this.dataB.evaluation || {}) : null;
+
+      const vText = this.element.querySelector(`#${this.id}-verdict-text`);
+      const vTag = this.element.querySelector(`#${this.id}-verdict-tag`);
+      const tbody = this.element.querySelector(`#${this.id}-matrix-tbody`);
+      if (!tbody) return;
+
+      if (!pA && !pB) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); text-align: center; padding: 12px;">Connect wires from two branches to IN A and IN B to compare deltas</td></tr>`;
+        if (vText) vText.textContent = 'Awaiting Dual Inputs...';
+        if (vTag) { vTag.className = 'diff-verdict-tag equal'; vTag.textContent = 'CONNECT A & B'; }
+        return;
+      }
+
+      const o2A = pA ? Number(pA.o2_percent !== undefined ? pA.o2_percent : 21).toFixed(1) : '—';
+      const o2B = pB ? Number(pB.o2_percent !== undefined ? pB.o2_percent : 21).toFixed(1) : '—';
+      const deltaO2 = (pA && pB) ? (pB.o2_percent - pA.o2_percent).toFixed(1) : '—';
+
+      const pAtmA = pA ? Number(pA.pressure_atm !== undefined ? pA.pressure_atm : 1).toFixed(2) : '—';
+      const pAtmB = pB ? Number(pB.pressure_atm !== undefined ? pB.pressure_atm : 1).toFixed(2) : '—';
+      const deltaP = (pA && pB) ? (pB.pressure_atm - pA.pressure_atm).toFixed(2) : '—';
+
+      const vgA = pA ? Number(pA.flow_velocity_cms !== undefined ? pA.flow_velocity_cms : 10).toFixed(1) : '—';
+      const vgB = pB ? Number(pB.flow_velocity_cms !== undefined ? pB.flow_velocity_cms : 10).toFixed(1) : '—';
+      const deltaVg = (pA && pB) ? (pB.flow_velocity_cms - pA.flow_velocity_cms).toFixed(1) : '—';
+
+      const tfA = eA ? Number(eA.t_flame_k || 1650).toFixed(0) : '—';
+      const tfB = eB ? Number(eB.t_flame_k || 1650).toFixed(0) : '—';
+      const deltaTf = (eA && eB) ? (eB.t_flame_k - eA.t_flame_k).toFixed(0) : '—';
+
+      const vfA = eA ? Number(eA.flame_spread_rate_mm_s || 2).toFixed(2) : '—';
+      const vfB = eB ? Number(eB.flame_spread_rate_mm_s || 2).toFixed(2) : '—';
+      const deltaVf = (eA && eB) ? (eB.flame_spread_rate_mm_s - eA.flame_spread_rate_mm_s).toFixed(2) : '—';
+
+      const fluxA = eA ? Number(eA.hull_heat_flux_kw_m2 || 5).toFixed(1) : '—';
+      const fluxB = eB ? Number(eB.hull_heat_flux_kw_m2 || 5).toFixed(1) : '—';
+      const deltaFlux = (eA && eB) ? (eB.hull_heat_flux_kw_m2 - eA.hull_heat_flux_kw_m2).toFixed(1) : '—';
+
+      const riskA = eA ? Number(eA.fire_risk_score || 0).toFixed(1) : '—';
+      const riskB = eB ? Number(eB.fire_risk_score || 0).toFixed(1) : '—';
+      const deltaRisk = (eA && eB) ? (eB.fire_risk_score - eA.fire_risk_score).toFixed(1) : '—';
+
+      const explA = eA ? Number(eA.explosion_risk_pct || 0).toFixed(1) : '—';
+      const explB = eB ? Number(eB.explosion_risk_pct || 0).toFixed(1) : '—';
+      const deltaExpl = (eA && eB) ? (eB.explosion_risk_pct - eA.explosion_risk_pct).toFixed(1) : '—';
+
+      let riskDeltaClass = 'delta-neutral';
+      if (eA && eB) {
+        const dR = eB.fire_risk_score - eA.fire_risk_score;
+        if (dR < -0.5) riskDeltaClass = 'delta-safer';
+        else if (dR > 0.5) riskDeltaClass = 'delta-danger';
+      }
+
+      // Verdict
+      if (eA && eB) {
+        const scoreA = (eA.fire_risk_score || 0) + 2 * (eA.explosion_risk_pct || 0) + (eA.hull_breach_predicted ? 100 : 0);
+        const scoreB = (eB.fire_risk_score || 0) + 2 * (eB.explosion_risk_pct || 0) + (eB.hull_breach_predicted ? 100 : 0);
+        if (scoreA < scoreB - 1.0) {
+          if (vText) vText.textContent = 'BRANCH A IS SAFER';
+          if (vTag) { vTag.className = 'diff-verdict-tag safer-a'; vTag.textContent = 'BRANCH A SAFER'; }
+        } else if (scoreB < scoreA - 1.0) {
+          if (vText) vText.textContent = 'BRANCH B IS SAFER';
+          if (vTag) { vTag.className = 'diff-verdict-tag safer-b'; vTag.textContent = 'BRANCH B SAFER'; }
+        } else {
+          if (vText) vText.textContent = 'EQUAL RISK PROFILES';
+          if (vTag) { vTag.className = 'diff-verdict-tag equal'; vTag.textContent = 'EQUAL RISK'; }
+        }
+      }
+
+      tbody.innerHTML = `
+        <tr><td><b>Oxygen [O₂]</b></td><td>${o2A}%</td><td>${o2B}%</td><td>${deltaO2 !== '—' && Number(deltaO2) > 0 ? '+' : ''}${deltaO2}%</td></tr>
+        <tr><td><b>Cabin Pressure [P]</b></td><td>${pAtmA} atm</td><td>${pAtmB} atm</td><td>${deltaP !== '—' && Number(deltaP) > 0 ? '+' : ''}${deltaP} atm</td></tr>
+        <tr><td><b>Flow Velocity [V_g]</b></td><td>${vgA} cm/s</td><td>${vgB} cm/s</td><td>${deltaVg !== '—' && Number(deltaVg) > 0 ? '+' : ''}${deltaVg} cm/s</td></tr>
+        <tr><td><b>Flame Temp [T_f]</b></td><td>${tfA} K</td><td>${tfB} K</td><td>${deltaTf !== '—' && Number(deltaTf) > 0 ? '+' : ''}${deltaTf} K</td></tr>
+        <tr><td><b>Spread Rate [V_f]</b></td><td>${vfA} mm/s</td><td>${vfB} mm/s</td><td>${deltaVf !== '—' && Number(deltaVf) > 0 ? '+' : ''}${deltaVf} mm/s</td></tr>
+        <tr><td><b>Heat Flux [q'']</b></td><td>${fluxA} kW/m²</td><td>${fluxB} kW/m²</td><td>${deltaFlux !== '—' && Number(deltaFlux) > 0 ? '+' : ''}${deltaFlux} kW/m²</td></tr>
+        <tr><td><b>Fire Risk Score</b></td><td>${riskA}%</td><td>${riskB}%</td><td class="${riskDeltaClass}">${deltaRisk !== '—' && Number(deltaRisk) > 0 ? '+' : ''}${deltaRisk}%</td></tr>
+        <tr><td><b>Explosion Risk</b></td><td>${explA}%</td><td>${explB}%</td><td>${deltaExpl !== '—' && Number(deltaExpl) > 0 ? '+' : ''}${deltaExpl}%</td></tr>
+      `;
+    }
+
+    async executeComparison() {
+      const cmpBtn = this.element.querySelector(`#${this.id}-btn-compare`);
+      const outBox = this.element.querySelector(`#${this.id}-output-box`);
+      if (cmpBtn) {
+        cmpBtn.disabled = true;
+        cmpBtn.textContent = 'COMPARING...';
+      }
+
+      try {
+        const res = await fetch('/api/compare-blueprints', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            branch_a: this.dataA || {},
+            branch_b: this.dataB || {},
+            query: this.diffQuery,
+            language: 'ru'
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+
+        if (outBox) {
+          let html = sanitize(result.advisory_text || '');
+          html = html.replace(/###\s+(.+)/g, '<h4 style="color:#00E5FF; margin:6px 0;">$1</h4>');
+          html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+          html = html.replace(/^- (.+)/gm, '<li>$1</li>');
+          html = html.replace(/(<li>.*<\/li>)/gs, '<ul style="margin-left: 14px;">$1</ul>');
+          html = html.replace(/\n\n/g, '<br>');
+          outBox.innerHTML = html;
+        }
+
+        this.data = result;
+        propagateDataFrom(this.id, result);
+        showToast('Differential comparison computed');
+      } catch (err) {
+        console.error('[AiDiffNode] Compare error:', err);
+        showToast('Comparison error: ' + err.message);
+      } finally {
+        if (cmpBtn) {
+          cmpBtn.disabled = false;
+          cmpBtn.textContent = 'COMPARE BLUEPRINTS';
+        }
+      }
     }
   }
 
@@ -1129,8 +1713,8 @@
   // -------------------------------------------------------------------------
 
   class SimNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, 460);
+    constructor(id, x, y, initialData = {}, width = 460, height = null) {
+      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, width, height);
       this.animFrameId = null;
       this.simGridMode = 'flame_o2'; // 'flame_o2' or 'thermal_hull'
       this.gridNx = 48;
@@ -1235,6 +1819,11 @@
       this.bindSimModeEvents();
       this.initParticles();
       this.startCanvasAnimation();
+
+      if (window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver(() => this.onResize());
+        this.resizeObserver.observe(this.element);
+      }
     }
 
     bindSimModeEvents() {
@@ -1840,8 +2429,22 @@
       }
     }
 
+    onResize() {
+      const container = this.element.querySelector('.cutaway-canvas-container');
+      const canvas = this.element.querySelector(`#${this.id}-canvas`);
+      if (container && canvas) {
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
+          canvas.width = cw;
+          canvas.height = ch;
+        }
+      }
+    }
+
     onDestroy() {
       if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+      if (this.resizeObserver) this.resizeObserver.disconnect();
     }
   }
 
@@ -1850,8 +2453,8 @@
   // -------------------------------------------------------------------------
 
   class GraphNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, 460);
+    constructor(id, x, y, initialData = {}, width = 460, height = null) {
+      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, width, height);
       this.selectedChannel = 'spread'; // 'spread', 'temp', 'pressure', 'co'
       this.viewMode = 'curves'; // 'curves' or 'table'
       this.init();
@@ -1905,6 +2508,12 @@
       this.createDOM('', portsHtml, bodyHtml);
       this.bindGraphEvents();
       this.renderGraph();
+      this.checkTableBanner();
+
+      if (window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver(() => this.onResize());
+        this.resizeObserver.observe(this.element);
+      }
     }
 
     bindGraphEvents() {
@@ -2035,8 +2644,8 @@
           e.stopPropagation();
           const rId = tr.dataset.runId;
           if (rId) {
-            const s2rNode = Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
-            if (s2rNode) {
+            const s2rNode = findUpstreamNode(this.id, 'simtoreal') || findDownstreamNode(this.id, 'simtoreal') || Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+            if (s2rNode && typeof s2rNode.setActiveBenchmark === 'function') {
               s2rNode.setActiveBenchmark(rId);
             }
             rows.forEach(r => r.classList.remove('active-psi-row'));
@@ -2053,6 +2662,7 @@
       } else {
         this.renderGraph();
       }
+      this.checkTableBanner();
       propagateDataFrom(this.id, data);
     }
 
@@ -2566,6 +3176,55 @@
         tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM RAW: <b>${simValDisplay}</b>`;
       }
     }
+
+    checkTableBanner() {
+      const hasConnectedTable = findDownstreamNode(this.id, 'table') || findUpstreamNode(this.id, 'table');
+      let tableBanner = this.element.querySelector(`#${this.id}-table-banner`);
+      const body = this.element.querySelector('.node-body');
+      if (!hasConnectedTable) {
+        if (!tableBanner) {
+          tableBanner = document.createElement('div');
+          tableBanner.id = `${this.id}-table-banner`;
+          tableBanner.className = 'smart-connect-banner';
+          if (body) body.appendChild(tableBanner);
+        }
+        tableBanner.style.display = 'flex';
+        tableBanner.innerHTML = `
+          <span>NASA PSI Matrix table available</span>
+          <button class="smart-connect-btn" id="${this.id}-btn-connect-table">[+ Connect TABLE]</button>
+        `;
+        const btnConnect = tableBanner.querySelector(`#${this.id}-btn-connect-table`);
+        if (btnConnect) {
+          btnConnect.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tableNode = spawnNode('table', this.x + this.width + 30, this.y);
+            addWire(this.id, 'out', tableNode.id, 'in');
+            tableBanner.style.display = 'none';
+            showToast('Connected TABLE // NASA PSI MATRIX node');
+          });
+        }
+      } else if (tableBanner) {
+        tableBanner.style.display = 'none';
+      }
+    }
+
+    onResize() {
+      const container = this.element.querySelector('.graph-canvas-container');
+      const canvas = this.element.querySelector(`#${this.id}-graph-canvas`);
+      if (container && canvas) {
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
+          canvas.width = cw;
+          canvas.height = ch;
+          this.renderGraph();
+        }
+      }
+    }
+
+    onDestroy() {
+      if (this.resizeObserver) this.resizeObserver.disconnect();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -2573,9 +3232,9 @@
   // -------------------------------------------------------------------------
 
   class PromptNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, 380);
-      this.query = 'Оценить риск взрыва и пробоя гермооболочки';
+    constructor(id, x, y, initialData = {}, width = 380, height = null) {
+      super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, width, height);
+      this.query = (initialData && initialData.query) || 'Оценить риск взрыва и пробоя гермооболочки';
       this.init();
     }
 
@@ -2699,8 +3358,8 @@
   // -------------------------------------------------------------------------
 
   class BriefNode extends BaseNode {
-    constructor(id, x, y) {
-      super(id, 'brief', 'AI SAFETY BRIEF // NASA ADVISORY', x, y, 440);
+    constructor(id, x, y, initialData = {}, width = 440, height = null) {
+      super(id, 'brief', 'AI SAFETY BRIEF // NASA ADVISORY', x, y, width, height);
       this.init();
     }
 
@@ -2766,25 +3425,29 @@
   // NODE FACTORY & LIFECYCLE
   // =========================================================================
 
-  function spawnNode(type, x, y, initialData = {}) {
+  function spawnNode(type, x, y, initialData = {}, width = null, height = null) {
     state.nodeCounter++;
     const id = `node_${state.nodeCounter}`;
     let node = null;
 
     if (type === 'note') {
-      node = new NoteNode(id, x, y);
+      node = new NoteNode(id, x, y, initialData, width || 420, height);
     } else if (type === 'variable') {
-      node = new VariableNode(id, x, y, initialData);
+      node = new VariableNode(id, x, y, initialData, width || 380, height);
     } else if (type === 'simtoreal') {
-      node = new SimToRealNode(id, x, y);
+      node = new SimToRealNode(id, x, y, initialData, width || 430, height);
+    } else if (type === 'table') {
+      node = new TableNode(id, x, y, initialData, width || 580, height || 440);
+    } else if (type === 'aidiff') {
+      node = new AiDiffNode(id, x, y, initialData, width || 520, height);
     } else if (type === 'sim') {
-      node = new SimNode(id, x, y);
+      node = new SimNode(id, x, y, initialData, width || 460, height);
     } else if (type === 'graph') {
-      node = new GraphNode(id, x, y);
+      node = new GraphNode(id, x, y, initialData, width || 460, height);
     } else if (type === 'prompt') {
-      node = new PromptNode(id, x, y);
+      node = new PromptNode(id, x, y, initialData, width || 380, height);
     } else if (type === 'brief') {
-      node = new BriefNode(id, x, y);
+      node = new BriefNode(id, x, y, initialData, width || 440, height);
     }
 
     if (node) {
@@ -2923,6 +3586,8 @@
         if (action === 'spawn_note') spawnNode('note', x, y);
         else if (action === 'spawn_variable') spawnNode('variable', x, y);
         else if (action === 'spawn_simtoreal') spawnNode('simtoreal', x, y);
+        else if (action === 'spawn_table') spawnNode('table', x, y);
+        else if (action === 'spawn_aidiff') spawnNode('aidiff', x, y);
         else if (action === 'spawn_sim') spawnNode('sim', x, y);
         else if (action === 'spawn_graph') spawnNode('graph', x, y);
         else if (action === 'spawn_prompt') spawnNode('prompt', x, y);
@@ -2947,7 +3612,27 @@
   // =========================================================================
 
   function setupTopBar() {
-    // Scenario select dropdown
+    // Add Node buttons from topbar
+    document.querySelectorAll('.btn-add-node').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.type;
+        if (!type) return;
+
+        const vpRect = viewport.getBoundingClientRect();
+        const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
+        const jitterX = Math.round((Math.random() - 0.5) * 60);
+        const jitterY = Math.round((Math.random() - 0.5) * 60);
+        const spawnX = Math.round(centerWorld.x - 200 + jitterX);
+        const spawnY = Math.round(centerWorld.y - 120 + jitterY);
+
+        const newNode = spawnNode(type, spawnX, spawnY);
+        if (newNode) {
+          showToast(`Added ${newNode.title}`);
+        }
+      });
+    });
+
+    // Scenario select dropdown (if present)
     const scSelect = document.getElementById('scenario-select');
     if (scSelect) {
       scSelect.addEventListener('change', () => {
@@ -2955,7 +3640,6 @@
         const sc = SCENARIOS[scKey];
         if (!sc) return;
 
-        // Apply scenario to active or first Variable node
         let varNode = null;
         for (const n of state.nodes.values()) {
           if (n.type === 'variable') {
@@ -2974,64 +3658,46 @@
       });
     }
 
-    // Scenario buttons fallback (if present in DOM)
-    document.querySelectorAll('.btn-scenario').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const scKey = btn.dataset.scenario;
-        if (scSelect) scSelect.value = scKey;
-        const sc = SCENARIOS[scKey];
-        if (!sc) return;
-
-        // Apply scenario to active or first Variable node
-        let varNode = null;
-        for (const n of state.nodes.values()) {
-          if (n.type === 'variable') {
-            varNode = n;
-            break;
-          }
-        }
-
-        if (!varNode) {
-          varNode = spawnNode('variable', 40, 440, sc.params);
-        } else {
-          varNode.setParams(sc.params);
-        }
-
-        showToast(`Loaded scenario: ${sc.name}`);
-      });
-    });
-
     // Auto-layout
-    document.getElementById('btn-autolayout').addEventListener('click', () => {
-      autoLayoutGraph();
-    });
+    const btnAuto = document.getElementById('btn-autolayout');
+    if (btnAuto) {
+      btnAuto.addEventListener('click', () => {
+        autoLayoutGraph();
+      });
+    }
 
     // Export JSON
-    document.getElementById('btn-export-json').addEventListener('click', () => {
-      exportGraphJSON();
-    });
+    const btnExport = document.getElementById('btn-export-json');
+    if (btnExport) {
+      btnExport.addEventListener('click', () => {
+        exportGraphJSON();
+      });
+    }
 
     // Import JSON
     const fileInput = document.getElementById('file-import-input');
-    document.getElementById('btn-import-json').addEventListener('click', () => {
-      fileInput.click();
-    });
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) importGraphJSON(file);
-      fileInput.value = '';
-    });
+    const btnImport = document.getElementById('btn-import-json');
+    if (btnImport && fileInput) {
+      btnImport.addEventListener('click', () => {
+        fileInput.click();
+      });
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) importGraphJSON(file);
+        fileInput.value = '';
+      });
+    }
 
     // Reset graph
-    document.getElementById('btn-reset-graph').addEventListener('click', () => {
-      if (confirm('Reset canvas to default starter blueprint graph?')) {
-        buildDefaultGraph();
-        showToast('Blueprint canvas reset to nominal state');
-      }
-    });
+    const btnReset = document.getElementById('btn-reset-graph');
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        if (confirm('Reset canvas to default starter blueprint graph?')) {
+          buildDefaultGraph();
+          showToast('Blueprint canvas reset to nominal state');
+        }
+      });
+    }
   }
 
   function autoLayoutGraph() {
@@ -3050,17 +3716,23 @@
       } else if (node.type === 'simtoreal') {
         node.x = 460;
         node.y = 50;
-      } else if (node.type === 'sim') {
+      } else if (node.type === 'table') {
+        node.x = 460;
+        node.y = 660;
+      } else if (node.type === 'aidiff') {
         node.x = 920;
+        node.y = 50;
+      } else if (node.type === 'sim') {
+        node.x = 1480;
         node.y = simY;
       } else if (node.type === 'graph') {
-        node.x = 920;
+        node.x = 1480;
         node.y = graphY;
       } else if (node.type === 'prompt') {
-        node.x = 1400;
+        node.x = 2000;
         node.y = 50;
       } else if (node.type === 'brief') {
-        node.x = 1800;
+        node.x = 2420;
         node.y = 50;
       }
       if (node.element) {
@@ -3078,7 +3750,7 @@
 
   function exportGraphJSON() {
     const exportData = {
-      version: '1.2.0',
+      version: '1.3.0',
       timestamp: new Date().toISOString(),
       pan: state.pan,
       scale: state.scale,
@@ -3087,6 +3759,8 @@
         type: n.type,
         x: n.x,
         y: n.y,
+        width: n.width,
+        height: n.height || (n.element ? n.element.offsetHeight : null),
         params: n.params || null
       })),
       wires: state.wires
@@ -3115,7 +3789,7 @@
         state.scale = data.scale || 0.95;
 
         data.nodes.forEach(n => {
-          spawnNode(n.type, n.x, n.y, n.params || {});
+          spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height);
         });
 
         data.wires.forEach(w => {
@@ -3220,6 +3894,8 @@
           type: n.type,
           x: n.x,
           y: n.y,
+          width: n.width,
+          height: n.height || (n.element ? n.element.offsetHeight : null),
           params: n.params || null
         })),
         wires: state.wires
@@ -3232,7 +3908,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -3245,13 +3921,8 @@
       state.pan = data.pan || { x: 40, y: 30 };
       state.scale = data.scale || 0.92;
 
-      let seenGraph = false;
       data.nodes.forEach(n => {
-        if (n.type === 'graph') {
-          if (seenGraph) return; // Discard duplicate graph nodes
-          seenGraph = true;
-        }
-        spawnNode(n.type, n.x, n.y, n.params || {});
+        spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height);
       });
 
       if (Array.isArray(data.wires)) {
@@ -3260,10 +3931,10 @@
         });
       }
 
-      // Check and enforce clearance for graphNode below simNode
+      // Check and enforce clearance for graphNode below simNode if on same branch
       const simNode = Array.from(state.nodes.values()).find(n => n.type === 'sim');
       const graphNode = Array.from(state.nodes.values()).find(n => n.type === 'graph');
-      if (simNode && graphNode) {
+      if (simNode && graphNode && Math.abs(simNode.x - graphNode.x) < 50) {
         requestAnimationFrame(() => {
           if (simNode.element && graphNode.element) {
             const actualSimH = simNode.element.offsetHeight || 700;

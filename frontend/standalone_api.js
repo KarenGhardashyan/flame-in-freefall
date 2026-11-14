@@ -1006,6 +1006,137 @@
   }
 
   // ---------------------------------------------------------------------------
+  // 4.5 DIFFERENTIAL COMPARATOR (AI DIFF / 2-PIN COMPARISON)
+  // ---------------------------------------------------------------------------
+  function compareBlueprints(branchA, branchB, query, language) {
+    const pA = (branchA && branchA.params) ? branchA.params : (branchA || {});
+    const pB = (branchB && branchB.params) ? branchB.params : (branchB || {});
+
+    const eA = (branchA && branchA.evaluation) ? branchA.evaluation : evaluateFireSafety(pA);
+    const eB = (branchB && branchB.evaluation) ? branchB.evaluation : evaluateFireSafety(pB);
+
+    const s2rA = (branchA && branchA.sim_to_real) ? branchA.sim_to_real : computeSimToReal(pA, eA);
+    const s2rB = (branchB && branchB.sim_to_real) ? branchB.sim_to_real : computeSimToReal(pB, eB);
+
+    const o2_a = Number(pA.o2_percent !== undefined ? pA.o2_percent : 21.0);
+    const o2_b = Number(pB.o2_percent !== undefined ? pB.o2_percent : 21.0);
+    const delta_o2 = o2_b - o2_a;
+
+    const p_a = Number(pA.pressure_atm !== undefined ? pA.pressure_atm : 1.0);
+    const p_b = Number(pB.pressure_atm !== undefined ? pB.pressure_atm : 1.0);
+    const delta_p = p_b - p_a;
+
+    const v_a = Number(pA.flow_velocity_cms !== undefined ? pA.flow_velocity_cms : 10.0);
+    const v_b = Number(pB.flow_velocity_cms !== undefined ? pB.flow_velocity_cms : 10.0);
+    const delta_v = v_b - v_a;
+
+    const tf_a = Number(eA.t_flame_k || 1650);
+    const tf_b = Number(eB.t_flame_k || 1650);
+    const delta_tf = tf_b - tf_a;
+
+    const vf_a = Number(eA.flame_spread_rate_mm_s || 2.0);
+    const vf_b = Number(eB.flame_spread_rate_mm_s || 2.0);
+    const delta_vf = vf_b - vf_a;
+
+    const flux_a = Number(eA.hull_heat_flux_kw_m2 || 5.0);
+    const flux_b = Number(eB.hull_heat_flux_kw_m2 || 5.0);
+    const delta_flux = flux_b - flux_a;
+
+    const risk_a = Number(eA.fire_risk_score || 5.0);
+    const risk_b = Number(eB.fire_risk_score || 5.0);
+    const delta_risk = risk_b - risk_a;
+
+    const expl_a = Number(eA.explosion_risk_pct || 0.0);
+    const expl_b = Number(eB.explosion_risk_pct || 0.0);
+    const delta_expl = expl_b - expl_a;
+
+    const match_a = Number((s2rA && s2rA.best_match && s2rA.best_match.match_pct) || (s2rA && s2rA.sim_to_real_confidence_pct) || 85.0);
+    const match_b = Number((s2rB && s2rB.best_match && s2rB.best_match.match_pct) || (s2rB && s2rB.sim_to_real_confidence_pct) || 85.0);
+    const delta_match = match_b - match_a;
+
+    // Safety assessment: lower risk score indicates safer regime
+    const scoreA = risk_a + 2.0 * expl_a + (eA.hull_breach_predicted ? 100 : 0);
+    const scoreB = risk_b + 2.0 * expl_b + (eB.hull_breach_predicted ? 100 : 0);
+
+    let saferBranch = 'EQUAL';
+    let saferTextRu = 'Оба режима обладают эквивалентным уровнем риска.';
+    let saferTextEn = 'Both configurations exhibit identical overall safety profiles.';
+
+    if (scoreA < scoreB - 1.0) {
+      saferBranch = 'A';
+      saferTextRu = `Ветка A (Сеть 1) существенно безопаснее: интегральный риск на ${Math.abs(scoreB - scoreA).toFixed(1)}% ниже.`;
+      saferTextEn = `Branch A (Network 1) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreB - scoreA).toFixed(1)}% lower.`;
+    } else if (scoreB < scoreA - 1.0) {
+      saferBranch = 'B';
+      saferTextRu = `Ветка B (Сеть 2) существенно безопаснее: интегральный риск на ${Math.abs(scoreA - scoreB).toFixed(1)}% ниже.`;
+      saferTextEn = `Branch B (Network 2) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreA - scoreB).toFixed(1)}% lower.`;
+    }
+
+    const isRu = (String(language || 'ru').toLowerCase() === 'ru');
+    let advisoryText = '';
+
+    if (isRu) {
+      advisoryText = `### 1. ДИФФЕРЕНЦИАЛЬНЫЙ ВЕРДИКТ БЕЗОПАСНОСТИ (DIFF VERDICT)
+- **Рекомендуемая конфигурация:** **ВЕТКА ${saferBranch}** (${saferTextRu})
+- **Дельта пожарного риска (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Ветка B опаснее' : (delta_risk < 0 ? 'Ветка B безопаснее' : 'Идентично')})
+- **Дельта взрывного риска (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
+- **Угроза пробоя гермооболочки:** Ветка A: **${eA.hull_breach_predicted ? 'ДА ⚠️' : 'НЕТ ✓'}** | Ветка B: **${eB.hull_breach_predicted ? 'ДА ⚠️' : 'НЕТ ✓'}**
+
+### 2. СРАВНИТЕЛЬНАЯ ТАБЛИЦА ФИЗИЧЕСКИХ ДЕЛЬТ
+| Параметр | Ветка A (Сеть 1) | Ветка B (Сеть 2) | Дельта (B - A) | Оценка влияния на безопасность |
+| :--- | :---: | :---: | :---: | :--- |
+| **Кислород [O₂]** | ${o2_a.toFixed(1)}% | ${o2_b.toFixed(1)}% | ${delta_o2 >= 0 ? '+' : ''}${delta_o2.toFixed(1)}% | ${delta_o2 > 0 ? 'Увеличение скорости горения и температуры' : (delta_o2 < 0 ? 'Снижение окислительного потенциала (безопаснее)' : 'Без изменений')} |
+| **Давление [P]** | ${p_a.toFixed(2)} атм | ${p_b.toFixed(2)} атм | ${delta_p >= 0 ? '+' : ''}${delta_p.toFixed(2)} атм | ${delta_p > 0 ? 'Повышение парциального давления O₂' : (delta_p < 0 ? 'Снижение плотности смеси' : 'Без изменений')} |
+| **Поток обдува [V_g]** | ${v_a.toFixed(1)} см/с | ${v_b.toFixed(1)} см/с | ${delta_v >= 0 ? '+' : ''}${delta_v.toFixed(1)} см/с | ${delta_v > 0 ? 'Увеличение конвективного притока O₂' : (delta_v < 0 ? 'Приближение к радиационному затуханию' : 'Без изменений')} |
+| **Температура пламени [T_f]** | ${tf_a.toFixed(0)} K | ${tf_b.toFixed(0)} K | ${delta_tf >= 0 ? '+' : ''}${delta_tf.toFixed(0)} K | ${delta_tf > 0 ? 'Рост термической нагрузки на ECLSS' : 'Снижение лучистого теплового потока'} |
+| **Скорость фронта [V_f]** | ${vf_a.toFixed(2)} мм/с | ${vf_b.toFixed(2)} мм/с | ${delta_vf >= 0 ? '+' : ''}${delta_vf.toFixed(2)} мм/с | ${delta_vf > 0 ? 'Ускорение распространения пожара' : 'Замедление пламени'} |
+| **Тепловой поток [q''_hull]** | ${flux_a.toFixed(1)} кВт/м² | ${flux_b.toFixed(1)} кВт/м² | ${delta_flux >= 0 ? '+' : ''}${delta_flux.toFixed(1)} кВт/м² | Предел стойкости гермооболочки: 28.0 кВт/м² |
+
+### 3. РЕКОМЕНДАЦИЯ АВИАЦИОННОГО ИНЖЕНЕРА (FLIGHT SAFETY RECOMMENDATION)
+- **Топливо / Источник:** Ветка A использует \`${pA.fuel || 'pmma'}\`, Ветка B использует \`${pB.fuel || 'pmma'}\`.
+- **Аналог NASA PSI:** Ветка A опирается на \`${(s2rA && s2rA.best_match && s2rA.best_match.id) || 'SAFFIRE-V-01'}\` (${match_a.toFixed(1)}%), Ветка B опирается на \`${(s2rB && s2rB.best_match && s2rB.best_match.id) || 'SAFFIRE-VI-01'}\` (${match_b.toFixed(1)}%).
+- **Итоговый вывод:** Перевод параметров гермоотсека на **ВЕТКУ ${saferBranch}** минимизирует вероятность структурного повреждения гермооболочки космического корабля.`;
+    } else {
+      advisoryText = `### 1. DIFFERENTIAL FLIGHT SAFETY VERDICT (DIFF VERDICT)
+- **Safer Configuration:** **BRANCH ${saferBranch}** (${saferTextEn})
+- **Delta Fire Risk (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Branch B more hazardous' : (delta_risk < 0 ? 'Branch B safer' : 'Identical')})
+- **Delta Explosion Risk (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
+- **Hull Breach Risk:** Branch A: **${eA.hull_breach_predicted ? 'YES ⚠️' : 'NO ✓'}** | Branch B: **${eB.hull_breach_predicted ? 'YES ⚠️' : 'NO ✓'}**
+
+### 2. PHYSICAL DELTAS COMPARISON MATRIX
+| Metric | Branch A (Net 1) | Branch B (Net 2) | Delta (B - A) | Engineering Safety Impact |
+| :--- | :---: | :---: | :---: | :--- |
+| **Oxygen [O₂]** | ${o2_a.toFixed(1)}% | ${o2_b.toFixed(1)}% | ${delta_o2 >= 0 ? '+' : ''}${delta_o2.toFixed(1)}% | ${delta_o2 > 0 ? 'Higher flame speed & thermal kinetics' : 'Lower oxidizer potential (safer)'} |
+| **Cabin Pressure [P]** | ${p_a.toFixed(2)} atm | ${p_b.toFixed(2)} atm | ${delta_p >= 0 ? '+' : ''}${delta_p.toFixed(2)} atm | ${delta_p > 0 ? 'Higher O2 partial pressure' : 'Reduced gas mixture density'} |
+| **Ventilation Flow [V_g]** | ${v_a.toFixed(1)} cm/s | ${v_b.toFixed(1)} cm/s | ${delta_v >= 0 ? '+' : ''}${delta_v.toFixed(1)} cm/s | ${delta_v > 0 ? 'Enhanced convective oxidizer draft' : 'Closer to radiative extinction'} |
+| **Flame Temp [T_f]** | ${tf_a.toFixed(0)} K | ${tf_b.toFixed(0)} K | ${delta_tf >= 0 ? '+' : ''}${delta_tf.toFixed(0)} K | ${delta_tf > 0 ? 'Increased structural thermal load' : 'Reduced radiative heat flux'} |
+| **Flame Spread Rate [V_f]** | ${vf_a.toFixed(2)} mm/s | ${vf_b.toFixed(2)} mm/s | ${delta_vf >= 0 ? '+' : ''}${delta_vf.toFixed(2)} mm/s | ${delta_vf > 0 ? 'Faster emergency response required' : 'Slower flame propagation'} |
+| **Hull Heat Flux [q''_hull]** | ${flux_a.toFixed(1)} kW/m² | ${flux_b.toFixed(1)} kW/m² | ${delta_flux >= 0 ? '+' : ''}${delta_flux.toFixed(1)} kW/m² | Hull thermal limit: 28.0 kW/m² |
+
+### 3. SAFETY OFFICER RECOMMENDATION
+- **NASA PSI Grounding:** Branch A calibrated against \`${(s2rA && s2rA.best_match && s2rA.best_match.id) || 'SAFFIRE-V-01'}\` (${match_a.toFixed(1)}%), Branch B calibrated against \`${(s2rB && s2rB.best_match && s2rB.best_match.id) || 'SAFFIRE-VI-01'}\` (${match_b.toFixed(1)}%).
+- **Engineering Directive:** Adopt **BRANCH ${saferBranch}** parameters to maximize spacecraft hull structural margins and suppress microgravity flame progression.`;
+    }
+
+    return {
+      status: 'success',
+      safer_branch: saferBranch,
+      advisory_text: advisoryText,
+      metrics: {
+        o2_a, o2_b, delta_o2,
+        p_a, p_b, delta_p,
+        v_a, v_b, delta_v,
+        tf_a, tf_b, delta_tf,
+        vf_a, vf_b, delta_vf,
+        flux_a, flux_b, delta_flux,
+        risk_a, risk_b, delta_risk,
+        expl_a, expl_b, delta_expl,
+        match_a, match_b, delta_match
+      }
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // 5. FETCH ROUTER INTERCEPTOR
   // ---------------------------------------------------------------------------
   function updateConnectionBadge(mode) {
@@ -1094,6 +1225,18 @@
           });
         }
 
+        if (url.includes('/api/compare-blueprints') || url.includes('/api/blueprint-diff')) {
+          const branchA = body.branch_a || body.branchA || {};
+          const branchB = body.branch_b || body.branchB || {};
+          const q = body.query || body.user_query || '';
+          const lang = body.language || 'ru';
+          const resData = compareBlueprints(branchA, branchB, q, lang);
+          return new Response(JSON.stringify(resData), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
         if (url.includes('/api/status') || url.includes('/api/health')) {
           return new Response(JSON.stringify({
             status: 'online',
@@ -1139,6 +1282,7 @@
     computeSimToReal: computeSimToReal,
     compileNoteToBlueprint: compileNoteToBlueprint,
     askSafetyOfficer: askSafetyOfficer,
+    compareBlueprints: compareBlueprints,
     NASA_EXPERIMENTS: NASA_FLIGHT_EXPERIMENTS
   };
 
