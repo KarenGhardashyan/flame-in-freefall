@@ -36,9 +36,11 @@ except (ImportError, Exception) as exc:
     print(f"[BACKEND] FastAPI/Pydantic not loaded ({exc}). Using high-performance native server fallback.")
 
 if HAS_FASTAPI:
+    import time
     from ml_models.anomaly_detector import EarlyFireDetector
     from backend.firebase_client import initialize_firebase, record_telemetry_event, get_connection_status
-    from backend.gemini_advisor import generate_safety_advisory, ask_gemini_safety_officer
+    from backend.gemini_advisor import generate_safety_advisory, ask_gemini_safety_officer, ask_blueprint_copilot
+    from backend.knowledge_retriever import find_nearest_nasa_benchmark, search_knowledge_bm25
 
     app = FastAPI(
         title="Flame in Freefall API",
@@ -165,6 +167,50 @@ if HAS_FASTAPI:
     def run_evaluate_fire_safety_endpoint(params: Dict[str, Any]):
         """Predictive 5-module spacecraft fire and explosion safety evaluation."""
         return evaluate_fire_safety(params)
+
+    @app.post("/api/blueprint-eval")
+    def blueprint_eval_endpoint(payload: Dict[str, Any]):
+        """
+        Fast evaluation endpoint for Blueprint dashboard nodes.
+        Computes 5-module physical evaluation + finds nearest NASA PSI benchmark in < 20 ms.
+        Consumes 0 LLM tokens.
+        """
+        t0 = time.time()
+        params = payload.get("params", payload) if "params" in payload and isinstance(payload.get("params"), dict) else payload
+        eval_res = evaluate_fire_safety(params)
+        nearest = find_nearest_nasa_benchmark(params)
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        return {
+            "evaluation": eval_res,
+            "nearest_benchmark": nearest,
+            "status": "success",
+            "latency_ms": elapsed_ms
+        }
+
+    @app.post("/api/blueprint-prompt")
+    def blueprint_prompt_endpoint(payload: Dict[str, Any]):
+        """
+        Blueprint Prompt Node Endpoint.
+        Accepts user question + parameters/calculation JSON.
+        Calls search_knowledge_bm25(query, top_k=2), sends compact prompt (~600 tokens) to Gemini 2.5 Flash.
+        Enforces strict formatting:
+        [VERIFIED NASA PSI DATA] with URL
+        [THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL]
+        3-part structure: 1) Verdict, 2) Objective physical reasons, 3) Benchmark reference / historical lesson.
+        """
+        q = payload.get("user_query") or payload.get("query") or payload.get("question") or "Assess microgravity fire safety"
+        params = payload.get("params") if isinstance(payload.get("params"), dict) else payload
+        eval_res = payload.get("evaluation")
+        nearest = payload.get("nearest_benchmark") or payload.get("selected_experiment")
+        lang = str(payload.get("language", "ru"))
+
+        return ask_blueprint_copilot(
+            user_query=q,
+            params=params,
+            evaluation=eval_res,
+            nearest_benchmark=nearest,
+            language=lang
+        )
 
     @app.post("/api/simulate")
     def simulate_droplet_combustion(req: SimulationRequest):

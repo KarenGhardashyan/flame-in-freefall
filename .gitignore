@@ -48,6 +48,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Knowledge Index Cache
+*.knowledge_index_cache.json
 .pnpm-debug.log*
 
 # IDE & OS

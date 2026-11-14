@@ -675,17 +675,14 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     # MODULE 2: U-Shaped Flammability Boundary & 0g Front Dynamics
     # (NASA BASS-II TM-20210011385 & modified de Ris equation)
     # ---------------------------------------------------------
-    # Critical radiative extinction velocity V_g,cr,rad (low-flow quenching)
-    # At low flow, absence of buoyancy starves flame of oxygen while radiation cools it
+    # Critical radiative extinction velocity V_g,cr,rad (low-flow quenching in 0g)
     v_g_cr_rad = max(0.0, 3.5 - 20.0 * (x_o2 - 0.16))  # cm/s
 
-    # High flow aerodynamic blowoff limit (Eq. 6.1 BASS-II stretch parameter)
-    # Stretch a = 1.5 * v_g / R * sqrt(R / 0.318)
-    char_radius_cm = 0.476
-    stretch_a = 1.5 * v_g_cms / char_radius_cm * math.sqrt(char_radius_cm / 0.318)
-    threshold_o2_rod = 6.0 * math.exp(-0.5 * stretch_a) + 0.0167 * stretch_a + 13.4  # %
+    # High-flow aerodynamic blowoff limit (BASS-II Fig 6.9 & Eq 6.1)
+    # At 21% O2, blowoff threshold is ~55 cm/s; expands with higher O2
+    v_g_blowoff = 55.0 * ((x_o2 / 0.21) ** 0.85)  # cm/s
     is_in_quench_zone = (v_g_cms < v_g_cr_rad) and (gravity == 0.0)
-    is_in_blowoff_zone = (stretch_a > 120.0) or (o2_pct < threshold_o2_rod and stretch_a > 20.0)
+    is_in_blowoff_zone = (v_g_cms >= v_g_blowoff)
 
     if is_in_quench_zone and not is_explosive:
         # Hydrocarbon droplets with NTC chemistry (n-heptane, n-decane) undergo radiative
@@ -702,6 +699,11 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         regime = "extinction"
         flame_temp_k = t_inf
         flame_color_mode = "extinguished"
+
+    # Aerodynamic stretch factor along U-curve (peaks at 15-25 cm/s, decays towards blowoff)
+    if v_g_cms > 25.0 and regime == "hot_flame":
+        cooling_stretch = max(0.2, 1.0 - 0.8 * ((v_g_cms - 25.0) / max(1.0, v_g_blowoff - 25.0)) ** 1.5)
+        flame_temp_k = t_inf + (flame_temp_k - t_inf) * cooling_stretch
 
     # Modified de Ris flame spread rate V_f (mm/s)
     if regime == "extinction":
@@ -919,8 +921,24 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         fire_risk_pct = 42.0
     else:
         # Base fire risk from oxygen and spread rate
-        raw_fire_risk = 35.0 + 45.0 * (x_o2 / 0.30) + 15.0 * min(1.0, spread_rate_mm_s / 5.0)
-        fire_risk_pct = min(100.0, raw_fire_risk)
+        # BASS-II U-curve ventilation factor:
+        # Low draft (3-8 cm/s) moderate; 15-30 cm/s maximum convective oxidizer feed (peak risk);
+        # Above 35 cm/s, aerodynamic strain cooling starts lowering risk towards blowoff.
+        if v_g_cms <= 5.0:
+            f_flow_risk = 0.85 + 0.15 * (v_g_cms / 5.0)
+        elif 15.0 <= v_g_cms <= 30.0:
+            f_flow_risk = 1.15
+        elif v_g_cms < 15.0:
+            f_flow_risk = 1.0 + 0.15 * ((v_g_cms - 5.0) / 10.0)
+        else:  # v_g_cms > 30.0
+            # Drops from 1.15 down to 0.70 near blowoff
+            f_flow_risk = max(0.60, 1.15 - 0.55 * ((v_g_cms - 30.0) / max(1.0, v_g_blowoff - 30.0)) ** 1.2)
+
+        # Pressure scaling: chemical reaction rate and oxidizer density scale with P
+        f_press_risk = (p_bar / 1.0) ** 0.35
+
+        raw_fire_risk = (30.0 + 42.0 * (x_o2 / 0.30) + 14.0 * min(1.0, spread_rate_mm_s / 5.0)) * f_flow_risk * f_press_risk
+        fire_risk_pct = min(100.0, max(5.0, raw_fire_risk))
 
     if breach_outside_risk or explosion_risk_pct >= 60.0 or fire_risk_pct >= 75.0 or x_o2 >= 0.65:
         flight_status = "NO-GO"
@@ -929,7 +947,38 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     else:
         flight_status = "GO"
 
-    # Objective Engineering Reasons (3 to 5 precise statements with calculated metrics)
+    # Objective Engineering Reasons (precise statements with calculated metrics)
+    if is_in_blowoff_zone:
+        flow_statement = (
+            f"Convective flow V_g = {v_g_cms:.1f} cm/s exceeds BASS-II aerodynamic blowoff threshold "
+            f"({v_g_blowoff:.1f} cm/s), causing hydrodynamic flame detachment and zero flame spread."
+        )
+    elif is_in_quench_zone:
+        flow_statement = (
+            f"Convective flow V_g = {v_g_cms:.1f} cm/s is within BASS-II microgravity low-flow radiative extinction zone "
+            f"(< {v_g_cr_rad:.1f} cm/s), where radiative cooling overcomes weak convective feed."
+        )
+    elif 15.0 <= v_g_cms <= 30.0:
+        flow_statement = (
+            f"Convective flow V_g = {v_g_cms:.1f} cm/s resides in the peak BASS-II forced-draft risk zone (15–30 cm/s): "
+            f"optimal oxidizer delivery accelerates flame spread to V_f = {spread_rate_mm_s:.2f} mm/s."
+        )
+    elif v_g_cms > 30.0:
+        flow_statement = (
+            f"Convective flow V_g = {v_g_cms:.1f} cm/s induces aerodynamic strain cooling approaching blowoff limit "
+            f"({v_g_blowoff:.1f} cm/s); flame spread damped to V_f = {spread_rate_mm_s:.2f} mm/s."
+        )
+    else:
+        flow_statement = (
+            f"Convective flow V_g = {v_g_cms:.1f} cm/s maintains stable microgravity combustion "
+            f"(spread rate V_f = {spread_rate_mm_s:.2f} mm/s)."
+        )
+
+    pressure_statement = (
+        f"Cabin pressure P = {p_bar:.2f} atm (P(O2) = {p_o2_bar:.3f} bar) modulates volumetric oxygen density; "
+        f"Arrhenius reaction time tau_chem = {tau_chem * 1000.0:.2f} ms."
+    )
+
     objective_reasons = [
         (
             f"Oxygen partial pressure P(O2) = {p_o2_bar:.3f} bar (mole fraction X_O2 = {x_o2:.3f}) "
@@ -939,10 +988,8 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
             f"Damköhler number Da = {da:.3f} (extinction turning point Da_ext = {da_extinction}, ignition Da_ign = {da_ignition}); "
             f"reaction regime: {regime.upper()} at peak flame temperature T_f = {flame_temp_k:.0f} K."
         ),
-        (
-            f"Convective flow V_g = {v_g_cms:.1f} cm/s relative to BASS-II low-flow radiative extinction threshold "
-            f"V_g,cr = {v_g_cr_rad:.2f} cm/s and de Ris spread rate V_f = {spread_rate_mm_s:.2f} mm/s."
-        ),
+        flow_statement,
+        pressure_statement,
         (
             f"Cabin toxic atmosphere: CO generation rate = {co_rate_ppm_s:.2f} ppm/s "
             f"(NASA SMAC 55 ppm threshold reached in {time_to_smac_sec:.0f} s; 600s total = {co_series_ppm[-1]:.0f} ppm)."

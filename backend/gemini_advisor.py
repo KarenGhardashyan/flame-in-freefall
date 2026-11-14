@@ -14,7 +14,7 @@ Grounded in:
 
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 # Load environment variables from .env
@@ -292,3 +292,225 @@ def generate_safety_advisory(telemetry_frame: Dict[str, Any], physics_context: O
         selected_experiment=physics_context,
         language="ru"
     )
+
+
+# =========================================================================
+# BLUEPRINT COPILOT & NASA KNOWLEDGE RETRIEVAL INTEGRATION
+# =========================================================================
+
+BLUEPRINT_SYSTEM_INSTRUCTION = """
+You are the Principal AI Fire Safety Officer and Senior Combustion Physicist at NASA Mission Control Houston (ISS Flight Operations).
+Your mandate is to provide precise, scientifically grounded fire safety risk analysis, telemetry verification, and operational guidance.
+
+MANDATORY CITATION & FORMATTING PROTOCOL:
+1. Every empirical flight observation, NASA PSI measurement, or flight investigation data MUST begin with:
+   [VERIFIED NASA PSI DATA] followed by the direct official NASA URL (e.g. https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation, https://doi.org/10.60555/saffire-v-ices310, or https://ntrs.nasa.gov/citations/20210011385).
+2. Every theoretical equation, mathematical law, Arrhenius kinetic rate, Damköhler number (Da), U-curve boundary, or thermodynamic model MUST begin with:
+   [THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL].
+3. You MUST format your entire response strictly into these 3 numbered sections:
+   1. VERDICT (ВЕРДИКТ): Clear flight safety operational decision (GO, CAUTION, or NO-GO) with quantified fire risk (%), explosion risk (%), and hull breach probability.
+   2. OBJECTIVE PHYSICAL REASONS (ФИЗИЧЕСКОЕ ОБОСНОВАНИЕ): Concrete physical mechanisms citing:
+      - Oxygen mole fraction and Chung K. Law Section 0.1 flammability limit (X_O2 < 0.15).
+      - Damköhler number Da on the S-curve (ignition Da_ign vs radiative extinction Da_ext).
+      - Convective flow velocity V_g on the BASS-II U-curve (quiescent quenching < 1.5 cm/s vs draft peak 15–30 cm/s vs blowoff > 55 cm/s).
+      - Toxic gas generation rates (CO yield) and cabin pressurization from Huggett thermal balance.
+   3. BENCHMARK REFERENCE & HISTORICAL LESSON (ЭТАЛОН NASA И УРОКИ ИСТОРИИ): Direct comparison to the nearest NASA PSI/Saffire flight benchmark (investigation ID, DOI, URL, burning rate K) and spaceflight lessons from relevant historical NASA incidents (Apollo 1 pure oxygen flashover, Apollo 13 cryogenic tank overpressure, Mir 1997 solid oxygen generator fire, or Shuttle/ISS smoke detector false alarms).
+"""
+
+
+def ask_blueprint_copilot(
+    user_query: str,
+    params: Optional[Dict[str, Any]] = None,
+    evaluation: Optional[Dict[str, Any]] = None,
+    nearest_benchmark: Optional[Dict[str, Any]] = None,
+    language: str = "ru"
+) -> Dict[str, Any]:
+    """
+    Blueprint AI Co-Pilot endpoint processor.
+    1. Retrieves top-2 knowledge chunks from indexed NASA PDFs via BM25 (0 LLM tokens, < 5 ms).
+    2. Incorporates predictive physical evaluation and nearest NASA PSI benchmark.
+    3. Prompts Gemini 2.5 Flash (~600 tokens) with strict [VERIFIED NASA PSI DATA] and
+       [THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL] formatting.
+    4. Deterministic expert fallback if GEMINI_API_KEY is not configured.
+    """
+    from backend.knowledge_retriever import search_knowledge_bm25, find_nearest_nasa_benchmark
+    from physics_engine.combustion_model import evaluate_fire_safety
+
+    params = params or {}
+    if evaluation is None:
+        evaluation = evaluate_fire_safety(params)
+    if nearest_benchmark is None:
+        nearest_benchmark = find_nearest_nasa_benchmark(params)
+
+    # 1. Retrieve knowledge chunks via BM25 (< 5 ms, 0 tokens)
+    retrieved_chunks = search_knowledge_bm25(user_query, top_k=2)
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    lang_code = language.lower() if language else "ru"
+    lang_instruction = (
+        "Отвечай строго на РУССКОМ ЯЗЫКЕ в профессиональном тоне NASA Flight Safety Officer."
+        if lang_code == "ru" else
+        "Answer strictly in ENGLISH using professional NASA Flight Safety terminology."
+    )
+
+    chunks_context = "\n\n".join([
+        f"- Source: {c['source']}\n  URL: {c.get('url', 'N/A')}\n  Snippet: {c['text']}"
+        for c in retrieved_chunks
+    ])
+
+    prompt = f"""
+{lang_instruction}
+
+USER INQUIRY / ВОПРОС ПОЛЬЗОВАТЕЛЯ:
+"{user_query}"
+
+RETRIEVED NASA KNOWLEDGE BASE CONTEXT (BM25 INDEX):
+{chunks_context}
+
+EVALUATED PHYSICAL STATE (PHYSICS ENGINE):
+- Flight Status: {evaluation.get('flight_status')}
+- Fire Risk: {evaluation.get('fire_risk_pct')}%
+- Explosion Risk: {evaluation.get('explosion_risk_pct')}%
+- Breach Outside Risk: {evaluation.get('breach_outside_risk')}
+- Regime: {evaluation.get('sim_telemetry', {}).get('flame_color_mode')} (Flame Temp: {evaluation.get('sim_telemetry', {}).get('flame_temp_k')} K)
+- Spread Rate: {evaluation.get('sim_telemetry', {}).get('spread_rate_mm_s')} mm/s
+- Cabin Overpressure: {evaluation.get('sim_telemetry', {}).get('cabin_overpressure_kpa')} kPa
+- Hull Heat Flux: {evaluation.get('sim_telemetry', {}).get('hull_heat_flux_kw_m2')} kW/m2
+- Historical Analog: {evaluation.get('historical_analog', {}).get('name')} ({evaluation.get('historical_analog', {}).get('similarity_pct')}%)
+
+NEAREST NASA PSI / FLIGHT BENCHMARK:
+- Benchmark ID: {nearest_benchmark.get('benchmark_id')} - {nearest_benchmark.get('investigation')}
+- Match: {nearest_benchmark.get('match_pct')}%
+- URL: {nearest_benchmark.get('url')}
+- Flight Conditions: {json.dumps(nearest_benchmark.get('conditions', {}))}
+- Flight Regime: {nearest_benchmark.get('nasa_regime')}, NASA Burning Rate K: {nearest_benchmark.get('nasa_burning_rate_k')} mm2/s
+- Note: {nearest_benchmark.get('note')}
+
+Remember:
+- Use [VERIFIED NASA PSI DATA] with URL for NASA flight facts.
+- Use [THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL] for equations and models.
+- Structure response in 3 sections: 1. VERDICT, 2. OBJECTIVE PHYSICAL REASONS, 3. BENCHMARK REFERENCE & HISTORICAL LESSON.
+"""
+
+    if api_key and api_key != "YOUR_GEMINI_API_KEY":
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=BLUEPRINT_SYSTEM_INSTRUCTION,
+                    temperature=0.20,
+                )
+            )
+            if response and response.text:
+                return {
+                    "source": "gemini-2.5-flash",
+                    "status": "success",
+                    "advisory_text": response.text,
+                    "model": "gemini-2.5-flash",
+                    "nearest_benchmark": nearest_benchmark,
+                    "retrieved_chunks": retrieved_chunks
+                }
+        except Exception as e:
+            print(f"[BLUEPRINT COPILOT] Live Gemini API error: {e}. Falling back to deterministic engine.")
+
+    # High-Fidelity Deterministic Fallback
+    return _generate_blueprint_fallback(
+        query=user_query,
+        params=params,
+        evaluation=evaluation,
+        nearest_benchmark=nearest_benchmark,
+        retrieved_chunks=retrieved_chunks,
+        lang=lang_code
+    )
+
+
+def _generate_blueprint_fallback(
+    query: str,
+    params: Dict[str, Any],
+    evaluation: Dict[str, Any],
+    nearest_benchmark: Dict[str, Any],
+    retrieved_chunks: List[Dict[str, Any]],
+    lang: str = "ru"
+) -> Dict[str, Any]:
+    """Generates structured response following strict tags and 3-part format."""
+    status = evaluation.get("flight_status", "CAUTION")
+    fire_risk = evaluation.get("fire_risk_pct", 50.0)
+    expl_risk = evaluation.get("explosion_risk_pct", 0.0)
+    breach = evaluation.get("breach_outside_risk", False)
+    sim_tel = evaluation.get("sim_telemetry", {})
+    t_flame = sim_tel.get("flame_temp_k", 1800.0)
+    spread_rate = sim_tel.get("spread_rate_mm_s", 1.5)
+    color_mode = sim_tel.get("flame_color_mode", "sooty_yellow")
+    overpressure = sim_tel.get("cabin_overpressure_kpa", 0.0)
+    analog = evaluation.get("historical_analog", {})
+
+    bench_id = nearest_benchmark.get("benchmark_id", "PSI-117-01")
+    bench_name = nearest_benchmark.get("investigation", "PSI-117 (FLEX Cool Flames CFD)")
+    bench_url = nearest_benchmark.get("url", "https://psi.nasa.gov/physci/repo/data/investigations/PSI-117")
+    bench_match = nearest_benchmark.get("match_pct", 95.0)
+    bench_k = nearest_benchmark.get("nasa_burning_rate_k", 0.365)
+    bench_regime = nearest_benchmark.get("nasa_regime", "cool_flame")
+
+    o2_pct = float(params.get("o2_percent", params.get("o2_pct", 21.0)))
+    if o2_pct <= 1.0 and o2_pct > 0.0:
+        o2_pct *= 100.0
+    p_atm = float(params.get("pressure_atm", params.get("pressure_bar", 1.0)))
+    vg_cms = float(params.get("flow_velocity_cms", params.get("flow_cms", 0.0)))
+    x_o2 = o2_pct / 100.0
+    loi_crit = 0.15 * (1.0 / max(0.1, p_atm)) ** 0.10
+
+    if lang == "ru":
+        text = f"""### 1. ВЕРДИКТ (VERDICT)
+- **Операционное решение Flight Safety:** `{status}`
+- **Пожарный риск (Fire Risk):** **{fire_risk:.1f}%** | **Взрывной риск (Explosion Risk):** **{expl_risk:.1f}%**
+- **Угроза прорыва гермооболочки наружу (Hull Breach):** **{'ДА (КРИТИЧНО)' if breach else 'НЕТ (В ПРЕДЕЛАХ НОРМЫ)'}**
+- **Режим горения:** **{color_mode.upper()}** (температура зоны реакции **{t_flame:.0f} K**, скорость распространения фронта **{spread_rate:.2f} мм/с**)
+
+### 2. ФИЗИЧЕСКОЕ ОБОСНОВАНИЕ (OBJECTIVE PHYSICAL REASONS)
+`[THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL]`
+- **Критерий негорючести Chung K. Law (Section 0.1):** При концентрации O₂ = {o2_pct:.1f}% и давлении P = {p_atm:.2f} атм мольная доля кислорода составляет X_O2 = {x_o2:.3f} (критический порог негорючести LOI_crit = {loi_crit:.3f}). При X_O2 < 0.15 атмосфера корабля становится негорючей, так как теплоотвод излучением превышает аррениусовское тепловыделение.
+- **S-кривая Дамкёлера (Chung K. Law Chapter 8):** Отношение гидродинамического времени диффузии к времени химической кинетики определяет режим: {'радиационное гашение (Da < 0.45)' if color_mode == 'extinguished' else 'низкотемпературная NTC кинетика холодного пламени' if color_mode == 'cool_blue' else 'диффузионно-контролируемое устойчивое горячее горение'}.
+- **U-кривая обдува NASA BASS-II (TM-20210011385):** При текущей скорости обдува V_g = {vg_cms:.1f} см/с {'наблюдается радиационное самозатухание в покое (V_g < 1.5 см/с)' if vg_cms < 1.5 else 'режим находится в зоне критического сквозняка 15–30 см/с с максимальным притоком окислителя' if 15 <= vg_cms <= 30 else 'действует аэродинамический срыв пламени при V_g > 55 см/с' if vg_cms >= 55 else 'поддерживается устойчивый конвективный перенос'}.
+- **Термический баланс обитаемого модуля (Saffire V ICES-2024-310):** Избыточное давление в модуле составляет {overpressure:.1f} кПа (предел герметичности 45.0 кПа).
+
+### 3. ЭТАЛОН NASA И УРОКИ ИСТОРИИ (BENCHMARK REFERENCE & HISTORICAL LESSON)
+`[VERIFIED NASA PSI DATA]` {bench_url}
+- **Ближайший эксперимент NASA:** `{bench_id}` ({bench_name}), степень совпадения параметров: **{bench_match:.1f}%**.
+  - Эталонный режим NASA: `{bench_regime}`, экспериментальная константа скорости выгорания K = **{bench_k:.3f} мм²/с**.
+- **Исторический космический аналог:** **{analog.get('name', 'NASA Historical Spaceflight Analog')}** (сходство: **{analog.get('similarity_pct', 95.0):.1f}%**).
+  - *Урок NASA Space Apps:* {analog.get('reason', 'В невесомости отсутствие плавучести требует многоволновой оптической дискриминации аэрозолей и экстренной локализации потоков ECLSS.')}
+"""
+    else:
+        text = f"""### 1. VERDICT
+- **Flight Safety Operational Verdict:** `{status}`
+- **Fire Risk Score:** **{fire_risk:.1f}%** | **Explosion Risk:** **{expl_risk:.1f}%**
+- **Vehicle Hull Breach Risk:** **{'CRITICAL (YES)' if breach else 'NOMINAL (NO)'}**
+- **Combustion Regime:** **{color_mode.upper()}** (flame zone temp: **{t_flame:.0f} K**, spread rate: **{spread_rate:.2f} mm/s**)
+
+### 2. OBJECTIVE PHYSICAL REASONS
+`[THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL]`
+- **Chung K. Law Flammability Criterion (Section 0.1):** Operating with O2 = {o2_pct:.1f}% at pressure P = {p_atm:.2f} atm yields oxygen mole fraction X_O2 = {x_o2:.3f} against non-flammability threshold LOI_crit = {loi_crit:.3f}. Below 15% O2, radiative losses extinguish the reaction.
+- **Damköhler S-Curve (Law Chapter 8):** The Damköhler number Da governs the regime: {'radiative extinction branch (Da < 0.45)' if color_mode == 'extinguished' else 'low-temperature cool flame NTC branch' if color_mode == 'cool_blue' else 'diffusion-controlled sustained hot flame'}.
+- **NASA BASS-II U-Curve (TM-20210011385):** Flow draft V_g = {vg_cms:.1f} cm/s {'triggers microgravity low-flow radiative quenching (< 1.5 cm/s)' if vg_cms < 1.5 else 'operates within peak convective feed zone (15–30 cm/s)' if 15 <= vg_cms <= 30 else 'approaches convective blowoff detachment (> 55 cm/s)' if vg_cms >= 55 else 'maintains stable convective burning'}.
+- **Vehicle Hull Heat Balance (Saffire V ICES-2024-310):** Calculated cabin overpressure is {overpressure:.1f} kPa (proof margin 45.0 kPa).
+
+### 3. BENCHMARK REFERENCE & HISTORICAL LESSON
+`[VERIFIED NASA PSI DATA]` {bench_url}
+- **Nearest NASA Benchmark:** `{bench_id}` ({bench_name}), state-space match: **{bench_match:.1f}%**.
+  - Flight Regime: `{bench_regime}`, NASA burning rate K = **{bench_k:.3f} mm²/s**.
+- **Historical Spaceflight Analog:** **{analog.get('name', 'NASA Historical Spaceflight Analog')}** (similarity: **{analog.get('similarity_pct', 95.0):.1f}%**).
+  - *NASA Historical Lesson:* {analog.get('reason', 'Absence of buoyancy requires rapid ECLSS airflow isolation and dual-wavelength smoke filtering.')}
+"""
+
+    return {
+        "source": "embedded_nasa_physics_engine",
+        "status": "success",
+        "advisory_text": text,
+        "model": "deterministic-blueprint-copilot",
+        "nearest_benchmark": nearest_benchmark,
+        "retrieved_chunks": retrieved_chunks
+    }
+
