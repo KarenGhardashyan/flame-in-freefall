@@ -13,6 +13,41 @@
   <!-- Three.js + OrbitControls CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Firebase Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    export const firebaseConfig = {
+      apiKey: "AIzaSyAZkQS3Q6kJ22InHZNFehqzOKK458jStdw",
+      authDomain: "microgravitational-flame.firebaseapp.com",
+      projectId: "microgravitational-flame",
+      storageBucket: "microgravitational-flame.firebasestorage.app",
+      messagingSenderId: "1091130732706",
+      appId: "1:1091130732706:web:e9745a1fda87564e7ea7fb",
+      measurementId: "G-H764T37XC6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.firebaseApp = app;
+    window.firestoreDb = db;
+    window.addDoc = addDoc;
+    window.collection = collection;
+    window.serverTimestamp = serverTimestamp;
+
+    isSupported().then(supported => {
+      if (supported) {
+        window.analytics = getAnalytics(app);
+        console.log("[FIREBASE] Google Analytics initialized successfully.");
+      }
+    });
+
+    console.log("[FIREBASE] Connected to live cloud project: microgravitational-flame");
+  </script>
+
   <style>
     body {
       background-color: #060913;
@@ -663,7 +698,7 @@
     });
 
     // Run Simulation Animation (d^2 law burnout)
-    btnRunSim.addEventListener('click', () => {
+    btnRunSim.addEventListener('click', async () => {
       let t = 0;
       let currD2 = d0 * d0;
       const k = currentGravity === 0 ? 0.512 : 0.890;
@@ -671,6 +706,22 @@
       
       const timeArr = [];
       const d2Arr = [];
+
+      // Record to Firestore if connected
+      if (window.firestoreDb && window.addDoc) {
+        try {
+          await window.addDoc(window.collection(window.firestoreDb, "simulations"), {
+            initial_diameter_mm: d0,
+            gravity: currentGravity,
+            oxygen_fraction: o2Frac,
+            pressure_bar: pressure,
+            timestamp: window.serverTimestamp()
+          });
+          console.log("[FIREBASE] Simulation recorded to Firestore.");
+        } catch (err) {
+          console.warn("[FIREBASE] Could not record simulation to Firestore:", err);
+        }
+      }
 
       clearInterval(simInterval);
       simInterval = setInterval(() => {
