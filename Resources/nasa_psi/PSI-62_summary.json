@@ -1,0 +1,11 @@
+﻿{
+    "id":  "PSI-62",
+    "description":  "Concurrent and opposed flame spread along solid polymer materials in low-speed forced microgravity convective flows.",
+    "doi":  "N/A",
+    "key_findings":  [
+                         "Flames propagate upstream against slow drafts (~1-5 cm/s).",
+                         "Extinction occurs at low airflow due to oxygen starvation and high radiative loss."
+                     ],
+    "title":  "BASS (Burning and Suppression of Solids)",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-62"
+}

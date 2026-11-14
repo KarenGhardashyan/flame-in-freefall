@@ -1,0 +1,69 @@
+﻿[
+    {
+        "id":  "PSI-117",
+        "description":  "Flame Extinction with Cool Flames - Computational Fluid Dynamics Analysis. Investigates 2nd stage low-temperature combustion of alkane droplets in microgravity.",
+        "doi":  "10.60555/gz0q-b577",
+        "key_findings":  [
+                             "Hot diffusion flame extinguishes due to radiative heat loss at critical droplet diameter.",
+                             "Low-temperature cool flame persists quasi-steadily at ~700-800 K.",
+                             "Combustion continues without visible luminosity, presenting severe undetected fire risk."
+                         ],
+        "title":  "FLEX Cool Flames CFD",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-117"
+    },
+    {
+        "id":  "PSI-159",
+        "description":  "Spherical gaseous cool diffusion flames without liquid droplet condensation in microgravity.",
+        "doi":  "N/A",
+        "key_findings":  [
+                             "Gaseous fuels demonstrate low-temperature cool flame chemistry in quiescent 0g.",
+                             "Chemiluminescence emission peaked in UV/formaldehyde bands rather than visible soot continuum."
+                         ],
+        "title":  "ACME CFI-G (Cool Flames Investigation with Gases)",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-159"
+    },
+    {
+        "id":  "PSI-10",
+        "description":  "Advanced Combustion via Microgravity Experiments: Flame Design to optimize burner geometries and suppress soot.",
+        "doi":  "N/A",
+        "key_findings":  [
+                             "Evaluates non-premixed spherical flames under varied diluent (CO2/N2) concentrations.",
+                             "Defines soot-free operating envelopes in microgravity."
+                         ],
+        "title":  "ACME Flame Design",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-10"
+    },
+    {
+        "id":  "PSI-62",
+        "description":  "Concurrent and opposed flame spread along solid polymer materials in low-speed forced microgravity convective flows.",
+        "doi":  "N/A",
+        "key_findings":  [
+                             "Flames propagate upstream against slow drafts (~1-5 cm/s).",
+                             "Extinction occurs at low airflow due to oxygen starvation and high radiative loss."
+                         ],
+        "title":  "BASS (Burning and Suppression of Solids)",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-62"
+    },
+    {
+        "id":  "PSI-60",
+        "description":  "Soot inception and agglomeration comparison between terrestrial 1g and microgravity 0g co-flow diffusion flames.",
+        "doi":  "N/A",
+        "key_findings":  [
+                             "Longer residence times in 0g foster larger primary soot particles and aggregate chains.",
+                             "Higher radiative heat loss from soot cloud alters flame temperature and extinction limits."
+                         ],
+        "title":  "SPICE (Smoke Point In Co-flow Experiment)",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-60"
+    },
+    {
+        "id":  "PSI-142",
+        "description":  "Experimental observation of transitions from hot droplet diffusion flames to quasi-steady cool flames in ISS Combustion Integrated Rack (CIR).",
+        "doi":  "N/A",
+        "key_findings":  [
+                             "First observation of steady-state cool flames in free-floating n-heptane droplets.",
+                             "Second extinction limit observed when droplet size shrinks to ~0.5 mm."
+                         ],
+        "title":  "Cool Flame Transitions / FLEX",
+        "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-142"
+    }
+]

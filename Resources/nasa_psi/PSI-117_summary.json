@@ -1,0 +1,12 @@
+﻿{
+    "id":  "PSI-117",
+    "description":  "Flame Extinction with Cool Flames - Computational Fluid Dynamics Analysis. Investigates 2nd stage low-temperature combustion of alkane droplets in microgravity.",
+    "doi":  "10.60555/gz0q-b577",
+    "key_findings":  [
+                         "Hot diffusion flame extinguishes due to radiative heat loss at critical droplet diameter.",
+                         "Low-temperature cool flame persists quasi-steadily at ~700-800 K.",
+                         "Combustion continues without visible luminosity, presenting severe undetected fire risk."
+                     ],
+    "title":  "FLEX Cool Flames CFD",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-117"
+}

@@ -1,0 +1,11 @@
+﻿{
+    "id":  "PSI-60",
+    "description":  "Soot inception and agglomeration comparison between terrestrial 1g and microgravity 0g co-flow diffusion flames.",
+    "doi":  "N/A",
+    "key_findings":  [
+                         "Longer residence times in 0g foster larger primary soot particles and aggregate chains.",
+                         "Higher radiative heat loss from soot cloud alters flame temperature and extinction limits."
+                     ],
+    "title":  "SPICE (Smoke Point In Co-flow Experiment)",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-60"
+}

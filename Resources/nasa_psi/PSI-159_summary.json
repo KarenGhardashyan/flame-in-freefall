@@ -1,0 +1,11 @@
+﻿{
+    "id":  "PSI-159",
+    "description":  "Spherical gaseous cool diffusion flames without liquid droplet condensation in microgravity.",
+    "doi":  "N/A",
+    "key_findings":  [
+                         "Gaseous fuels demonstrate low-temperature cool flame chemistry in quiescent 0g.",
+                         "Chemiluminescence emission peaked in UV/formaldehyde bands rather than visible soot continuum."
+                     ],
+    "title":  "ACME CFI-G (Cool Flames Investigation with Gases)",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-159"
+}

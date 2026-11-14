@@ -1,0 +1,11 @@
+﻿{
+    "id":  "PSI-142",
+    "description":  "Experimental observation of transitions from hot droplet diffusion flames to quasi-steady cool flames in ISS Combustion Integrated Rack (CIR).",
+    "doi":  "N/A",
+    "key_findings":  [
+                         "First observation of steady-state cool flames in free-floating n-heptane droplets.",
+                         "Second extinction limit observed when droplet size shrinks to ~0.5 mm."
+                     ],
+    "title":  "Cool Flame Transitions / FLEX",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-142"
+}

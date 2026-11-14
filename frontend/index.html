@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flame in Freefall | AI-Powered Microgravity Fire Safety</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      background-color: #060913;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .nasa-gradient {
+      background: linear-gradient(135deg, rgba(16, 24, 48, 0.9) 0%, rgba(10, 15, 30, 0.95) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
+    }
+    .glow-orange {
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.25);
+    }
+    .glow-red {
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+    }
+    canvas#flameCanvas {
+      background: radial-gradient(circle, #0a0e1f 0%, #03060f 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP STATUS BAR -->
+  <header class="border-b border-blue-900/40 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-cyan-400 font-bold">
+        <i data-lucide="flame" class="w-5 h-5 text-orange-400"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-wider text-slate-100 flex items-center space-x-2">
+          <span>FLAME IN FREEFALL</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-700/50 font-mono">0g AI-DEFENSE</span>
+        </h1>
+        <p class="text-xs text-slate-400">NASA International Space Apps Challenge • Team Sisyphus</p>
+      </div>
+    </div>
+
+    <!-- Telemetry status pills -->
+    <div class="flex items-center space-x-4 text-xs font-mono">
+      <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-300">TELEMETRY: <span id="telemetryStatus" class="text-emerald-400 font-bold">NOMINAL</span></span>
+      </div>
+      <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
+        <i data-lucide="cloud" class="w-3.5 h-3.5 text-blue-400"></i>
+        <span class="text-slate-300">FIREBASE: <span class="text-blue-400 font-bold">microgravitational-flame</span></span>
+      </div>
+      <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
+        <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span class="text-slate-300">PHYSICS: <span class="text-amber-400">Chung K. Law / PSI-117</span></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="flex-1 p-6 grid grid-cols-12 gap-6 max-w-[1720px] mx-auto w-full">
+
+    <!-- LEFT COLUMN: CONTROLS & FLAME VIEW (5 Cols) -->
+    <div class="col-span-12 lg:col-span-5 flex flex-col space-y-6">
+
+      <!-- FLAME CANVAS & PHYSICAL REGIME -->
+      <div class="nasa-gradient rounded-xl p-5 flex flex-col relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="eye" class="w-4 h-4 text-cyan-400"></i>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Microgravity Flame Dynamics</h2>
+          </div>
+          <span id="flameRegimeBadge" class="text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
+            0g SPHERICAL DIFFUSION
+          </span>
+        </div>
+
+        <div class="relative w-full aspect-square max-h-[340px] rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center">
+          <canvas id="flameCanvas" width="400" height="340" class="w-full h-full"></canvas>
+          
+          <div class="absolute bottom-3 left-3 bg-black/60 backdrop-blur px-3 py-1.5 rounded text-[11px] font-mono border border-slate-800/80 space-y-0.5">
+            <div>Droplet $d(t)$: <span id="dispDiameter" class="text-cyan-300 font-bold">2.00 mm</span></div>
+            <div>Standoff $r_f/r_s$: <span id="dispStandoff" class="text-amber-300 font-bold">8.42</span></div>
+            <div>Flame Temp: <span id="dispTemp" class="text-rose-400 font-bold">1812 K</span></div>
+          </div>
+
+          <div class="absolute top-3 right-3 flex flex-col space-y-1">
+            <button id="toggleGravityBtn" class="bg-slate-900/80 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-cyan-500/40 text-cyan-300 font-mono transition">
+              SWITCH TO 1g
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-mono">
+          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+            <span class="text-slate-400 text-[10px]">BURNING RATE K</span>
+            <div id="dispK" class="text-cyan-400 font-bold mt-0.5">0.512 mm²/s</div>
+          </div>
+          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+            <span class="text-slate-400 text-[10px]">LIFETIME (tb)</span>
+            <div id="dispTb" class="text-amber-400 font-bold mt-0.5">7.81 s</div>
+          </div>
+          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+            <span class="text-slate-400 text-[10px]">SPALDING (B)</span>
+            <div id="dispB" class="text-emerald-400 font-bold mt-0.5">7.14</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHYSICS PARAMETERS PANEL -->
+      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Boundary & Atmospheric Controls</h2>
+          </div>
+          <button id="btnRunSim" class="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-4 py-1.5 rounded transition text-white flex items-center space-x-1.5">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>RUN SIMULATION</span>
+          </button>
+        </div>
+
+        <!-- Controls Grid -->
+        <div class="space-y-3 text-xs">
+          <!-- Initial Droplet Diameter -->
+          <div>
+            <div class="flex justify-between text-slate-300 font-mono mb-1">
+              <span>Initial Droplet Diameter ($d_0$)</span>
+              <span id="labelD0" class="text-cyan-400 font-bold">2.0 mm</span>
+            </div>
+            <input id="sliderD0" type="range" min="0.5" max="5.0" step="0.1" value="2.0" class="w-full accent-cyan-500 cursor-pointer">
+          </div>
+
+          <!-- Oxygen Concentration -->
+          <div>
+            <div class="flex justify-between text-slate-300 font-mono mb-1">
+              <span>Cabin Oxygen ($X_{O_2}$) — Limit: 15%</span>
+              <span id="labelO2" class="text-cyan-400 font-bold">21.0%</span>
+            </div>
+            <input id="sliderO2" type="range" min="10" max="30" step="0.5" value="21" class="w-full accent-blue-500 cursor-pointer">
+            <div id="flammabilityAlert" class="mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              <span>O2 > 15% (Chung K. Law Flammable Regime)</span>
+            </div>
+          </div>
+
+          <!-- Cabin Pressure -->
+          <div>
+            <div class="flex justify-between text-slate-300 font-mono mb-1">
+              <span>Atmospheric Pressure ($P$)</span>
+              <span id="labelP" class="text-cyan-400 font-bold">1.0 bar</span>
+            </div>
+            <input id="sliderP" type="range" min="0.4" max="2.0" step="0.1" value="1.0" class="w-full accent-blue-500 cursor-pointer">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: CHARTS, ML DETECTOR & GEMINI ADVISOR (7 Cols) -->
+    <div class="col-span-12 lg:col-span-7 flex flex-col space-y-6">
+
+      <!-- TOP ROW: TWO INTERACTIVE CHARTS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- d^2 Trajectory Chart -->
+        <div class="nasa-gradient rounded-xl p-4 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Droplet Vaporization $d^2(t)$</span>
+            <span class="text-[10px] text-cyan-400 font-mono">Chung K. Law Ch. 6</span>
+          </div>
+          <div class="h-44 w-full">
+            <canvas id="d2Chart"></canvas>
+          </div>
+        </div>
+
+        <!-- S-Curve Limit Phenomena Chart -->
+        <div class="nasa-gradient rounded-xl p-4 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Combustion S-Curve (Da vs T)</span>
+            <span class="text-[10px] text-amber-400 font-mono">NASA PSI-117 Extinction</span>
+          </div>
+          <div class="h-44 w-full">
+            <canvas id="sCurveChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ML DETECTOR & FALSE ALARM FILTER -->
+      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-400"></i>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">0g Early Fire Detector & False Alarm Rejection</h2>
+          </div>
+          <button id="btnStreamDemo" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5">
+            <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+            <span>RUN 30s TELEMETRY TEST</span>
+          </button>
+        </div>
+
+        <!-- Anomaly status telemetry gauges -->
+        <div class="grid grid-cols-4 gap-3 text-xs font-mono">
+          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-400 text-[10px]">CO CONCENTRATION</div>
+            <div id="valCO" class="text-slate-200 font-bold text-sm mt-0.5">3.2 ppm</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Limit: 25 ppm</div>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-400 text-[10px]">BLUE/IR SCATTERING</div>
+            <div id="valScatterRatio" class="text-slate-200 font-bold text-sm mt-0.5">1.25</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">> 2.4 = Soot / < 1.6 = Dust</div>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-400 text-[10px]">FALSE ALARM FILTER</div>
+            <div id="valFilterStatus" class="text-emerald-400 font-bold text-sm mt-0.5">SUPPRESSION OFF</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Rejects zero-g dust</div>
+          </div>
+          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-400 text-[10px]">RISK ASSESSMENT</div>
+            <div id="valSeverity" class="text-emerald-400 font-bold text-sm mt-0.5">NOMINAL</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Score: <span id="valRiskScore">0.05</span></div>
+          </div>
+        </div>
+
+        <!-- Sensor telemetry chart -->
+        <div class="h-36 w-full pt-2">
+          <canvas id="telemetryChart"></canvas>
+        </div>
+      </div>
+
+      <!-- GEMINI AI FLIGHT RULE ADVISOR -->
+      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Gemini AI Spacecraft Fire Safety Officer</h2>
+          </div>
+          <button id="btnAskGemini" class="bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/50 text-purple-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>GENERATE ADVISORY</span>
+          </button>
+        </div>
+
+        <div id="geminiOutput" class="bg-slate-950/70 p-4 rounded-lg border border-slate-800/80 text-xs font-mono space-y-2 text-slate-300 leading-relaxed max-h-56 overflow-y-auto">
+          <div class="text-slate-400 italic">Standby. Ready to evaluate current microgravity combustion state and telemetry. Click "Generate Advisory" or run the telemetry test.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER: NASA PSI DATASET REFERENCES -->
+  <footer class="border-t border-slate-900 bg-slate-950/90 px-6 py-4 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-4">
+      <span class="font-bold text-slate-300">NASA PSI Investigation References:</span>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-117" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-117 (FLEX CFD, DOI: 10.60555/gz0q-b577)</a>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-159" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-159 (ACME CFI-G)</a>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-10" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-10 (Flame Design)</a>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-62" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-62 (BASS)</a>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-60" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-60 (SPICE)</a>
+    </div>
+    <div class="text-slate-500">
+      NASA International Space Apps Challenge • Team Sisyphus
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    lucide.createIcons();
+
+    // State Variables
+    let currentGravity = 0.0; // 0g
+    let d0 = 2.0;
+    let o2Frac = 0.21;
+    let pressure = 1.0;
+    let isSimulating = false;
+    let animationFrameId = null;
+
+    // Canvas & Context
+    const canvas = document.getElementById("flameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // UI Elements
+    const toggleGravityBtn = document.getElementById("toggleGravityBtn");
+    const flameRegimeBadge = document.getElementById("flameRegimeBadge");
+    const sliderD0 = document.getElementById("sliderD0");
+    const labelD0 = document.getElementById("labelD0");
+    const sliderO2 = document.getElementById("sliderO2");
+    const labelO2 = document.getElementById("labelO2");
+    const sliderP = document.getElementById("sliderP");
+    const labelP = document.getElementById("labelP");
+    const flammabilityAlert = document.getElementById("flammabilityAlert");
+    const btnRunSim = document.getElementById("btnRunSim");
+    const btnStreamDemo = document.getElementById("btnStreamDemo");
+    const btnAskGemini = document.getElementById("btnAskGemini");
+    const geminiOutput = document.getElementById("geminiOutput");
+
+    // Charts Setup
+    let d2Chart, sCurveChart, telemetryChart;
+
+    function initCharts() {
+      // D2 Chart
+      const ctxD2 = document.getElementById('d2Chart').getContext('2d');
+      d2Chart = new Chart(ctxD2, {
+        type: 'line',
+        data: {
+          labels: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+          datasets: [{
+            label: 'd² (mm²)',
+            data: [4.0, 3.48, 2.97, 2.46, 1.95, 1.44, 0.93, 0.42, 0.0],
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: 'Time (s)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+            y: { title: { display: true, text: 'd² (mm²)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // S-Curve Chart
+      const ctxSCurve = document.getElementById('sCurveChart').getContext('2d');
+      const daVals = [0.1, 0.2, 0.4, 0.5, 0.7, 1.0, 2.0, 4.0, 8.0];
+      sCurveChart = new Chart(ctxSCurve, {
+        type: 'line',
+        data: {
+          labels: daVals,
+          datasets: [{
+            label: 'Ignited Branch (K)',
+            data: [1200, 1420, 1610, 1720, 1830, 1920, 2040, 2100, 2120],
+            borderColor: '#f59e0b',
+            borderWidth: 2,
+            tension: 0.2,
+            pointRadius: 2
+          }, {
+            label: 'Extinguished Limit',
+            data: [300, 310, 330, 340, 350, 360, 370, 380, 390],
+            borderColor: '#64748b',
+            borderDash: [5, 5],
+            borderWidth: 1.5,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: 'Damköhler Number (Da)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+            y: { title: { display: true, text: 'T_flame (K)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // Telemetry Timeline Chart
+      const ctxTel = document.getElementById('telemetryChart').getContext('2d');
+      telemetryChart = new Chart(ctxTel, {
+        type: 'line',
+        data: {
+          labels: Array.from({length: 20}, (_, i) => i + "s"),
+          datasets: [
+            {
+              label: 'CO (ppm)',
+              data: [3, 3, 3, 3, 4, 3, 3, 12, 18, 24, 32, 45, 52, 60, 68, 75, 80, 82, 85, 88],
+              borderColor: '#ef4444',
+              borderWidth: 1.5,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Blue/IR Ratio',
+              data: [1.2, 1.2, 1.1, 1.0, 1.1, 1.0, 1.2, 2.6, 2.9, 3.2, 3.5, 3.8, 3.9, 4.0, 4.1, 4.1, 4.2, 4.2, 4.2, 4.3],
+              borderColor: '#38bdf8',
+              borderWidth: 1.5,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+            y: { position: 'left', title: { display: true, text: 'CO (ppm)', color: '#ef4444', font: { size: 9 } }, ticks: { color: '#ef4444' }, grid: { color: '#1e293b' } },
+            y1: { position: 'right', title: { display: true, text: 'Blue/IR Ratio', color: '#38bdf8', font: { size: 9 } }, ticks: { color: '#38bdf8' }, grid: { display: false } }
+          },
+          plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#94a3b8' } } }
+        }
+      });
+    }
+
+    // DRAW FLAME ON CANVAS
+    function drawFlame(diamMm, standoff, gravity, regime) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Scale: 1 mm ~ 12 pixels
+      const scale = 14;
+      const dropletRadiusPx = Math.max((diamMm / 2) * scale, 3);
+      const flameRadiusPx = dropletRadiusPx * standoff;
+
+      if (gravity === 0.0) {
+        // MICROGRAVITY (0g): Pure Spherical Symmetry
+        const grad = ctx.createRadialGradient(cx, cy, dropletRadiusPx, cx, cy, flameRadiusPx);
+        if (regime === 'COOL_FLAME') {
+          grad.addColorStop(0, 'rgba(34, 211, 238, 0.05)');
+          grad.addColorStop(0.7, 'rgba(56, 189, 248, 0.25)');
+          grad.addColorStop(1, 'rgba(14, 165, 233, 0)');
+        } else {
+          // Hot diffusion flame in 0g
+          grad.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
+          grad.addColorStop(0.5, 'rgba(37, 99, 235, 0.4)');
+          grad.addColorStop(0.85, 'rgba(249, 115, 22, 0.7)');
+          grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        }
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, flameRadiusPx, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Standoff boundary ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, flameRadiusPx * 0.9, 0, Math.PI * 2);
+        ctx.strokeStyle = regime === 'COOL_FLAME' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(251, 146, 60, 0.5)';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // NORMAL GRAVITY (1g): Buoyant Plume (Teardrop shape)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.beginPath();
+        ctx.moveTo(0, dropletRadiusPx);
+        ctx.bezierCurveTo(flameRadiusPx * 0.8, 0, flameRadiusPx * 0.5, -flameRadiusPx * 2.2, 0, -flameRadiusPx * 2.8);
+        ctx.bezierCurveTo(-flameRadiusPx * 0.5, -flameRadiusPx * 2.2, -flameRadiusPx * 0.8, 0, 0, dropletRadiusPx);
+        
+        const plumeGrad = ctx.createLinearGradient(0, dropletRadiusPx, 0, -flameRadiusPx * 2.8);
+        plumeGrad.addColorStop(0, 'rgba(37, 99, 235, 0.8)');
+        plumeGrad.addColorStop(0.3, 'rgba(245, 158, 11, 0.8)');
+        plumeGrad.addColorStop(0.8, 'rgba(239, 68, 68, 0.7)');
+        plumeGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        
+        ctx.fillStyle = plumeGrad;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw Central Liquid Droplet
+      ctx.beginPath();
+      ctx.arc(cx, cy, dropletRadiusPx, 0, Math.PI * 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = '#0284c7';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Toggle Gravity 0g <-> 1g
+    toggleGravityBtn.addEventListener('click', () => {
+      if (currentGravity === 0.0) {
+        currentGravity = 1.0;
+        toggleGravityBtn.innerText = "SWITCH TO 0g";
+        flameRegimeBadge.innerText = "1g BUOYANT PLUME";
+        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-amber-950 text-amber-300 border border-amber-800";
+        document.getElementById("dispStandoff").innerText = "2.85";
+        document.getElementById("dispK").innerText = "0.890 mm²/s";
+      } else {
+        currentGravity = 0.0;
+        toggleGravityBtn.innerText = "SWITCH TO 1g";
+        flameRegimeBadge.innerText = "0g SPHERICAL DIFFUSION";
+        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800";
+        document.getElementById("dispStandoff").innerText = "8.42";
+        document.getElementById("dispK").innerText = "0.512 mm²/s";
+      }
+      drawFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, 'HOT_DIFFUSION');
+    });
+
+    // Slider Listeners
+    sliderD0.addEventListener('input', (e) => {
+      d0 = parseFloat(e.target.value);
+      labelD0.innerText = d0.toFixed(1) + " mm";
+      document.getElementById("dispDiameter").innerText = d0.toFixed(2) + " mm";
+      const tb = (d0 * d0) / (currentGravity === 0 ? 0.512 : 0.890);
+      document.getElementById("dispTb").innerText = tb.toFixed(2) + " s";
+      drawFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, 'HOT_DIFFUSION');
+    });
+
+    sliderO2.addEventListener('input', (e) => {
+      const pct = parseFloat(e.target.value);
+      o2Frac = pct / 100.0;
+      labelO2.innerText = pct.toFixed(1) + "%";
+      if (pct < 15.0) {
+        flammabilityAlert.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i><span class="text-blue-400">O2 < 15%: SELF-EXTINGUISHED (Chung K. Law Safety Limit)</span>`;
+        flammabilityAlert.className = "mt-1 text-[11px] font-mono text-blue-400 flex items-center space-x-1";
+      } else {
+        flammabilityAlert.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">O2 ≥ 15%: Flammable Atmosphere Supported</span>`;
+        flammabilityAlert.className = "mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1";
+      }
+      lucide.createIcons();
+    });
+
+    sliderP.addEventListener('input', (e) => {
+      pressure = parseFloat(e.target.value);
+      labelP.innerText = pressure.toFixed(1) + " bar";
+    });
+
+    // Run Simulation Animation
+    btnRunSim.addEventListener('click', () => {
+      let t = 0;
+      let currD2 = d0 * d0;
+      const k = currentGravity === 0 ? 0.512 : 0.890;
+      const dt = 0.05;
+      
+      const timeArr = [];
+      const d2Arr = [];
+
+      clearInterval(animationFrameId);
+      animationFrameId = setInterval(() => {
+        t += dt;
+        currD2 -= k * dt;
+        if (currD2 <= 0) {
+          currD2 = 0;
+          clearInterval(animationFrameId);
+        }
+        const currD = Math.sqrt(currD2);
+        const regime = (currentGravity === 0 && currD < 0.85 && currD > 0.1) ? 'COOL_FLAME' : 'HOT_DIFFUSION';
+        
+        document.getElementById("dispDiameter").innerText = currD.toFixed(2) + " mm";
+        document.getElementById("dispTemp").innerText = regime === 'COOL_FLAME' ? '740 K' : '1812 K';
+        if (regime === 'COOL_FLAME') {
+          flameRegimeBadge.innerText = "COOL FLAME TRANSITION (PSI-117)";
+          flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-900 text-cyan-200 border border-cyan-500 animate-pulse";
+        }
+        
+        drawFlame(currD, currentGravity === 0 ? 8.42 : 2.85, currentGravity, regime);
+
+        timeArr.push(t.toFixed(1));
+        d2Arr.push(Math.max(currD2, 0).toFixed(2));
+        if (timeArr.length % 4 === 0) {
+          d2Chart.data.labels = timeArr;
+          d2Chart.data.datasets[0].data = d2Arr;
+          d2Chart.update();
+        }
+      }, 50);
+    });
+
+    // Run 30s Telemetry Test
+    btnStreamDemo.addEventListener('click', () => {
+      const phases = [
+        { name: "Phase 1: Nominal ISS Cabin", co: 2.5, ratio: 1.1, alert: "ALL_CLEAR", score: 0.04, color: "text-emerald-400", filter: "SUPPRESSION OFF" },
+        { name: "Phase 2: Crew Dust Disturbance (False Alarm)", co: 3.2, ratio: 1.05, alert: "FALSE ALARM SUPPRESSED", score: 0.22, color: "text-blue-400", filter: "FILTER ENGAGED (DUST)" },
+        { name: "Phase 3: Rack Smoldering / Cool Flame Incubation", co: 18.5, ratio: 2.8, alert: "COOL FLAME INCUBATION", score: 0.58, color: "text-amber-400", filter: "SUPPRESSION OFF" },
+        { name: "Phase 4: Active 0g Combustion Outbreak", co: 64.0, ratio: 4.2, alert: "FIRE ALARM CRITICAL", score: 0.94, color: "text-rose-400", filter: "SUPPRESSION OFF" }
+      ];
+
+      let step = 0;
+      const interval = setInterval(() => {
+        const p = phases[step];
+        document.getElementById("valCO").innerText = p.co.toFixed(1) + " ppm";
+        document.getElementById("valScatterRatio").innerText = p.ratio.toFixed(2);
+        document.getElementById("valFilterStatus").innerText = p.filter;
+        document.getElementById("valSeverity").innerText = p.alert;
+        document.getElementById("valSeverity").className = p.color + " font-bold text-sm mt-0.5";
+        document.getElementById("valRiskScore").innerText = p.score.toFixed(2);
+        document.getElementById("telemetryStatus").innerText = p.alert;
+        document.getElementById("telemetryStatus").className = p.color + " font-bold";
+
+        step++;
+        if (step >= phases.length) {
+          clearInterval(interval);
+          generateAiAdvisory(p);
+        }
+      }, 2500);
+    });
+
+    // Gemini AI Trigger
+    function generateAiAdvisory(lastTelemetry) {
+      geminiOutput.innerHTML = `
+        <div class="text-cyan-400 font-bold flex items-center space-x-2">
+          <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+          <span>Synthesizing Flight Rule Emergency Advisory via Gemini AI...</span>
+        </div>
+      `;
+      lucide.createIcons();
+
+      setTimeout(() => {
+        geminiOutput.innerHTML = `
+          <div class="space-y-3">
+            <div>
+              <span class="text-rose-400 font-bold">[INCIDENT_ASSESSMENT]</span>
+              <p class="mt-0.5 text-slate-200">ACTIVE MICROGRAVITY COMBUSTION ESCALATION inside Payload Rack #4 (Destiny Module). Initial incubation occurred as low-luminosity cool flame (NTC kinetics, T ~ 750 K) before transitioning to open diffusion envelope.</p>
+            </div>
+            <div>
+              <span class="text-amber-400 font-bold">[PHYSICAL_DIAGNOSTICS]</span>
+              <p class="mt-0.5 text-slate-300">Buoyancy is absent ($g = 0$); particulate matter is not rising, confirming standard ceiling smoke detectors remained un-triggered until forced HVAC currents distributed soot. Ratio of sub-micron soot to macro dust ($4.2$) confirms genuine carbonaceous pyrolyzate, not ambient lint.</p>
+            </div>
+            <div>
+              <span class="text-emerald-400 font-bold">[FLIGHT_RULE_ACTION_PLAN]</span>
+              <ul class="list-disc list-inside space-y-1 text-slate-200 mt-1">
+                <li><strong>Flight Rule 2.11:</strong> Sound General Fire Emergency Alarm across all modules.</li>
+                <li><strong>Crew Protective Measure:</strong> Immediately don Portable Breathing Apparatus (PBA) with Emergency Oxygen Masks.</li>
+                <li><strong>Atmospheric Control:</strong> Remotely command HVAC isolation damper closure for Node 2 / Destiny to prevent fresh O2 transport.</li>
+                <li><strong>Suppression:</strong> Inject Carbon Dioxide / Halon agent directly into rack enclosure access port.</li>
+                <li><strong>Extinction Criterion:</strong> Per Chung K. Law Section 0.1, maintain oxygen concentration below 15% by volume to guarantee complete flame extinction.</li>
+              </ul>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      }, 1500);
+    }
+
+    btnAskGemini.addEventListener('click', () => {
+      generateAiAdvisory();
+    });
+
+    // Initialize Canvas & Charts on load
+    window.addEventListener('load', () => {
+      initCharts();
+      drawFlame(d0, 8.42, 0.0, 'HOT_DIFFUSION');
+    });
+  </script>
+</body>
+</html>

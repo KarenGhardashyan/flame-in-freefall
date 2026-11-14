@@ -1,0 +1,11 @@
+﻿{
+    "id":  "PSI-10",
+    "description":  "Advanced Combustion via Microgravity Experiments: Flame Design to optimize burner geometries and suppress soot.",
+    "doi":  "N/A",
+    "key_findings":  [
+                         "Evaluates non-premixed spherical flames under varied diluent (CO2/N2) concentrations.",
+                         "Defines soot-free operating envelopes in microgravity."
+                     ],
+    "title":  "ACME Flame Design",
+    "url":  "https://psi.nasa.gov/physci/repo/data/investigations/PSI-10"
+}
