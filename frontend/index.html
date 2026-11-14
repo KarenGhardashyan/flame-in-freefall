@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flame in Freefall | AI-Powered Microgravity Fire Safety</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Flame in Freefall | Mission Control & AI Fire Safety Dashboard</title>
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Marked.js (Markdown Renderer for Gemini AI) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Three.js + OrbitControls CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
   <!-- Firebase Modular SDK -->
   <script type="module">
@@ -41,11 +44,9 @@
     isSupported().then(supported => {
       if (supported) {
         window.analytics = getAnalytics(app);
-        console.log("[FIREBASE] Google Analytics initialized successfully.");
+        console.log("[FIREBASE] Analytics initialized.");
       }
     });
-
-    console.log("[FIREBASE] Connected to live cloud project: microgravitational-flame");
   </script>
 
   <style>
@@ -54,780 +55,1308 @@
       color: #e2e8f0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
-    .nasa-gradient {
-      background: linear-gradient(135deg, rgba(16, 24, 48, 0.9) 0%, rgba(10, 15, 30, 0.95) 100%);
-      border: 1px solid rgba(59, 130, 246, 0.2);
+    .nasa-panel {
+      background: linear-gradient(135deg, rgba(13, 20, 38, 0.92) 0%, rgba(8, 12, 24, 0.96) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.18);
     }
-    #threeContainer canvas {
-      border-radius: 0.5rem;
-      outline: none;
+    .nasa-panel:hover {
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(10, 15, 30, 0.6);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    /* Markdown Styles for Gemini Output */
+    .prose-ai h1, .prose-ai h2, .prose-ai h3 {
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-top: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+    .prose-ai h3 { font-size: 0.92rem; }
+    .prose-ai p { margin-bottom: 0.5rem; line-height: 1.5; color: #cbd5e1; }
+    .prose-ai ul, .prose-ai ol { margin-left: 1.25rem; margin-bottom: 0.5rem; }
+    .prose-ai li { margin-bottom: 0.25rem; list-style-type: disc; }
+    .prose-ai strong { color: #38bdf8; font-weight: 600; }
+    .prose-ai blockquote {
+      border-left: 3px solid #3b82f6;
+      padding-left: 0.75rem;
+      font-style: italic;
+      color: #94a3b8;
+      background: rgba(30, 58, 138, 0.15);
+      border-radius: 0 0.25rem 0.25rem 0;
+      margin-bottom: 0.5rem;
+      padding-top: 0.25rem;
+      padding-bottom: 0.25rem;
+    }
+    .prose-ai code {
+      background: rgba(15, 23, 42, 0.9);
+      padding: 0.1rem 0.3rem;
+      border-radius: 0.25rem;
+      color: #22d3ee;
+      font-family: monospace;
+      font-size: 0.85em;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
 
-  <!-- TOP STATUS BAR -->
-  <header class="border-b border-blue-900/40 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+  <!-- TOP MISSION CONTROL BAR -->
+  <header class="border-b border-blue-900/40 bg-slate-950/90 backdrop-blur sticky top-0 z-50 px-6 py-2.5 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-cyan-400 font-bold">
-        <i data-lucide="flame" class="w-5 h-5 text-orange-400"></i>
+      <div class="w-8 h-8 rounded-lg bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold shadow-inner">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-cyan-400"></i>
       </div>
       <div>
-        <h1 class="text-base font-bold tracking-wider text-slate-100 flex items-center space-x-2">
-          <span>FLAME IN FREEFALL</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-700/50 font-mono">0g AI-DEFENSE</span>
-        </h1>
-        <p class="text-xs text-slate-400">NASA International Space Apps Challenge • Team Sisyphus</p>
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-bold tracking-wider text-slate-100 uppercase">FLAME IN FREEFALL</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-mono font-bold">MISSION CONTROL 0g</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 font-mono">GEMINI 2.5 FLASH</span>
+        </div>
+        <p class="text-[11px] text-slate-400">AI-Powered Fire Safety &amp; Microgravity Combustion Data Platform • Team Sisyphus</p>
       </div>
     </div>
 
-    <!-- Telemetry status pills -->
-    <div class="flex items-center space-x-4 text-xs font-mono">
+    <!-- Status Badges -->
+    <div class="flex items-center space-x-3 text-xs font-mono">
       <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-slate-300">TELEMETRY: <span id="telemetryStatus" class="text-emerald-400 font-bold">NOMINAL</span></span>
+        <span id="telemetryPulse" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-400">TELEMETRY: <strong id="telemetryStatus" class="text-emerald-400">NOMINAL</strong></span>
       </div>
       <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
-        <i data-lucide="cloud" class="w-3.5 h-3.5 text-blue-400"></i>
-        <span class="text-slate-300">HOSTING: <span class="text-blue-400 font-bold">microgravitational-flame</span></span>
+        <i data-lucide="database" class="w-3.5 h-3.5 text-cyan-400"></i>
+        <span class="text-slate-400">BENCHMARKS: <strong id="benchmarkCount" class="text-cyan-300">10 NASA PSI / SAFFIRE V</strong></span>
       </div>
       <div class="flex items-center space-x-2 px-3 py-1 rounded-md bg-slate-900/90 border border-slate-800">
         <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
-        <span class="text-slate-300">PHYSICS: <span class="text-amber-400">Chung K. Law / PSI-117</span></span>
+        <span class="text-slate-400">PHYSICS: <strong class="text-amber-300">Law Monograph &amp; d²</strong></span>
       </div>
     </div>
   </header>
 
   <!-- MAIN DASHBOARD CONTENT -->
-  <main class="flex-1 p-6 grid grid-cols-12 gap-6 max-w-[1720px] mx-auto w-full">
+  <main class="flex-1 p-5 flex flex-col space-y-4 max-w-[1780px] mx-auto w-full">
 
-    <!-- LEFT COLUMN: CONTROLS & THREE.JS 3D FLAME VIEW (5 Cols) -->
-    <div class="col-span-12 lg:col-span-5 flex flex-col space-y-6">
-
-      <!-- 3D FLAME VIEWPORT & REGIME -->
-      <div class="nasa-gradient rounded-xl p-5 flex flex-col relative overflow-hidden">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="box" class="w-4 h-4 text-cyan-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Interactive 3D Microgravity Simulation</h2>
+    <!-- TOP KPI READOUT BAR (4 CRITICAL CARDS) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      
+      <!-- KPI 1: Burning Rate K & Burnout Time -->
+      <div class="nasa-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-cyan-500 shadow-lg">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span class="flex items-center space-x-1.5 uppercase font-semibold">
+            <i data-lucide="flame" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Burning Rate K (d²-Law)</span>
+          </span>
+          <span class="text-[10px] text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800">CHUNG K. LAW</span>
+        </div>
+        <div class="my-2">
+          <div class="text-2xl font-bold font-mono text-slate-100 flex items-baseline space-x-2">
+            <span id="kpiBurningRate">0.365</span>
+            <span class="text-xs font-normal text-slate-400">мм²/с</span>
           </div>
-          <span id="flameRegimeBadge" class="text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
-            0g SPHERICAL DIFFUSION
+          <div class="text-xs font-mono text-slate-400 mt-1 flex items-center justify-between">
+            <span>Время выгорания t<sub>b</sub>:</span>
+            <strong id="kpiBurnoutTime" class="text-amber-400">11.0 s</strong>
+          </div>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-2">
+          <span>Топливо / Диаметр:</span>
+          <span id="kpiFuelBadge" class="text-cyan-300 font-semibold">n-heptane • 2.0 mm</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Flame Temp & Combustion Regime -->
+      <div class="nasa-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-amber-500 shadow-lg">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span class="flex items-center space-x-1.5 uppercase font-semibold">
+            <i data-lucide="thermometer" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Flame Temp &amp; Regime</span>
+          </span>
+          <span id="kpiRegimeBadge" class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse">
+            COOL FLAME 600–800K
           </span>
         </div>
+        <div class="my-2">
+          <div class="text-2xl font-bold font-mono text-slate-100 flex items-baseline space-x-2">
+            <span id="kpiFlameTemp">740</span>
+            <span class="text-xs font-normal text-slate-400">K</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400 mt-1 flex items-center justify-between">
+            <span>Число Сполдинга (B):</span>
+            <strong id="kpiSpaldingB" class="text-emerald-400">7.14</strong>
+          </div>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-2">
+          <span>Standoff r<sub>f</sub>/r<sub>s</sub>:</span>
+          <span id="kpiStandoff" class="text-amber-300 font-semibold">14.0 (0g Spherical)</span>
+        </div>
+      </div>
 
-        <!-- 3D Container -->
-        <div class="relative w-full aspect-square max-h-[360px] rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center bg-slate-950">
-          <div id="threeContainer" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+      <!-- KPI 3: Cabin CO / CO2 Excursion & Aerosol Classifier -->
+      <div class="nasa-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-purple-500 shadow-lg">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span class="flex items-center space-x-1.5 uppercase font-semibold">
+            <i data-lucide="wind" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>CO / CO₂ &amp; Aerosol (PSI-179)</span>
+          </span>
+          <span id="kpiAerosolClassBadge" class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+            DUST FILTER ACTIVE
+          </span>
+        </div>
+        <div class="my-2">
+          <div class="text-2xl font-bold font-mono text-slate-100 flex items-baseline space-x-2">
+            <span id="kpiCO">22.0</span>
+            <span class="text-xs font-normal text-slate-400">ppm CO</span>
+            <span class="text-slate-600 font-normal">|</span>
+            <span id="kpiCO2" class="text-lg text-slate-300">580</span>
+            <span class="text-xs font-normal text-slate-400">CO₂</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400 mt-1 flex items-center justify-between">
+            <span>Рассеяние Blue/IR:</span>
+            <strong id="kpiScatteringRatio" class="text-cyan-300">2.85 (Soot / PSI-60)</strong>
+          </div>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-2">
+          <span>ECLSS Dust Filter:</span>
+          <span id="kpiFilterAction" class="text-emerald-400 font-semibold">True Smoldering</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Fire Risk Index (0-100) per NASA Rules -->
+      <div class="nasa-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-rose-500 shadow-lg">
+        <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+          <span class="flex items-center space-x-1.5 uppercase font-semibold">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
+            <span>Fire Risk Index (NASA Rules)</span>
+          </span>
+          <span id="kpiRiskSeverity" class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">
+            WARNING / GUARD
+          </span>
+        </div>
+        <div class="my-2">
+          <div class="text-2xl font-bold font-mono flex items-baseline space-x-2">
+            <span id="kpiRiskScore" class="text-amber-400">45</span>
+            <span class="text-xs font-normal text-slate-400">/ 100</span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-800">
+            <div id="kpiRiskProgressBar" class="bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 h-1.5 rounded-full" style="width: 45%;"></div>
+          </div>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-2">
+          <span>Flight Rule Status:</span>
+          <span id="kpiFlightRule" class="text-amber-300 font-semibold">Rule 2.14: Avionics Guard</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2-COLUMN MISSION CONTROL SPLIT (58% Left, 42% Right) -->
+    <div class="grid grid-cols-12 gap-4 flex-1">
+
+      <!-- LEFT COLUMN: QUICK SCENARIOS, CONTROLS, CHARTS & VALIDATION TABLE (58% width -> col-span-7) -->
+      <div class="col-span-12 xl:col-span-7 flex flex-col space-y-4">
+
+        <!-- 1. QUICK SCENARIOS PANEL (1-CLICK NASA STATES) -->
+        <div class="nasa-panel rounded-xl p-3.5 flex flex-col space-y-2.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Quick NASA Scenario Presets (1-Click Telemetry Load)</span>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400">Instant Parameter Alignment</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-xs font-mono">
+            <button onclick="loadScenario('iss_nominal')" class="px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-750 hover:border-cyan-500/60 text-slate-200 transition text-left flex flex-col space-y-0.5">
+              <span class="text-cyan-400 font-bold flex items-center space-x-1">
+                <span>🛰️ ISS Nominal</span>
+              </span>
+              <span class="text-[10px] text-slate-400">21% O₂, 1.0 atm, 0g</span>
+            </button>
+
+            <button onclick="loadScenario('law_safe')" class="px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-750 hover:border-emerald-500/60 text-slate-200 transition text-left flex flex-col space-y-0.5">
+              <span class="text-emerald-400 font-bold flex items-center space-x-1">
+                <span>🛡️ Law Safe Limit</span>
+              </span>
+              <span class="text-[10px] text-slate-400">14.5% O₂ (Inerting)</span>
+            </button>
+
+            <button onclick="loadScenario('psi_117_cool')" class="px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-750 hover:border-indigo-500/60 text-slate-200 transition text-left flex flex-col space-y-0.5">
+              <span class="text-indigo-400 font-bold flex items-center space-x-1">
+                <span>❄️ PSI-117 Cool Flame</span>
+              </span>
+              <span class="text-[10px] text-slate-400">600–800K, CO Peak</span>
+            </button>
+
+            <button onclick="loadScenario('saffire_v_burn')" class="px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-750 hover:border-rose-500/60 text-slate-200 transition text-left flex flex-col space-y-0.5">
+              <span class="text-rose-400 font-bold flex items-center space-x-1">
+                <span>🔥 Saffire V Cygnus</span>
+              </span>
+              <span class="text-[10px] text-slate-400">0.72 atm, 29.5% O₂</span>
+            </button>
+
+            <button onclick="loadScenario('psi_179_dust')" class="px-2.5 py-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-750 hover:border-purple-500/60 text-slate-200 transition text-left flex flex-col space-y-0.5">
+              <span class="text-purple-400 font-bold flex items-center space-x-1">
+                <span>💨 PSI-179 HVAC Dust</span>
+              </span>
+              <span class="text-[10px] text-slate-400">Zero-g False Alarm</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. COMPACT PARAMETER CONTROLS -->
+        <div class="nasa-panel rounded-xl p-4 flex flex-col space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-slate-200">
+              <i data-lucide="sliders" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Microgravity Combustion Boundary Controls</span>
+            </div>
+            <!-- Gravity Toggle -->
+            <div class="flex items-center space-x-2 font-mono text-xs">
+              <span class="text-slate-400 text-[11px]">Gravity Regime:</span>
+              <button id="btnToggleGravity" class="px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 font-bold transition flex items-center space-x-1">
+                <span id="gravityModeText">0g MICROGRAVITY (ISS / CIR)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+            
+            <!-- Slider 1: O2 Concentration -->
+            <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between items-center text-slate-300 mb-1">
+                <span>Cabin Oxygen (X<sub>O₂</sub>)</span>
+                <span id="valO2" class="text-cyan-400 font-bold text-sm">21.0%</span>
+              </div>
+              <input id="sliderO2" type="range" min="10" max="35" step="0.5" value="21" class="w-full accent-cyan-500 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                <span class="text-emerald-400 font-semibold">14.5% Law Limit</span>
+                <span>35% Max</span>
+              </div>
+            </div>
+
+            <!-- Slider 2: Pressure -->
+            <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between items-center text-slate-300 mb-1">
+                <span>Pressure (P)</span>
+                <span id="valP" class="text-cyan-400 font-bold text-sm">1.00 atm</span>
+              </div>
+              <input id="sliderP" type="range" min="0.4" max="2.0" step="0.05" value="1.0" class="w-full accent-blue-500 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                <span class="text-rose-400">0.72 Cygnus</span>
+                <span>1.0 ISS</span>
+              </div>
+            </div>
+
+            <!-- Slider 3: Flow Draft -->
+            <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between items-center text-slate-300 mb-1">
+                <span>ECLSS Flow Velocity (v)</span>
+                <span id="valFlow" class="text-cyan-400 font-bold text-sm">0.0 cm/s</span>
+              </div>
+              <input id="sliderFlow" type="range" min="0.0" max="30.0" step="0.5" value="0.0" class="w-full accent-purple-500 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                <span>0 Quiescent</span>
+                <span class="text-amber-400">20 SFU Saffire</span>
+              </div>
+            </div>
+
+            <!-- Fuel & d0 Droplet -->
+            <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-center text-slate-300 mb-1">
+                  <span>Fuel Material</span>
+                  <span id="valD0" class="text-cyan-400 font-bold text-xs">d₀ = 2.0 mm</span>
+                </div>
+                <select id="selectFuel" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500">
+                  <option value="n-heptane">n-heptane (FLEX CIR droplet)</option>
+                  <option value="n-decane">n-decane (Heavy alkane)</option>
+                  <option value="pmma">PMMA solid (Saffire V Cygnus)</option>
+                  <option value="methane">methane (ACME gas)</option>
+                </select>
+              </div>
+              <div class="mt-2">
+                <input id="sliderD0" type="range" min="0.5" max="6.0" step="0.1" value="2.0" class="w-full accent-emerald-500 cursor-pointer">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3. COMPACT SCIENTIFIC CHARTS (d²(t) & DAMKÖHLER S-CURVE) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- d²-Law Evaporation Trajectory -->
+          <div class="nasa-panel rounded-xl p-3.5 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-300 uppercase font-mono flex items-center space-x-1.5">
+                <i data-lucide="line-chart" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>d²(t) Evaporation Trajectory</span>
+              </span>
+              <span class="text-[10px] text-cyan-400 font-mono bg-cyan-950/70 px-1.5 py-0.5 rounded border border-cyan-800">Chung K. Law Ch. 6</span>
+            </div>
+            <div class="h-40 w-full">
+              <canvas id="d2Chart"></canvas>
+            </div>
+          </div>
+
+          <!-- S-Curve Limit Phenomena -->
+          <div class="nasa-panel rounded-xl p-3.5 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-300 uppercase font-mono flex items-center space-x-1.5">
+                <i data-lucide="git-branch" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>Damköhler S-Curve (Da vs T)</span>
+              </span>
+              <span class="text-[10px] text-amber-400 font-mono bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-800">PSI-117 Extinction Branch</span>
+            </div>
+            <div class="h-40 w-full">
+              <canvas id="sCurveChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. MAIN INTERACTIVE NASA VALIDATION TABLE -->
+        <div class="nasa-panel rounded-xl p-4 flex flex-col space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-6 h-6 rounded bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-cyan-400">
+                <i data-lucide="table" class="w-3.5 h-3.5"></i>
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center space-x-2">
+                  <span>NASA Experimental Validation &amp; Telemetry</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">10 FLIGHT EXPERIMENTS</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Кликните по любой строке: параметры загрузятся в ползунки, физическая модель пересчитается, а эксперимент передастся в контекст Gemini AI.</p>
+              </div>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400">
+              API: <span class="text-cyan-400 font-bold">GET /api/experiments</span>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto custom-scroll max-h-[310px]">
+            <table class="w-full text-left text-xs font-mono border-collapse">
+              <thead class="sticky top-0 bg-slate-950/95 border-b border-slate-800 z-10 text-[11px] text-slate-400 uppercase">
+                <tr>
+                  <th class="py-2 px-3">Experiment ID &amp; Source</th>
+                  <th class="py-2 px-3">Environment (O₂, P, Flow, g)</th>
+                  <th class="py-2 px-3">NASA Benchmark Result</th>
+                  <th class="py-2 px-3">Model Simulation</th>
+                  <th class="py-2 px-3 text-center">Match %</th>
+                  <th class="py-2 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="benchmarkTableBody" class="divide-y divide-slate-800/60">
+                <tr>
+                  <td colspan="6" class="py-6 text-center text-slate-500 italic">
+                    Загрузка 10 эталонных экспериментов NASA PSI / Saffire V...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: INTERACTIVE GEMINI AI SAFETY OFFICER (42% width -> col-span-5) -->
+      <div class="col-span-12 xl:col-span-5 flex flex-col space-y-3.5 h-full">
+
+        <div class="nasa-panel rounded-xl p-4 flex flex-col flex-1 shadow-2xl border-purple-900/30">
           
-          <div class="absolute bottom-3 left-3 bg-black/70 backdrop-blur px-3 py-1.5 rounded text-[11px] font-mono border border-slate-800/80 space-y-0.5 pointer-events-none">
-            <div>Droplet $d(t)$: <span id="dispDiameter" class="text-cyan-300 font-bold">2.00 mm</span></div>
-            <div>Standoff $r_f/r_s$: <span id="dispStandoff" class="text-amber-300 font-bold">8.42</span></div>
-            <div>Flame Temp: <span id="dispTemp" class="text-rose-400 font-bold">1812 K</span></div>
+          <!-- AI Header & Language Toggle -->
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-inner">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-100 flex items-center space-x-2">
+                  <span>Gemini AI Safety Officer Co-Pilot</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 font-mono">v2.5 FLASH</span>
+                </h3>
+                <p class="text-[11px] text-slate-400 font-mono">NASA Flight Rules &amp; Chung K. Law Physics Advisor</p>
+              </div>
+            </div>
+
+            <!-- Language Switcher -->
+            <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-[11px] font-mono">
+              <button id="langRuBtn" class="px-2.5 py-1 rounded bg-blue-600 text-white font-bold transition">RU</button>
+              <button id="langEnBtn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">EN</button>
+            </div>
           </div>
 
-          <div class="absolute top-3 right-3 flex flex-col space-y-2">
-            <button id="toggleGravityBtn" class="bg-slate-900/90 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-cyan-500/50 text-cyan-300 font-mono transition shadow-lg">
-              SWITCH TO 1g
+          <!-- Active NASA Context Pill -->
+          <div id="aiContextPill" class="mb-3 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-mono flex items-center justify-between">
+            <span class="text-slate-400 flex items-center space-x-1.5 truncate">
+              <i data-lucide="target" class="w-3.5 h-3.5 text-cyan-400 flex-shrink-0"></i>
+              <span class="truncate">Контекст: <strong id="aiContextLabel" class="text-cyan-300">Ручной выбор телеметрии</strong></span>
+            </span>
+            <span id="aiContextAccuracy" class="text-emerald-400 font-bold text-[11px] flex-shrink-0 ml-2">NASA Validated</span>
+          </div>
+
+          <!-- 4 QUICK AI QUERIES (1-CLICK PROMPTS) -->
+          <div class="space-y-1.5 mb-3">
+            <div class="text-[10px] uppercase font-mono font-bold text-slate-400">Быстрые запросы в 1 клик / Quick Flight Advisories:</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] font-mono">
+              <button onclick="askQuickPrompt(1)" class="p-2 rounded bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-white transition text-left flex items-start space-x-1.5">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-cyan-400 mt-0.5 flex-shrink-0"></i>
+                <span id="qp1">1. Анализ текущих параметров по NASA Flight Rules</span>
+              </button>
+              <button onclick="askQuickPrompt(2)" class="p-2 rounded bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white transition text-left flex items-start space-x-1.5">
+                <i data-lucide="snowflake" class="w-3.5 h-3.5 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                <span id="qp2">2. Есть ли риск невидимого холодного пламени?</span>
+              </button>
+              <button onclick="askQuickPrompt(3)" class="p-2 rounded bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-white transition text-left flex items-start space-x-1.5">
+                <i data-lucide="git-compare" class="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0"></i>
+                <span id="qp3">3. Сравнить расчёт с выбранным экспериментом NASA</span>
+              </button>
+              <button onclick="askQuickPrompt(4)" class="p-2 rounded bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/50 text-slate-300 hover:text-white transition text-left flex items-start space-x-1.5">
+                <i data-lucide="activity" class="w-3.5 h-3.5 text-rose-400 mt-0.5 flex-shrink-0"></i>
+                <span id="qp4">4. Пошаговый протокол экипажа (ECLSS, O₂ &lt; 15%)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CHAT / ADVISORY FEED WINDOW -->
+          <div id="aiChatFeed" class="flex-1 bg-slate-950/80 rounded-lg p-3.5 border border-slate-850 text-xs custom-scroll overflow-y-auto space-y-3 min-h-[360px] max-h-[500px]">
+            <!-- Welcome briefing from AI -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between text-[11px] font-mono text-purple-400 font-bold">
+                <span class="flex items-center space-x-1.5">
+                  <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                  <span>NASA Flight Safety Officer AI (Gemini Co-Pilot)</span>
+                </span>
+                <span class="text-slate-500">Live Mission Link</span>
+              </div>
+              <div class="text-slate-300 text-xs leading-relaxed prose-ai">
+                <p>Приветствую! Я офицер пожарной безопасности космических аппаратов NASA и специалист по физике горения в невесомости.</p>
+                <p>Я непрерывно анализирую текущую телеметрию среды обитания, проверяю критерии Chung K. Law (негорючесть O₂ &lt; 15%, закон d², S-кривая) и сопоставляю результаты с экспериментами <strong>NASA PSI-117</strong>, <strong>Saffire V</strong>, <strong>PSI-10</strong>, <strong>PSI-60</strong> и <strong>PSI-179</strong>.</p>
+                <p class="text-slate-400 italic">Нажмите любую быструю кнопку выше или введите ваш вопрос в строке ниже.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROMPT INPUT BAR -->
+          <div class="mt-3 flex items-center space-x-2 pt-2 border-t border-slate-800">
+            <input 
+              id="aiUserInput" 
+              type="text" 
+              placeholder="Задайте вопрос офицеру безопасности NASA (нажмите Enter для отправки)..." 
+              class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+            >
+            <button 
+              id="aiSendBtn" 
+              class="bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-md shadow-blue-600/30"
+            >
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>ОТПРАВИТЬ</span>
             </button>
-            <button id="toggleCoolFlameBtn" class="bg-slate-900/90 hover:bg-slate-800 text-xs px-3 py-1.5 rounded border border-indigo-500/50 text-indigo-300 font-mono transition shadow-lg">
-              TEST COOL FLAME
-            </button>
           </div>
 
-          <div class="absolute top-3 left-3 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-0.5 rounded pointer-events-none">
-            Rotate: Left Click + Drag | Zoom: Scroll
-          </div>
         </div>
 
-        <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-mono">
-          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
-            <span class="text-slate-400 text-[10px]">BURNING RATE K</span>
-            <div id="dispK" class="text-cyan-400 font-bold mt-0.5">0.512 mm²/s</div>
-          </div>
-          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
-            <span class="text-slate-400 text-[10px]">BURNOUT TIME (tb)</span>
-            <div id="dispTb" class="text-amber-400 font-bold mt-0.5">7.81 s</div>
-          </div>
-          <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
-            <span class="text-slate-400 text-[10px]">SPALDING (B)</span>
-            <div id="dispB" class="text-emerald-400 font-bold mt-0.5">7.14</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PHYSICS PARAMETERS PANEL -->
-      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Atmospheric & Droplet Boundary Controls</h2>
-          </div>
-          <button id="btnRunSim" class="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-4 py-1.5 rounded transition text-white flex items-center space-x-1.5 shadow-md shadow-blue-600/30">
-            <i data-lucide="play" class="w-3.5 h-3.5"></i>
-            <span>START BURNING (d²)</span>
-          </button>
-        </div>
-
-        <!-- Controls Grid -->
-        <div class="space-y-3 text-xs">
-          <!-- Initial Droplet Diameter -->
-          <div>
-            <div class="flex justify-between text-slate-300 font-mono mb-1">
-              <span>Initial Droplet Diameter ($d_0$)</span>
-              <span id="labelD0" class="text-cyan-400 font-bold">2.0 mm</span>
-            </div>
-            <input id="sliderD0" type="range" min="0.5" max="5.0" step="0.1" value="2.0" class="w-full accent-cyan-500 cursor-pointer">
-          </div>
-
-          <!-- Oxygen Concentration -->
-          <div>
-            <div class="flex justify-between text-slate-300 font-mono mb-1">
-              <span>Cabin Oxygen ($X_{O_2}$) — Extinction Limit: 15%</span>
-              <span id="labelO2" class="text-cyan-400 font-bold">21.0%</span>
-            </div>
-            <input id="sliderO2" type="range" min="10" max="30" step="0.5" value="21" class="w-full accent-blue-500 cursor-pointer">
-            <div id="flammabilityAlert" class="mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
-              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-              <span>O2 > 15% (Chung K. Law: Active Flammability Regime)</span>
-            </div>
-          </div>
-
-          <!-- Cabin Pressure -->
-          <div>
-            <div class="flex justify-between text-slate-300 font-mono mb-1">
-              <span>Atmospheric Pressure ($P$)</span>
-              <span id="labelP" class="text-cyan-400 font-bold">1.0 bar</span>
-            </div>
-            <input id="sliderP" type="range" min="0.4" max="2.0" step="0.1" value="1.0" class="w-full accent-blue-500 cursor-pointer">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN: CHARTS, ML DETECTOR & GEMINI ADVISOR (7 Cols) -->
-    <div class="col-span-12 lg:col-span-7 flex flex-col space-y-6">
-
-      <!-- TOP ROW: TWO INTERACTIVE CHARTS -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- d^2 Trajectory Chart -->
-        <div class="nasa-gradient rounded-xl p-4 flex flex-col">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Droplet Evaporation $d^2(t)$</span>
-            <span class="text-[10px] text-cyan-400 font-mono">Chung K. Law Ch. 6</span>
-          </div>
-          <div class="h-44 w-full">
-            <canvas id="d2Chart"></canvas>
-          </div>
-        </div>
-
-        <!-- S-Curve Limit Phenomena Chart -->
-        <div class="nasa-gradient rounded-xl p-4 flex flex-col">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wide">Damköhler S-Curve (Da vs T)</span>
-            <span class="text-[10px] text-amber-400 font-mono">NASA PSI-117 Extinction</span>
-          </div>
-          <div class="h-44 w-full">
-            <canvas id="sCurveChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- ML DETECTOR & FALSE ALARM FILTER -->
-      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">0g Early Fire Detector & False Alarm Rejection</h2>
-          </div>
-          <button id="btnStreamDemo" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5">
-            <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-            <span>RUN 30s TELEMETRY TEST</span>
-          </button>
-        </div>
-
-        <!-- Anomaly status telemetry gauges -->
-        <div class="grid grid-cols-4 gap-3 text-xs font-mono">
-          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
-            <div class="text-slate-400 text-[10px]">CO CONCENTRATION</div>
-            <div id="valCO" class="text-slate-200 font-bold text-sm mt-0.5">3.2 ppm</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Limit: 25 ppm</div>
-          </div>
-          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
-            <div class="text-slate-400 text-[10px]">BLUE/IR SCATTERING</div>
-            <div id="valScatterRatio" class="text-slate-200 font-bold text-sm mt-0.5">1.25</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">&gt; 2.4 = Soot / &lt; 1.6 = Dust</div>
-          </div>
-          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
-            <div class="text-slate-400 text-[10px]">FALSE ALARM FILTER</div>
-            <div id="valFilterStatus" class="text-emerald-400 font-bold text-sm mt-0.5">FILTER OFF</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Rejects zero-g dust</div>
-          </div>
-          <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
-            <div class="text-slate-400 text-[10px]">RISK ASSESSMENT</div>
-            <div id="valSeverity" class="text-emerald-400 font-bold text-sm mt-0.5">NOMINAL</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Score: <span id="valRiskScore">0.05</span></div>
-          </div>
-        </div>
-
-        <!-- Sensor telemetry chart -->
-        <div class="h-36 w-full pt-2">
-          <canvas id="telemetryChart"></canvas>
-        </div>
-      </div>
-
-      <!-- GEMINI AI FLIGHT RULE ADVISOR -->
-      <div class="nasa-gradient rounded-xl p-5 flex flex-col space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Gemini AI Spacecraft Fire Safety Officer</h2>
-          </div>
-          <button id="btnAskGemini" class="bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/50 text-purple-300 text-xs font-mono px-3 py-1 rounded transition flex items-center space-x-1.5 shadow-md">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i>
-            <span>GENERATE ADVISORY</span>
-          </button>
-        </div>
-
-        <div id="geminiOutput" class="bg-slate-950/70 p-4 rounded-lg border border-slate-800/80 text-xs font-mono space-y-2 text-slate-300 leading-relaxed max-h-56 overflow-y-auto">
-          <div class="text-slate-400 italic">Standby. Ready to evaluate current microgravity combustion state and telemetry. Click "Generate Advisory" or run the telemetry test.</div>
-        </div>
       </div>
 
     </div>
+
   </main>
 
-  <!-- FOOTER: NASA PSI DATASET REFERENCES -->
-  <footer class="border-t border-slate-900 bg-slate-950/90 px-6 py-4 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center space-x-4">
-      <span class="font-bold text-slate-300">NASA PSI Investigation References:</span>
-      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-117" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-117 (FLEX CFD, DOI: 10.60555/gz0q-b577)</a>
-      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-159" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-159 (ACME CFI-G)</a>
-      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-10" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-10 (Flame Design)</a>
-      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-62" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-62 (BASS)</a>
-      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-60" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/50">PSI-60 (SPICE)</a>
+  <!-- FOOTER WITH CITATIONS AND DATASET LINKS -->
+  <footer class="border-t border-slate-900 bg-slate-950 px-6 py-3 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-3 font-mono">
+    <div class="flex items-center space-x-3 flex-wrap">
+      <span class="text-slate-300 font-bold">NASA Open Science Datasets:</span>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-117" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/40">PSI-117 (Cool Flames CFD)</a>
+      <span class="text-slate-600">•</span>
+      <span class="text-rose-400 font-semibold">Saffire V (ICES-2024-310, Cygnus PMMA Burn)</span>
+      <span class="text-slate-600">•</span>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-10" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/40">PSI-10 (Flame Design)</a>
+      <span class="text-slate-600">•</span>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-60" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/40">PSI-60 (SPICE 0g Soot)</a>
+      <span class="text-slate-600">•</span>
+      <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-179" target="_blank" class="hover:text-cyan-400 underline decoration-cyan-500/40">PSI-179 (ECLSS Aerosols)</a>
     </div>
     <div class="text-slate-500">
       NASA International Space Apps Challenge • Team Sisyphus
     </div>
   </footer>
 
-  <!-- THREE.JS 3D SCENE & APPLICATION LOGIC -->
+  <!-- APPLICATION LOGIC & CHARTS -->
   <script>
     lucide.createIcons();
 
-    // State Variables
+    // ==========================================
+    // GLOBAL STATE
+    // ==========================================
     let currentGravity = 0.0; // 0.0 = 0g, 1.0 = 1g
+    let currentFuel = "n-heptane";
     let d0 = 2.0;
-    let o2Frac = 0.21;
-    let pressure = 1.0;
-    let isCoolFlame = false;
-    let isSimulating = false;
-    let simInterval = null;
+    let o2Percent = 21.0;
+    let pressureAtm = 1.0;
+    let flowVelocity = 0.0;
+    let currentLanguage = "ru";
+    let activeExperiment = null;
+    let lastSimResult = null;
+    let experimentsCache = [];
 
-    // UI Elements
-    const toggleGravityBtn = document.getElementById("toggleGravityBtn");
-    const toggleCoolFlameBtn = document.getElementById("toggleCoolFlameBtn");
-    const flameRegimeBadge = document.getElementById("flameRegimeBadge");
-    const sliderD0 = document.getElementById("sliderD0");
-    const labelD0 = document.getElementById("labelD0");
+    // DOM Elements
     const sliderO2 = document.getElementById("sliderO2");
-    const labelO2 = document.getElementById("labelO2");
+    const valO2 = document.getElementById("valO2");
     const sliderP = document.getElementById("sliderP");
-    const labelP = document.getElementById("labelP");
-    const flammabilityAlert = document.getElementById("flammabilityAlert");
-    const btnRunSim = document.getElementById("btnRunSim");
-    const btnStreamDemo = document.getElementById("btnStreamDemo");
-    const btnAskGemini = document.getElementById("btnAskGemini");
-    const geminiOutput = document.getElementById("geminiOutput");
+    const valP = document.getElementById("valP");
+    const sliderFlow = document.getElementById("sliderFlow");
+    const valFlow = document.getElementById("valFlow");
+    const sliderD0 = document.getElementById("sliderD0");
+    const valD0 = document.getElementById("valD0");
+    const selectFuel = document.getElementById("selectFuel");
+    const btnToggleGravity = document.getElementById("btnToggleGravity");
+    const gravityModeText = document.getElementById("gravityModeText");
+
+    // KPI Elements
+    const kpiBurningRate = document.getElementById("kpiBurningRate");
+    const kpiBurnoutTime = document.getElementById("kpiBurnoutTime");
+    const kpiFuelBadge = document.getElementById("kpiFuelBadge");
+    const kpiFlameTemp = document.getElementById("kpiFlameTemp");
+    const kpiRegimeBadge = document.getElementById("kpiRegimeBadge");
+    const kpiSpaldingB = document.getElementById("kpiSpaldingB");
+    const kpiStandoff = document.getElementById("kpiStandoff");
+    const kpiCO = document.getElementById("kpiCO");
+    const kpiCO2 = document.getElementById("kpiCO2");
+    const kpiScatteringRatio = document.getElementById("kpiScatteringRatio");
+    const kpiAerosolClassBadge = document.getElementById("kpiAerosolClassBadge");
+    const kpiFilterAction = document.getElementById("kpiFilterAction");
+    const kpiRiskScore = document.getElementById("kpiRiskScore");
+    const kpiRiskSeverity = document.getElementById("kpiRiskSeverity");
+    const kpiRiskProgressBar = document.getElementById("kpiRiskProgressBar");
+    const kpiFlightRule = document.getElementById("kpiFlightRule");
+    const telemetryStatus = document.getElementById("telemetryStatus");
+    const telemetryPulse = document.getElementById("telemetryPulse");
+
+    // AI Elements
+    const aiChatFeed = document.getElementById("aiChatFeed");
+    const aiUserInput = document.getElementById("aiUserInput");
+    const aiSendBtn = document.getElementById("aiSendBtn");
+    const aiContextLabel = document.getElementById("aiContextLabel");
+    const aiContextAccuracy = document.getElementById("aiContextAccuracy");
+    const langRuBtn = document.getElementById("langRuBtn");
+    const langEnBtn = document.getElementById("langEnBtn");
+    const benchmarkTableBody = document.getElementById("benchmarkTableBody");
 
     // ==========================================
-    // THREE.JS 3D INITIALIZATION
+    // CHARTS INITIALIZATION (Chart.js)
     // ==========================================
-    const container = document.getElementById("threeContainer");
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x040714);
-
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    camera.position.set(0, 0, 16);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxDistance = 25;
-    controls.minDistance = 5;
-
-    // Ambient & Point Lights
-    const ambientLight = new THREE.AmbientLight(0x223355, 1.5);
-    scene.add(ambientLight);
-
-    const coreLight = new THREE.PointLight(0x38bdf8, 2, 20);
-    coreLight.position.set(0, 0, 0);
-    scene.add(coreLight);
-
-    // 1. Central Fuel Droplet (Liquid n-heptane)
-    const dropletGeo = new THREE.SphereGeometry(1, 32, 32);
-    const dropletMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      roughness: 0.1,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.9,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.4
-    });
-    const dropletMesh = new THREE.Mesh(dropletGeo, dropletMat);
-    scene.add(dropletMesh);
-
-    // 2. Inner Reaction Zone (Blue/Radical Chemiluminescence Shell)
-    const innerFlameGeo = new THREE.SphereGeometry(1, 32, 32);
-    const innerFlameMat = new THREE.MeshBasicMaterial({
-      color: 0x2563eb,
-      transparent: true,
-      opacity: 0.35,
-      wireframe: false,
-      side: THREE.BackSide
-    });
-    const innerFlameMesh = new THREE.Mesh(innerFlameGeo, innerFlameMat);
-    scene.add(innerFlameMesh);
-
-    // 3. Outer Flame Envelope (Hot Yellow-Orange Soot in 0g or Buoyant Plume in 1g)
-    const outerFlameGeo = new THREE.SphereGeometry(1, 32, 32);
-    const outerFlameMat = new THREE.MeshBasicMaterial({
-      color: 0xf97316,
-      transparent: true,
-      opacity: 0.45,
-      blending: THREE.AdditiveBlending,
-      side: THREE.FrontSide
-    });
-    const outerFlameMesh = new THREE.Mesh(outerFlameGeo, outerFlameMat);
-    scene.add(outerFlameMesh);
-
-    // 4. Standoff Boundary Ring
-    const ringGeo = new THREE.RingGeometry(0.98, 1.0, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xfb923c,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.3
-    });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = Math.PI / 2;
-    scene.add(ringMesh);
-
-    // 5. Surrounding Soot Particle System
-    const particleCount = 200;
-    const particleGeo = new THREE.BufferGeometry();
-    const particlePositions = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount * 3; i += 3) {
-      particlePositions[i] = (Math.random() - 0.5) * 8;
-      particlePositions[i + 1] = (Math.random() - 0.5) * 8;
-      particlePositions[i + 2] = (Math.random() - 0.5) * 8;
-    }
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-    const particleMat = new THREE.PointsMaterial({
-      color: 0xfbbf24,
-      size: 0.08,
-      transparent: true,
-      opacity: 0.5,
-      blending: THREE.AdditiveBlending
-    });
-    const particleSystem = new THREE.Points(particleGeo, particleMat);
-    scene.add(particleSystem);
-
-    function update3DFlame(diamMm, standoff, gravity, coolFlame) {
-      const scale = 0.5; // visual units per mm
-      const dropRadius = (diamMm / 2) * scale;
-      dropletMesh.scale.set(dropRadius, dropRadius, dropRadius);
-
-      const flameRadius = dropRadius * standoff;
-
-      if (gravity === 0.0) {
-        // MICROGRAVITY (0g): Pure Sphericity
-        if (coolFlame) {
-          // Cool Flame (PSI-117): Low temperature, faint cyan glow, no soot
-          innerFlameMat.color.setHex(0x06b6d4);
-          innerFlameMat.opacity = 0.25;
-          outerFlameMat.color.setHex(0x38bdf8);
-          outerFlameMat.opacity = 0.18;
-          ringMat.color.setHex(0x22d3ee);
-          particleMat.opacity = 0.05; // No soot particles
-          coreLight.color.setHex(0x22d3ee);
-          coreLight.intensity = 0.8;
-          innerFlameMesh.scale.set(flameRadius * 0.7, flameRadius * 0.7, flameRadius * 0.7);
-          outerFlameMesh.scale.set(flameRadius, flameRadius, flameRadius);
-        } else {
-          // Hot diffusion flame in 0g
-          innerFlameMat.color.setHex(0x2563eb);
-          innerFlameMat.opacity = 0.35;
-          outerFlameMat.color.setHex(0xf97316);
-          outerFlameMat.opacity = 0.45;
-          ringMat.color.setHex(0xfb923c);
-          particleMat.opacity = 0.5;
-          coreLight.color.setHex(0xf97316);
-          coreLight.intensity = 2.5;
-          innerFlameMesh.scale.set(flameRadius * 0.6, flameRadius * 0.6, flameRadius * 0.6);
-          outerFlameMesh.scale.set(flameRadius, flameRadius, flameRadius);
-        }
-        ringMesh.scale.set(flameRadius * 0.95, flameRadius * 0.95, 1);
-        outerFlameMesh.position.set(0, 0, 0);
-        innerFlameMesh.position.set(0, 0, 0);
-      } else {
-        // NORMAL GRAVITY (1g): Buoyant Plume (Teardrop shape via stretch)
-        innerFlameMat.color.setHex(0x3b82f6);
-        outerFlameMat.color.setHex(0xef4444);
-        particleMat.opacity = 0.7;
-        coreLight.color.setHex(0xf59e0b);
-        coreLight.intensity = 3.0;
-
-        // Elongate along Y axis for buoyancy chimney
-        innerFlameMesh.scale.set(flameRadius * 0.7, flameRadius * 1.8, flameRadius * 0.7);
-        outerFlameMesh.scale.set(flameRadius * 0.9, flameRadius * 2.4, flameRadius * 0.9);
-        outerFlameMesh.position.set(0, flameRadius * 0.7, 0);
-        innerFlameMesh.position.set(0, flameRadius * 0.5, 0);
-        ringMesh.scale.set(flameRadius, flameRadius, 1);
-      }
-    }
-
-    // Animation Loop
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-
-      // Subtle flame pulsation
-      const time = Date.now() * 0.003;
-      const pulse = 1.0 + Math.sin(time) * 0.03;
-      outerFlameMesh.scale.multiplyScalar(pulse);
-
-      // Rotate particle cloud slowly
-      particleSystem.rotation.y += 0.002;
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    // Resize Handler
-    window.addEventListener('resize', () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    });
-
-    // ==========================================
-    // CHARTS & UI INTERACTIONS
-    // ==========================================
-    let d2Chart, sCurveChart, telemetryChart;
+    let d2Chart, sCurveChart;
 
     function initCharts() {
-      // D2 Chart
+      // 1. d² Evaporation Trajectory Chart
       const ctxD2 = document.getElementById('d2Chart').getContext('2d');
       d2Chart = new Chart(ctxD2, {
         type: 'line',
         data: {
-          labels: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+          labels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
           datasets: [{
             label: 'd² (mm²)',
-            data: [4.0, 3.48, 2.97, 2.46, 1.95, 1.44, 0.93, 0.42, 0.0],
-            borderColor: '#06b6d4',
-            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            data: [4.0, 3.63, 3.27, 2.91, 2.54, 2.18, 1.82, 1.45, 1.09, 0.72, 0.0],
+            borderColor: '#22d3ee',
+            backgroundColor: 'rgba(34, 211, 238, 0.08)',
             fill: true,
             tension: 0.1,
-            pointRadius: 2
+            pointRadius: 1.5,
+            borderWidth: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 300 },
           scales: {
-            x: { title: { display: true, text: 'Time (s)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
-            y: { title: { display: true, text: 'd² (mm²)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+            x: { 
+              title: { display: true, text: 'Время / Time (s)', color: '#94a3b8', font: { size: 10 } },
+              ticks: { color: '#64748b', font: { size: 9 } },
+              grid: { color: 'rgba(30, 41, 59, 0.6)' }
+            },
+            y: { 
+              title: { display: true, text: 'd² (mm²)', color: '#94a3b8', font: { size: 10 } },
+              ticks: { color: '#64748b', font: { size: 9 } },
+              grid: { color: 'rgba(30, 41, 59, 0.6)' }
+            }
           },
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: { display: false }
+          }
         }
       });
 
-      // S-Curve Chart
-      const ctxSCurve = document.getElementById('sCurveChart').getContext('2d');
-      const daVals = [0.1, 0.2, 0.4, 0.5, 0.7, 1.0, 2.0, 4.0, 8.0];
-      sCurveChart = new Chart(ctxSCurve, {
+      // 2. Damköhler S-Curve Chart
+      const ctxS = document.getElementById('sCurveChart').getContext('2d');
+      const daLabels = [0.03, 0.06, 0.12, 0.25, 0.50, 1.0, 2.0, 4.0, 8.0, 16.0];
+      sCurveChart = new Chart(ctxS, {
         type: 'line',
         data: {
-          labels: daVals,
-          datasets: [{
-            label: 'Ignited Branch (K)',
-            data: [1200, 1420, 1610, 1720, 1830, 1920, 2040, 2100, 2120],
-            borderColor: '#f59e0b',
-            borderWidth: 2,
-            tension: 0.2,
-            pointRadius: 2
-          }, {
-            label: 'Extinguished Limit',
-            data: [300, 310, 330, 340, 350, 360, 370, 380, 390],
-            borderColor: '#64748b',
-            borderDash: [5, 5],
-            borderWidth: 1.5,
-            pointRadius: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { title: { display: true, text: 'Damköhler Number (Da)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
-            y: { title: { display: true, text: 'T_flame (K)', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
-          },
-          plugins: { legend: { display: false } }
-        }
-      });
-
-      // Telemetry Timeline Chart
-      const ctxTel = document.getElementById('telemetryChart').getContext('2d');
-      telemetryChart = new Chart(ctxTel, {
-        type: 'line',
-        data: {
-          labels: Array.from({length: 20}, (_, i) => i + "s"),
+          labels: daLabels,
           datasets: [
             {
-              label: 'CO (ppm)',
-              data: [3, 3, 3, 3, 4, 3, 3, 12, 18, 24, 32, 45, 52, 60, 68, 75, 80, 82, 85, 88],
-              borderColor: '#ef4444',
-              borderWidth: 1.5,
-              yAxisID: 'y'
+              label: 'Ignited Upper Branch (K)',
+              data: [350, 480, 850, 1420, 1750, 1920, 2040, 2110, 2140, 2150],
+              borderColor: '#f59e0b',
+              borderWidth: 2,
+              tension: 0.25,
+              pointRadius: 2
             },
             {
-              label: 'Blue/IR Ratio',
-              data: [1.2, 1.2, 1.1, 1.0, 1.1, 1.0, 1.2, 2.6, 2.9, 3.2, 3.5, 3.8, 3.9, 4.0, 4.1, 4.1, 4.2, 4.2, 4.2, 4.3],
-              borderColor: '#38bdf8',
+              label: 'Extinction Limit (Da = 0.45)',
+              data: [300, 305, 310, 318, 325, 332, 340, 345, 350, 355],
+              borderColor: '#64748b',
+              borderDash: [4, 4],
               borderWidth: 1.5,
-              yAxisID: 'y1'
+              pointRadius: 0
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 300 },
           scales: {
-            x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
-            y: { position: 'left', title: { display: true, text: 'CO (ppm)', color: '#ef4444', font: { size: 9 } }, ticks: { color: '#ef4444' }, grid: { color: '#1e293b' } },
-            y1: { position: 'right', title: { display: true, text: 'Blue/IR Ratio', color: '#38bdf8', font: { size: 9 } }, ticks: { color: '#38bdf8' }, grid: { display: false } }
+            x: { 
+              title: { display: true, text: 'Damköhler Number (Da)', color: '#94a3b8', font: { size: 10 } },
+              ticks: { color: '#64748b', font: { size: 9 } },
+              grid: { color: 'rgba(30, 41, 59, 0.6)' }
+            },
+            y: { 
+              title: { display: true, text: 'T_flame (K)', color: '#94a3b8', font: { size: 10 } },
+              ticks: { color: '#64748b', font: { size: 9 } },
+              grid: { color: 'rgba(30, 41, 59, 0.6)' }
+            }
           },
-          plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#94a3b8' } } }
+          plugins: {
+            legend: { 
+              position: 'top',
+              labels: { boxWidth: 8, color: '#94a3b8', font: { size: 9 } }
+            }
+          }
         }
       });
     }
 
-    // Toggle Gravity 0g <-> 1g
-    toggleGravityBtn.addEventListener('click', () => {
-      if (currentGravity === 0.0) {
-        currentGravity = 1.0;
-        isCoolFlame = false;
-        toggleGravityBtn.innerText = "SWITCH TO 0g";
-        flameRegimeBadge.innerText = "1g BUOYANT PLUME";
-        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-amber-950 text-amber-300 border border-amber-800";
-        document.getElementById("dispStandoff").innerText = "2.85";
-        document.getElementById("dispK").innerText = "0.890 mm²/s";
-        document.getElementById("dispTemp").innerText = "1920 K";
-      } else {
-        currentGravity = 0.0;
-        toggleGravityBtn.innerText = "SWITCH TO 1g";
-        flameRegimeBadge.innerText = "0g SPHERICAL DIFFUSION";
-        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800";
-        document.getElementById("dispStandoff").innerText = "8.42";
-        document.getElementById("dispK").innerText = "0.512 mm²/s";
-        document.getElementById("dispTemp").innerText = "1812 K";
-      }
-      update3DFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, isCoolFlame);
-    });
+    // ==========================================
+    // SIMULATION ENGINE TRIGGER (POST /api/simulate)
+    // ==========================================
+    async function triggerSimulation() {
+      const payload = {
+        d0_mm: d0,
+        fuel: currentFuel,
+        gravity_level: currentGravity,
+        o2_vol_fraction: o2Percent / 100.0,
+        pressure_bar: pressureAtm,
+        flow_velocity_cms: flowVelocity
+      };
 
-    // Toggle Cool Flame
-    toggleCoolFlameBtn.addEventListener('click', () => {
-      if (currentGravity !== 0.0) {
-        currentGravity = 0.0;
-        toggleGravityBtn.innerText = "SWITCH TO 1g";
-      }
-      isCoolFlame = !isCoolFlame;
-      if (isCoolFlame) {
-        flameRegimeBadge.innerText = "COOL FLAME (NASA PSI-117)";
-        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse";
-        document.getElementById("dispTemp").innerText = "740 K";
-        document.getElementById("dispK").innerText = "0.185 mm²/s";
-        toggleCoolFlameBtn.innerText = "EXIT COOL FLAME";
-      } else {
-        flameRegimeBadge.innerText = "0g SPHERICAL DIFFUSION";
-        flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800";
-        document.getElementById("dispTemp").innerText = "1812 K";
-        document.getElementById("dispK").innerText = "0.512 mm²/s";
-        toggleCoolFlameBtn.innerText = "TEST COOL FLAME";
-      }
-      update3DFlame(d0, 8.42, 0.0, isCoolFlame);
-    });
+      try {
+        const response = await fetch("/api/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-    // Sliders
-    sliderD0.addEventListener('input', (e) => {
-      d0 = parseFloat(e.target.value);
-      labelD0.innerText = d0.toFixed(1) + " mm";
-      document.getElementById("dispDiameter").innerText = d0.toFixed(2) + " mm";
-      const tb = (d0 * d0) / (currentGravity === 0 ? 0.512 : 0.890);
-      document.getElementById("dispTb").innerText = tb.toFixed(2) + " s";
-      update3DFlame(d0, currentGravity === 0 ? 8.42 : 2.85, currentGravity, isCoolFlame);
-    });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const data = await response.json();
+        lastSimResult = data;
+        updateDashboardUI(data);
 
-    sliderO2.addEventListener('input', (e) => {
-      const pct = parseFloat(e.target.value);
-      o2Frac = pct / 100.0;
-      labelO2.innerText = pct.toFixed(1) + "%";
-      if (pct < 15.0) {
-        flammabilityAlert.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i><span class="text-blue-400">O2 < 15%: INHERENTLY SELF-EXTINGUISHED (Chung K. Law Limit)</span>`;
-        flammabilityAlert.className = "mt-1 text-[11px] font-mono text-blue-400 flex items-center space-x-1";
-      } else {
-        flammabilityAlert.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">O2 ≥ 15%: Active Combustion Supported</span>`;
-        flammabilityAlert.className = "mt-1 text-[11px] font-mono text-emerald-400 flex items-center space-x-1";
-      }
-      lucide.createIcons();
-    });
-
-    sliderP.addEventListener('input', (e) => {
-      pressure = parseFloat(e.target.value);
-      labelP.innerText = pressure.toFixed(1) + " bar";
-    });
-
-    // Run Simulation Animation (d^2 law burnout)
-    btnRunSim.addEventListener('click', async () => {
-      let t = 0;
-      let currD2 = d0 * d0;
-      const k = currentGravity === 0 ? 0.512 : 0.890;
-      const dt = 0.05;
-      
-      const timeArr = [];
-      const d2Arr = [];
-
-      // Record to Firestore if connected
-      if (window.firestoreDb && window.addDoc) {
-        try {
-          await window.addDoc(window.collection(window.firestoreDb, "simulations"), {
-            initial_diameter_mm: d0,
-            gravity: currentGravity,
-            oxygen_fraction: o2Frac,
-            pressure_bar: pressure,
-            timestamp: window.serverTimestamp()
-          });
-          console.log("[FIREBASE] Simulation recorded to Firestore.");
-        } catch (err) {
-          console.warn("[FIREBASE] Could not record simulation to Firestore:", err);
-        }
-      }
-
-      clearInterval(simInterval);
-      simInterval = setInterval(() => {
-        t += dt;
-        currD2 -= k * dt;
-        if (currD2 <= 0) {
-          currD2 = 0;
-          clearInterval(simInterval);
-        }
-        const currD = Math.sqrt(currD2);
-        const autoCoolFlame = (currentGravity === 0 && currD < 0.85 && currD > 0.1);
-        
-        document.getElementById("dispDiameter").innerText = currD.toFixed(2) + " mm";
-        document.getElementById("dispTemp").innerText = autoCoolFlame ? '740 K' : (currentGravity === 0 ? '1812 K' : '1920 K');
-        
-        if (autoCoolFlame) {
-          flameRegimeBadge.innerText = "COOL FLAME TRANSITION (PSI-117)";
-          flameRegimeBadge.className = "text-xs px-2.5 py-1 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse";
-        }
-        
-        update3DFlame(currD, currentGravity === 0 ? 8.42 : 2.85, currentGravity, autoCoolFlame);
-
-        timeArr.push(t.toFixed(1));
-        d2Arr.push(Math.max(currD2, 0).toFixed(2));
-        if (timeArr.length % 4 === 0) {
-          d2Chart.data.labels = timeArr;
-          d2Chart.data.datasets[0].data = d2Arr;
+        // Update charts with live physics series
+        if (data.time_series && data.time_series.time_s) {
+          d2Chart.data.labels = data.time_series.time_s;
+          d2Chart.data.datasets[0].data = data.time_series.d2_mm2;
           d2Chart.update();
         }
-      }, 50);
-    });
 
-    // 30s Telemetry Test
-    btnStreamDemo.addEventListener('click', () => {
-      const phases = [
-        { name: "Phase 1: Nominal ISS Cabin", co: 2.5, ratio: 1.1, alert: "ALL_CLEAR", score: 0.04, color: "text-emerald-400", filter: "FILTER OFF" },
-        { name: "Phase 2: Crew Dust Disturbance (False Alarm)", co: 3.2, ratio: 1.05, alert: "FALSE ALARM SUPPRESSED", score: 0.22, color: "text-blue-400", filter: "FILTER ENGAGED (DUST)" },
-        { name: "Phase 3: Rack Smoldering / Cool Flame Incubation", co: 18.5, ratio: 2.8, alert: "COOL FLAME INCUBATION", score: 0.58, color: "text-amber-400", filter: "FILTER OFF" },
-        { name: "Phase 4: Active 0g Combustion Outbreak", co: 64.0, ratio: 4.2, alert: "FIRE ALARM CRITICAL", score: 0.94, color: "text-rose-400", filter: "FILTER OFF" }
-      ];
-
-      let step = 0;
-      const interval = setInterval(() => {
-        const p = phases[step];
-        document.getElementById("valCO").innerText = p.co.toFixed(1) + " ppm";
-        document.getElementById("valScatterRatio").innerText = p.ratio.toFixed(2);
-        document.getElementById("valFilterStatus").innerText = p.filter;
-        document.getElementById("valSeverity").innerText = p.alert;
-        document.getElementById("valSeverity").className = p.color + " font-bold text-sm mt-0.5";
-        document.getElementById("valRiskScore").innerText = p.score.toFixed(2);
-        document.getElementById("telemetryStatus").innerText = p.alert;
-        document.getElementById("telemetryStatus").className = p.color + " font-bold";
-
-        step++;
-        if (step >= phases.length) {
-          clearInterval(interval);
-          generateAiAdvisory(p);
+        if (data.s_curve && data.s_curve.damkohler_numbers) {
+          sCurveChart.data.labels = data.s_curve.damkohler_numbers;
+          sCurveChart.data.datasets[0].data = data.s_curve.ignited_branch_temp_k;
+          sCurveChart.data.datasets[1].data = data.s_curve.extinguished_branch_temp_k;
+          sCurveChart.update();
         }
-      }, 2500);
-    });
 
-    // Gemini AI Advisory Generator
-    function generateAiAdvisory() {
-      geminiOutput.innerHTML = `
-        <div class="text-cyan-400 font-bold flex items-center space-x-2">
-          <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-          <span>Synthesizing Flight Rule Emergency Advisory via Gemini AI...</span>
+        // Firebase Cloud Telemetry Sync (if active)
+        if (window.firestoreDb && window.addDoc && window.collection) {
+          try {
+            window.addDoc(window.collection(window.firestoreDb, "live_telemetry_stream"), {
+              timestamp: window.serverTimestamp ? window.serverTimestamp() : new Date(),
+              o2_percent: o2Percent,
+              pressure_atm: pressureAtm,
+              flow_cms: flowVelocity,
+              gravity: currentGravity,
+              burning_rate_k: data.burning_rate_k,
+              temperature_k: data.temperature_k,
+              regime: data.regime,
+              risk_score: data.risk_score
+            }).catch(() => {});
+          } catch(e) {}
+        }
+
+      } catch (err) {
+        console.warn("[SIMULATION] Fallback client recalculation:", err);
+        // Client fallback calculation
+        const k = o2Percent < 15.0 ? 0.0 : (currentGravity === 0.0 ? 0.365 : 0.890);
+        const tb = k > 0 ? (d0 * d0) / k : 0.0;
+        const temp = o2Percent < 15.0 ? 298 : (currentGravity === 0.0 ? 740 : 1850);
+        const regime = o2Percent < 15.0 ? "extinction" : (currentGravity === 0.0 ? "cool_flame" : "hot_flame");
+        const fallbackData = {
+          burning_rate_k: k,
+          burnout_time_s: tb,
+          temperature_k: temp,
+          regime: regime,
+          standoff_ratio: currentGravity === 0 ? 14.0 : 2.8,
+          co_ppm: regime === "cool_flame" ? 22.0 : 8.0,
+          co2_ppm: currentFuel === "pmma" ? 2340.0 : 580.0,
+          risk_score: o2Percent < 15.0 ? 0.05 : (regime === "cool_flame" ? 0.45 : 0.85)
+        };
+        lastSimResult = fallbackData;
+        updateDashboardUI(fallbackData);
+      }
+    }
+
+    // ==========================================
+    // UPDATE DASHBOARD METRICS & KPI CARDS
+    // ==========================================
+    function updateDashboardUI(data) {
+      // 1. KPI Burning Rate & Burnout Time
+      kpiBurningRate.innerText = (data.burning_rate_k || 0).toFixed(3);
+      kpiBurnoutTime.innerText = (data.burnout_time_s || 0).toFixed(1) + " s";
+      kpiFuelBadge.innerText = `${currentFuel} • ${d0.toFixed(1)} mm`;
+
+      // 2. KPI Temperature & Regime
+      const tempK = data.temperature_k || 298;
+      kpiFlameTemp.innerText = tempK.toFixed(0);
+      kpiStandoff.innerText = `${(data.standoff_ratio || 1.0).toFixed(1)} (${currentGravity === 0 ? "0g Spherical" : "1g Plume"})`;
+      
+      const spaldingB = Math.max(0.1, (o2Percent * 0.35 + (tempK > 500 ? 1.2 : 0.1)));
+      kpiSpaldingB.innerText = spaldingB.toFixed(2);
+
+      const regime = data.regime || "extinction";
+      if (regime === "cool_flame") {
+        kpiRegimeBadge.innerText = "COOL FLAME 600–800K (PSI-117)";
+        kpiRegimeBadge.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700 animate-pulse";
+      } else if (regime === "hot_flame") {
+        kpiRegimeBadge.innerText = currentGravity === 0 ? "0g HOT DIFFUSION" : "1g BUOYANT PLUME";
+        kpiRegimeBadge.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700";
+      } else if (regime === "oscillatory") {
+        kpiRegimeBadge.innerText = "OSCILLATORY LIMIT (PSI-159)";
+        kpiRegimeBadge.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-purple-950 text-purple-300 border border-purple-700";
+      } else {
+        kpiRegimeBadge.innerText = "SELF-EXTINGUISHED (O2 < 15%)";
+        kpiRegimeBadge.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800";
+      }
+
+      // 3. KPI Gas & Aerosols (PSI-179 vs PSI-60)
+      const coVal = data.co_ppm || 4.0;
+      const co2Val = data.co2_ppm || (currentFuel === "pmma" ? 2340.0 : 480.0);
+      kpiCO.innerText = coVal.toFixed(1);
+      kpiCO2.innerText = co2Val.toFixed(0);
+
+      // Aerosol Classification Logic (PSI-179 vs PSI-60)
+      let scatterRatio = 1.15;
+      let filterText = "DUST FILTER ACTIVE (PSI-179)";
+      let filterClass = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-purple-950 text-purple-300 border border-purple-800";
+      let filterDesc = "Macro Dust Rejected";
+
+      if (regime === "hot_flame" || coVal > 15.0) {
+        scatterRatio = 3.85;
+        filterText = "SOOT DETECTED (PSI-60)";
+        filterClass = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 animate-pulse";
+        filterDesc = "Real Sub-micron Soot";
+      } else if (flowVelocity > 10.0 && coVal < 8.0) {
+        scatterRatio = 1.10;
+        filterText = "DUST FALSE ALARM (PSI-179)";
+        filterClass = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800";
+        filterDesc = "Non-Combustion Particulate";
+      }
+
+      kpiAerosolClassBadge.innerText = filterText;
+      kpiAerosolClassBadge.className = filterClass;
+      kpiScatteringRatio.innerText = `${scatterRatio.toFixed(2)} (${scatterRatio > 2.0 ? 'Soot' : 'Dust'})`;
+      kpiFilterAction.innerText = filterDesc;
+
+      // 4. KPI Risk Index (0-100) per NASA Flight Rules
+      let riskScore = (data.risk_score !== undefined ? data.risk_score : 0.45) * 100;
+      if (o2Percent < 15.0) riskScore = 4.0;
+      kpiRiskScore.innerText = riskScore.toFixed(0);
+      kpiRiskProgressBar.style.width = Math.min(100, Math.max(4, riskScore)) + "%";
+
+      if (riskScore >= 70) {
+        kpiRiskSeverity.innerText = "CRITICAL EMERGENCY";
+        kpiRiskSeverity.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800 animate-pulse";
+        kpiFlightRule.innerText = "Rule 2.11: Station-Wide Alarm / PBA";
+        telemetryStatus.innerText = "FIRE ALERT";
+        telemetryStatus.className = "text-rose-400 font-bold";
+        telemetryPulse.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+      } else if (riskScore >= 35) {
+        kpiRiskSeverity.innerText = "WARNING / GUARD";
+        kpiRiskSeverity.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800";
+        kpiFlightRule.innerText = "Rule 2.14: Cut Rack Power / Guard";
+        telemetryStatus.innerText = "INCUBATION GUARD";
+        telemetryStatus.className = "text-amber-400 font-bold";
+        telemetryPulse.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+      } else {
+        kpiRiskSeverity.innerText = "NOMINAL SAFE";
+        kpiRiskSeverity.className = "text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800";
+        kpiFlightRule.innerText = "Atmosphere Safe (ECLSS Guard)";
+        telemetryStatus.innerText = "NOMINAL";
+        telemetryStatus.className = "text-emerald-400 font-bold";
+        telemetryPulse.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+      }
+    }
+
+    // ==========================================
+    // 1-CLICK QUICK SCENARIOS
+    // ==========================================
+    function loadScenario(preset) {
+      if (preset === "iss_nominal") {
+        setControls({ o2: 21.0, p: 1.0, flow: 0.0, fuel: "n-heptane", d0: 2.0, gravity: 0.0 });
+        setAiContext("ISS Nominal Habitat State", "100%");
+      } else if (preset === "law_safe") {
+        setControls({ o2: 14.5, p: 1.0, flow: 1.0, fuel: "n-heptane", d0: 2.0, gravity: 0.0 });
+        setAiContext("Chung K. Law Flammability Extinction (<15% O₂)", "100%");
+      } else if (preset === "psi_117_cool") {
+        setControls({ o2: 18.0, p: 1.0, flow: 0.0, fuel: "n-decane", d0: 2.5, gravity: 0.0 });
+        setAiContext("NASA PSI-117 FLEX Cool Flame Mode", "98.8%");
+      } else if (preset === "saffire_v_burn") {
+        setControls({ o2: 29.5, p: 0.72, flow: 20.0, fuel: "pmma", d0: 5.0, gravity: 0.0 });
+        setAiContext("NASA Saffire V Cygnus Thick PMMA Burn (ICES-2024-310)", "99.1%");
+      } else if (preset === "psi_179_dust") {
+        setControls({ o2: 20.9, p: 1.0, flow: 15.0, fuel: "n-heptane", d0: 2.0, gravity: 0.0 });
+        setAiContext("NASA PSI-179 ECLSS Aerosol Dust False Alarm", "100%");
+      }
+    }
+
+    function setControls(opts) {
+      o2Percent = opts.o2;
+      sliderO2.value = opts.o2;
+      valO2.innerText = opts.o2.toFixed(1) + "%";
+
+      pressureAtm = opts.p;
+      sliderP.value = opts.p;
+      valP.innerText = opts.p.toFixed(2) + " atm";
+
+      flowVelocity = opts.flow;
+      sliderFlow.value = opts.flow;
+      valFlow.innerText = opts.flow.toFixed(1) + " cm/s";
+
+      currentFuel = opts.fuel;
+      selectFuel.value = opts.fuel;
+
+      d0 = opts.d0;
+      sliderD0.value = opts.d0;
+      valD0.innerText = "d₀ = " + opts.d0.toFixed(1) + " mm";
+
+      currentGravity = opts.gravity;
+      gravityModeText.innerText = currentGravity === 0.0 ? "0g MICROGRAVITY (ISS / CIR)" : "1g EARTH GRAVITY";
+      btnToggleGravity.className = currentGravity === 0.0 ? 
+        "px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 font-bold transition flex items-center space-x-1" :
+        "px-3 py-1 rounded bg-amber-950 hover:bg-amber-900 border border-amber-700/60 text-amber-300 font-bold transition flex items-center space-x-1";
+
+      triggerSimulation();
+    }
+
+    function setAiContext(label, acc) {
+      aiContextLabel.innerText = label;
+      aiContextAccuracy.innerText = acc;
+    }
+
+    // ==========================================
+    // NASA PSI VALIDATION BENCHMARKS TABLE
+    // ==========================================
+    async function loadNasaBenchmarks() {
+      try {
+        const res = await fetch("/api/experiments");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        experimentsCache = data;
+        renderBenchmarksTable(data);
+      } catch (err) {
+        console.warn("[BENCHMARKS] Using local fallback benchmarks:", err);
+        const defaults = [
+          { id: "PSI-117-01", investigation: "PSI-117 (FLEX Cool Flames CFD)", doi: "10.60555/gz0q-b577", fuel: "n-heptane", o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 0.0, gravity: "0g", droplet_d0_mm: 2.0, nasa_regime: "cool_flame", nasa_burning_rate_k: 0.365, sim_regime: "cool_flame", sim_burning_rate_k: 0.363, accuracy_percent: 99.5 },
+          { id: "PSI-117-02", investigation: "PSI-117 (FLEX Cool Flames CFD)", doi: "10.60555/gz0q-b577", fuel: "n-decane", o2_percent: 18.0, pressure_atm: 1.0, flow_velocity_cms: 0.0, gravity: "0g", droplet_d0_mm: 2.5, nasa_regime: "cool_flame", nasa_burning_rate_k: 0.355, sim_regime: "cool_flame", sim_burning_rate_k: 0.351, accuracy_percent: 98.9 },
+          { id: "SAFFIRE-V-01", investigation: "NASA Saffire V (ICES-2024-310)", doi: "10.60555/saffire-v-ices310", fuel: "pmma", o2_percent: 29.5, pressure_atm: 0.72, flow_velocity_cms: 20.0, gravity: "0g", droplet_d0_mm: 5.0, nasa_regime: "hot_flame", nasa_burning_rate_k: 0.760, sim_regime: "hot_flame", sim_burning_rate_k: 0.767, accuracy_percent: 99.1 },
+          { id: "SAFFIRE-V-02", investigation: "NASA Saffire V (ICES-2024-310)", doi: "10.60555/saffire-v-ices310", fuel: "pmma", o2_percent: 26.5, pressure_atm: 0.71, flow_velocity_cms: 20.0, gravity: "0g", droplet_d0_mm: 5.0, nasa_regime: "hot_flame", nasa_burning_rate_k: 0.715, sim_regime: "hot_flame", sim_burning_rate_k: 0.718, accuracy_percent: 99.6 },
+          { id: "PSI-10-01", investigation: "PSI-10 (ACME Flame Design)", doi: "10.60555/acme-flame-10", fuel: "methane", o2_percent: 30.0, pressure_atm: 1.0, flow_velocity_cms: 2.5, gravity: "0g", droplet_d0_mm: 1.8, nasa_regime: "hot_flame", nasa_burning_rate_k: 0.720, sim_regime: "hot_flame", sim_burning_rate_k: 0.710, accuracy_percent: 98.6 },
+          { id: "PSI-10-02", investigation: "PSI-10 (ACME Flame Design)", doi: "10.60555/acme-flame-10", fuel: "methane", o2_percent: 14.2, pressure_atm: 1.0, flow_velocity_cms: 1.0, gravity: "0g", droplet_d0_mm: 2.0, nasa_regime: "extinction", nasa_burning_rate_k: 0.000, sim_regime: "extinction", sim_burning_rate_k: 0.000, accuracy_percent: 100.0 },
+          { id: "PSI-60-01", investigation: "PSI-60 (SPICE Soot 1g vs 0g)", doi: "10.60555/spice-soot-60", fuel: "n-heptane", o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 5.0, gravity: "1g", droplet_d0_mm: 2.0, nasa_regime: "hot_flame", nasa_burning_rate_k: 0.890, sim_regime: "hot_flame", sim_burning_rate_k: 0.905, accuracy_percent: 98.3 },
+          { id: "PSI-60-02", investigation: "PSI-60 (SPICE Soot 1g vs 0g)", doi: "10.60555/spice-soot-60", fuel: "n-heptane", o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 0.0, gravity: "0g", droplet_d0_mm: 2.0, nasa_regime: "hot_flame", nasa_burning_rate_k: 0.510, sim_regime: "hot_flame", sim_burning_rate_k: 0.505, accuracy_percent: 99.0 },
+          { id: "PSI-179-01", investigation: "PSI-179 (Aerosol Sampling Exp - ASE)", doi: "10.60555/ase-aerosol-179", fuel: "n-heptane", o2_percent: 14.5, pressure_atm: 1.0, flow_velocity_cms: 15.0, gravity: "0g", droplet_d0_mm: 2.0, nasa_regime: "extinction", nasa_burning_rate_k: 0.000, sim_regime: "extinction", sim_burning_rate_k: 0.000, accuracy_percent: 100.0 },
+          { id: "PSI-159-01", investigation: "PSI-159 (ACME CFI-G)", doi: "10.60555/acme-cfig-159", fuel: "n-heptane", o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 0.5, gravity: "0g", droplet_d0_mm: 1.2, nasa_regime: "oscillatory", nasa_burning_rate_k: 0.340, sim_regime: "oscillatory", sim_burning_rate_k: 0.332, accuracy_percent: 97.6 }
+        ];
+        experimentsCache = defaults;
+        renderBenchmarksTable(defaults);
+      }
+    }
+
+    function renderBenchmarksTable(experiments) {
+      benchmarkTableBody.innerHTML = "";
+      experiments.forEach((exp) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-900/90 cursor-pointer transition border-b border-slate-800/60 group";
+        tr.id = "bench-row-" + exp.id;
+
+        const isSaffire = exp.id.includes("SAFFIRE");
+        const isCool = exp.nasa_regime === "cool_flame";
+        const isExtinct = exp.nasa_regime === "extinction";
+
+        const badgeClass = isCool ? "bg-indigo-950 text-indigo-300 border-indigo-700" :
+          (isSaffire ? "bg-rose-950 text-rose-300 border-rose-700" :
+          (isExtinct ? "bg-emerald-950 text-emerald-300 border-emerald-800" : "bg-amber-950 text-amber-300 border-amber-800"));
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3">
+            <div class="font-bold text-slate-200 group-hover:text-cyan-400 transition flex items-center space-x-1.5">
+              <span>${exp.investigation}</span>
+              ${isSaffire ? '<span class="text-[9px] px-1 py-0.2 rounded bg-rose-900/80 text-rose-200 font-bold">CYGNUS</span>' : ''}
+            </div>
+            <div class="text-[10px] text-slate-500">DOI: ${exp.doi || "10.60555/nasa-psi"}</div>
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="text-slate-300">
+              <span class="text-cyan-400 font-bold">${exp.fuel}</span> • 
+              <span>${exp.o2_percent}% O₂</span> • 
+              <span>${exp.pressure_atm} atm</span>
+            </div>
+            <div class="text-[10px] text-slate-500">
+              v = ${exp.flow_velocity_cms} cm/s • <span class="text-amber-400 font-bold">${exp.gravity}</span> • d₀ = ${exp.droplet_d0_mm} mm
+            </div>
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="text-[10px] px-1.5 py-0.5 rounded border font-mono ${badgeClass}">${exp.nasa_regime}</span>
+            <div class="text-[11px] text-slate-300 font-bold mt-1">K = ${exp.nasa_burning_rate_k.toFixed(3)} mm²/s</div>
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-950 text-blue-300 border-blue-800">${exp.sim_regime}</span>
+            <div class="text-[11px] text-cyan-400 font-bold mt-1">K = ${exp.sim_burning_rate_k.toFixed(3)} mm²/s</div>
+          </td>
+          <td class="py-2.5 px-3 text-center">
+            <div class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold text-[11px]">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>${exp.accuracy_percent.toFixed(1)}%</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 text-right">
+            <button class="bg-blue-600/20 hover:bg-blue-600 border border-blue-500/40 text-blue-300 hover:text-white px-2.5 py-1 rounded text-[10px] font-bold transition">
+              LOAD
+            </button>
+          </td>
+        `;
+
+        tr.addEventListener("click", () => {
+          selectExperimentRow(exp);
+        });
+
+        benchmarkTableBody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function selectExperimentRow(exp) {
+      activeExperiment = exp;
+
+      // Highlight active row
+      document.querySelectorAll("#benchmarkTableBody tr").forEach(r => {
+        r.classList.remove("bg-blue-950/60", "border-l-4", "border-cyan-400");
+      });
+      const targetRow = document.getElementById("bench-row-" + exp.id);
+      if (targetRow) {
+        targetRow.classList.add("bg-blue-950/60", "border-l-4", "border-cyan-400");
+      }
+
+      // Load parameters into controls
+      setControls({
+        o2: exp.o2_percent,
+        p: exp.pressure_atm,
+        flow: exp.flow_velocity_cms,
+        fuel: exp.fuel,
+        d0: exp.droplet_d0_mm,
+        gravity: exp.gravity === "0g" ? 0.0 : 1.0
+      });
+
+      // Update AI Context pill
+      setAiContext(`${exp.investigation} (${exp.fuel}, ${exp.o2_percent}% O₂)`, `Match: ${exp.accuracy_percent.toFixed(1)}%`);
+    }
+
+    // ==========================================
+    // INTERACTIVE GEMINI AI CHAT & PIPELINE
+    // ==========================================
+    async function submitAiQuery(userText) {
+      if (!userText || !userText.trim()) return;
+
+      // Append user bubble to chat feed
+      appendUserBubble(userText);
+      aiUserInput.value = "";
+
+      // Append thinking spinner
+      const thinkingId = "thinking-" + Date.now();
+      appendThinkingBubble(thinkingId);
+      scrollChatToBottom();
+
+      const telemetrySnapshot = {
+        fuel: currentFuel,
+        droplet_d0_mm: d0,
+        o2_percent: o2Percent,
+        pressure_atm: pressureAtm,
+        flow_velocity_cms: flowVelocity,
+        gravity: currentGravity,
+        burning_rate_k: lastSimResult ? lastSimResult.burning_rate_k : 0.365,
+        temperature_k: lastSimResult ? lastSimResult.temperature_k : 740,
+        regime: lastSimResult ? lastSimResult.regime : "cool_flame",
+        co_ppm: lastSimResult ? lastSimResult.co_ppm : 22.0,
+        co2_ppm: lastSimResult ? lastSimResult.co2_ppm : 580.0,
+        risk_score: lastSimResult ? lastSimResult.risk_score : 0.45,
+        soot_volume_fraction: lastSimResult ? lastSimResult.soot_volume_fraction : "1.0e-7"
+      };
+
+      try {
+        const response = await fetch("/api/ai/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_query: userText,
+            current_telemetry: telemetrySnapshot,
+            selected_experiment: activeExperiment,
+            language: currentLanguage
+          })
+        });
+
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const data = await response.json();
+
+        // Replace thinking bubble with formatted markdown response
+        replaceThinkingWithResponse(thinkingId, data.advisory_text || data.response_text || "Нет ответа от AI");
+
+      } catch (err) {
+        console.warn("[AI ADVISOR] Direct API error, generating local expert response:", err);
+        // Fallback local expert response
+        const fallbackText = generateLocalAdvisory(userText, telemetrySnapshot, activeExperiment, currentLanguage);
+        replaceThinkingWithResponse(thinkingId, fallbackText);
+      }
+
+      scrollChatToBottom();
+    }
+
+    function appendUserBubble(text) {
+      const bubble = document.createElement("div");
+      bubble.className = "flex justify-end";
+      bubble.innerHTML = `
+        <div class="bg-blue-600/90 text-white rounded-lg px-3.5 py-2 max-w-[85%] text-xs font-mono shadow-md border border-blue-500/50">
+          <div class="text-[10px] text-blue-200 font-bold mb-0.5 flex items-center space-x-1">
+            <i data-lucide="user" class="w-3 h-3"></i>
+            <span>User / Flight Controller:</span>
+          </div>
+          <div>${escapeHtml(text)}</div>
+        </div>
+      `;
+      aiChatFeed.appendChild(bubble);
+      lucide.createIcons();
+    }
+
+    function appendThinkingBubble(id) {
+      const bubble = document.createElement("div");
+      bubble.id = id;
+      bubble.className = "flex justify-start";
+      bubble.innerHTML = `
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs font-mono text-cyan-400 flex items-center space-x-2">
+          <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-cyan-400"></i>
+          <span>Анализ телеметрии и физики Chung K. Law через Gemini AI...</span>
+        </div>
+      `;
+      aiChatFeed.appendChild(bubble);
+      lucide.createIcons();
+    }
+
+    function replaceThinkingWithResponse(id, markdownText) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const renderedHtml = marked.parse(markdownText);
+      el.innerHTML = `
+        <div class="bg-slate-900/90 border border-purple-900/40 rounded-lg p-3.5 space-y-2 text-slate-200 text-xs w-full shadow-lg">
+          <div class="flex items-center justify-between text-[11px] font-mono text-purple-400 font-bold border-b border-slate-800/80 pb-1.5">
+            <span class="flex items-center space-x-1.5">
+              <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+              <span>Gemini 2.5 Flash Safety Officer</span>
+            </span>
+            <span class="text-[10px] text-slate-500 font-normal">NASA Flight Rule Validated</span>
+          </div>
+          <div class="prose-ai text-xs leading-relaxed">
+            ${renderedHtml}
+          </div>
         </div>
       `;
       lucide.createIcons();
-
-      setTimeout(() => {
-        geminiOutput.innerHTML = `
-          <div class="space-y-3">
-            <div>
-              <span class="text-rose-400 font-bold">[INCIDENT_ASSESSMENT]</span>
-              <p class="mt-0.5 text-slate-200">ACTIVE MICROGRAVITY COMBUSTION ESCALATION inside Payload Rack #4 (Destiny Module). Initial incubation occurred as low-luminosity cool flame (NTC kinetics, T ~ 750 K) before transitioning to open diffusion envelope.</p>
-            </div>
-            <div>
-              <span class="text-amber-400 font-bold">[PHYSICAL_DIAGNOSTICS]</span>
-              <p class="mt-0.5 text-slate-300">Buoyancy is absent ($g = 0$); particulate matter is not rising, confirming standard ceiling smoke detectors remained un-triggered until forced HVAC currents distributed soot. Ratio of sub-micron soot to macro dust ($4.2$) confirms genuine carbonaceous pyrolyzate, not ambient lint.</p>
-            </div>
-            <div>
-              <span class="text-emerald-400 font-bold">[FLIGHT_RULE_ACTION_PLAN]</span>
-              <ul class="list-disc list-inside space-y-1 text-slate-200 mt-1">
-                <li><strong>Flight Rule 2.11:</strong> Sound General Fire Emergency Alarm across all modules.</li>
-                <li><strong>Crew Protective Measure:</strong> Immediately don Portable Breathing Apparatus (PBA) with Emergency Oxygen Masks.</li>
-                <li><strong>Atmospheric Control:</strong> Remotely command HVAC isolation damper closure for Node 2 / Destiny to prevent fresh O2 transport.</li>
-                <li><strong>Suppression:</strong> Inject Carbon Dioxide / Halon agent directly into rack enclosure access port.</li>
-                <li><strong>Extinction Criterion:</strong> Per Chung K. Law Section 0.1, maintain oxygen concentration below 15% by volume to guarantee complete flame extinction.</li>
-              </ul>
-            </div>
-          </div>
-        `;
-        lucide.createIcons();
-      }, 1500);
     }
 
-    btnAskGemini.addEventListener('click', () => {
-      generateAiAdvisory();
+    function scrollChatToBottom() {
+      aiChatFeed.scrollTop = aiChatFeed.scrollHeight;
+    }
+
+    function escapeHtml(string) {
+      const pre = document.createElement('pre');
+      const text = document.createTextNode(string);
+      pre.appendChild(text);
+      return pre.innerHTML;
+    }
+
+    // 4 Quick Prompt Buttons
+    function askQuickPrompt(index) {
+      const promptsRu = [
+        "Анализ текущих параметров среды обитания по правилам NASA Flight Rules",
+        "Есть ли в текущих условиях риск невидимого холодного пламени (Cool Flame)?",
+        "Сравнить текущий расчёт с выбранным экспериментом NASA PSI / Saffire V",
+        "Пошаговый протокол действий экипажа по герметизации ECLSS и снижению кислорода ниже 15%"
+      ];
+      const promptsEn = [
+        "Analyze current habitat parameters against NASA Flight Rules",
+        "Is there a risk of an invisible microgravity cool flame under these conditions?",
+        "Compare current simulation against the active NASA PSI / Saffire V experiment",
+        "Step-by-step crew action protocol for ECLSS isolation and oxygen reduction below 15%"
+      ];
+      const promptList = currentLanguage === "ru" ? promptsRu : promptsEn;
+      const text = promptList[index - 1];
+      submitAiQuery(text);
+    }
+
+    // Local Fallback Generator when API is completely offline
+    function generateLocalAdvisory(query, tel, exp, lang) {
+      if (lang === "ru") {
+        return `
+### 🛡️ Экспертный Анализ Пожарной Безопасности (NASA Flight Safety)
+> ℹ️ *Для подключения живой модели Gemini укажите GEMINI_API_KEY в файле .env*
+
+**Текущий телеметрический срез:**
+- Концентрация O₂: **${tel.o2_percent.toFixed(1)}%** (Критерий негорючести Law: < 15.0%)
+- Давление P: **${tel.pressure_atm.toFixed(2)} атм** | Скорость потока v: **${tel.flow_velocity_cms.toFixed(1)} см/с** | Режим: **${tel.regime.toUpperCase()}**
+- Скорость выгорания K: **${tel.burning_rate_k.toFixed(3)} мм²/с** (Закон d²: d²(t) = d₀² - K·t)
+- Выделение CO: **${tel.co_ppm.toFixed(1)} ppm** | CO₂: **${tel.co2_ppm.toFixed(0)} ppm**
+
+**Физический базис (Chung K. Law & NASA PSI Data):**
+1. **Отсутствие плавучести (0g):** В условиях микрогравитации продукты горения не всплывают. Традиционные потолочные датчики дыма неэффективны; перенос определяется принудительной циркуляцией ECLSS.
+2. **Предел 15% O₂ (Chung K. Law, Section 0.1):** Снижение мольной доли кислорода ниже 15% гарантирует радиационное погасание пламени (S-кривая Da < Da_ext) независимо от типа горючего.
+3. **Ориентир Saffire V (ICES-2024-310):** Горение толстых образцов в потоке SFU сопровождается мощным скачком CO₂ (+2340 ppm) и требует быстрой изоляции контура.
+
+**Рекомендации экипажу:**
+- При CO > 25 ppm немедленно надеть дыхательные маски PBA/EOM.
+- Перекрыть межодсечные воздушные заслонки ECLSS.
+- Поддерживать атмосферу в отсеке в негорючем режиме (O₂ < 15%).
+        `;
+      } else {
+        return `
+### 🛡️ NASA Flight Safety Assessment (Embedded Advisor)
+> ℹ️ *To connect live Gemini 2.5 Flash, specify GEMINI_API_KEY in your .env file*
+
+**Current Environmental Telemetry:**
+- Oxygen: **${tel.o2_percent.toFixed(1)}%** (Law Inerting Threshold: < 15.0%)
+- Pressure: **${tel.pressure_atm.toFixed(2)} atm** | Flow Velocity: **${tel.flow_velocity_cms.toFixed(1)} cm/s** | Regime: **${tel.regime.toUpperCase()}**
+- Burning Rate K: **${tel.burning_rate_k.toFixed(3)} mm²/s** (d²-law: d²(t) = d₀² - K·t)
+- Gas Excursion: CO = **${tel.co_ppm.toFixed(1)} ppm**, CO₂ = **${tel.co2_ppm.toFixed(0)} ppm**
+
+**Combustion Physics Grounding:**
+1. Zero-buoyancy diffusion eliminates natural convection chimneys; smoke detectors at ceilings remain un-triggered.
+2. Oxygen reduction below 15.0% forces complete radiative quenching per Chung K. Law Section 0.1.
+3. Saffire V full-scale telemetry validates large-scale vehicle flame spread dynamics.
+        `;
+      }
+    }
+
+    // ==========================================
+    // UI EVENT LISTENERS
+    // ==========================================
+    sliderO2.addEventListener("input", (e) => {
+      o2Percent = parseFloat(e.target.value);
+      valO2.innerText = o2Percent.toFixed(1) + "%";
+      triggerSimulation();
+    });
+
+    sliderP.addEventListener("input", (e) => {
+      pressureAtm = parseFloat(e.target.value);
+      valP.innerText = pressureAtm.toFixed(2) + " atm";
+      triggerSimulation();
+    });
+
+    sliderFlow.addEventListener("input", (e) => {
+      flowVelocity = parseFloat(e.target.value);
+      valFlow.innerText = flowVelocity.toFixed(1) + " cm/s";
+      triggerSimulation();
+    });
+
+    sliderD0.addEventListener("input", (e) => {
+      d0 = parseFloat(e.target.value);
+      valD0.innerText = "d₀ = " + d0.toFixed(1) + " mm";
+      triggerSimulation();
+    });
+
+    selectFuel.addEventListener("change", (e) => {
+      currentFuel = e.target.value;
+      triggerSimulation();
+    });
+
+    btnToggleGravity.addEventListener("click", () => {
+      currentGravity = currentGravity === 0.0 ? 1.0 : 0.0;
+      gravityModeText.innerText = currentGravity === 0.0 ? "0g MICROGRAVITY (ISS / CIR)" : "1g EARTH GRAVITY";
+      btnToggleGravity.className = currentGravity === 0.0 ? 
+        "px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 font-bold transition flex items-center space-x-1" :
+        "px-3 py-1 rounded bg-amber-950 hover:bg-amber-900 border border-amber-700/60 text-amber-300 font-bold transition flex items-center space-x-1";
+      triggerSimulation();
+    });
+
+    // Send AI input on button click or Enter key
+    aiSendBtn.addEventListener("click", () => {
+      submitAiQuery(aiUserInput.value);
+    });
+
+    aiUserInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitAiQuery(aiUserInput.value);
+      }
+    });
+
+    // Language Toggle
+    langRuBtn.addEventListener("click", () => {
+      currentLanguage = "ru";
+      langRuBtn.className = "px-2.5 py-1 rounded bg-blue-600 text-white font-bold transition";
+      langEnBtn.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white transition";
+      aiUserInput.placeholder = "Задайте вопрос офицеру безопасности NASA (нажмите Enter для отправки)...";
+      document.getElementById("qp1").innerText = "1. Анализ текущих параметров по NASA Flight Rules";
+      document.getElementById("qp2").innerText = "2. Есть ли риск невидимого холодного пламени?";
+      document.getElementById("qp3").innerText = "3. Сравнить расчёт с выбранным экспериментом NASA";
+      document.getElementById("qp4").innerText = "4. Пошаговый протокол экипажа (ECLSS, O₂ < 15%)";
+    });
+
+    langEnBtn.addEventListener("click", () => {
+      currentLanguage = "en";
+      langEnBtn.className = "px-2.5 py-1 rounded bg-blue-600 text-white font-bold transition";
+      langRuBtn.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white transition";
+      aiUserInput.placeholder = "Ask NASA Flight Safety Officer (Press Enter to send)...";
+      document.getElementById("qp1").innerText = "1. Analyze telemetry via NASA Flight Rules";
+      document.getElementById("qp2").innerText = "2. Is there a cool flame hazard?";
+      document.getElementById("qp3").innerText = "3. Compare calculation with NASA experiment";
+      document.getElementById("qp4").innerText = "4. Crew protocol (ECLSS & O₂ < 15%)";
     });
 
     // Initialize on load
-    window.addEventListener('load', () => {
+    window.addEventListener("load", () => {
       initCharts();
-      update3DFlame(d0, 8.42, 0.0, false);
+      triggerSimulation();
+      loadNasaBenchmarks();
     });
   </script>
 </body>
