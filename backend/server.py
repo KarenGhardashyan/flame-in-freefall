@@ -33,6 +33,7 @@ from backend.gemini_advisor import ask_gemini_safety_officer
 
 BENCHMARKS_FILE = os.path.join(PROJECT_ROOT, "Resources", "nasa_psi_benchmarks.json")
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+ASHKAN_DIR = os.path.join(PROJECT_ROOT, "AshkanAshkani", "flame-lab")
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -65,12 +66,27 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_get_experiments()
         elif path in ["/api/status", "/api/health"]:
             self.handle_get_status()
+        elif path.startswith("/ashkan") or path.startswith("/flame-lab"):
+            self.handle_get_ashkan(path)
         elif path == "/" or path == "":
+            self.directory = FRONTEND_DIR
             self.path = "/index.html"
             super().do_GET()
         else:
-            # Fall back to serving static files from frontend
+            self.directory = FRONTEND_DIR
             super().do_GET()
+
+    def handle_get_ashkan(self, path):
+        subpath = path
+        if subpath.startswith("/ashkan"):
+            subpath = subpath[len("/ashkan"):]
+        elif subpath.startswith("/flame-lab"):
+            subpath = subpath[len("/flame-lab"):]
+        if not subpath or subpath == "/":
+            subpath = "/index.html"
+        self.directory = ASHKAN_DIR
+        self.path = subpath
+        super().do_GET()
 
     def do_POST(self):
         parsed_url = urllib.parse.urlparse(self.path)

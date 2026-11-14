@@ -213,6 +213,11 @@ if HAS_FASTAPI:
             "physics_engine": "active"
         }
 
+    ashkan_dir = os.path.join(PROJECT_ROOT, "AshkanAshkani", "flame-lab")
+    if os.path.isdir(ashkan_dir):
+        app.mount("/ashkan", StaticFiles(directory=ashkan_dir, html=True), name="ashkan")
+        app.mount("/flame-lab", StaticFiles(directory=ashkan_dir, html=True), name="flame_lab")
+
     frontend_dir = os.path.join(PROJECT_ROOT, "frontend")
     if os.path.isdir(frontend_dir):
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
