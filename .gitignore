@@ -63,6 +63,7 @@ Thumbs.db
 desktop.ini
 
 # Large Research & Binary Data
+Resources/20120016768.pdf
 Resources/raw_large_blobs/
 *.tar.gz
 *.zip
