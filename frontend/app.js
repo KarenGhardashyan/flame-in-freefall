@@ -11,9 +11,10 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v1';
+  const STORAGE_KEY = 'flame_blueprint_graph_v2';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
+  const API_NOTE_URL = '/api/blueprint-note';
 
   const SCENARIOS = {
     iss_nominal: {
@@ -331,6 +332,240 @@
   }
 
   // -------------------------------------------------------------------------
+  // NODE 0: NOTE AI (JARVIS Mission Architect)
+  // -------------------------------------------------------------------------
+
+  class NoteNode extends BaseNode {
+    constructor(id, x, y) {
+      super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, 380);
+      this.noteText = 'Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s flow of PMMA in 28 m3. Check cabin pressure.';
+      this.isRecording = false;
+      this.recognition = null;
+      this.init();
+    }
+
+    init() {
+      const portsHtml = `
+        <div class="pin pin-out" data-pin="out">
+          <span>OUT (Blueprint Plan)</span>
+          <div class="pin-socket"></div>
+        </div>
+      `;
+
+      const bodyHtml = `
+        <div class="note-input-container">
+          <textarea class="note-textarea" id="${this.id}-note-text" placeholder="Speak or type mission note (e.g. Saffire V 29.5% O2, 0.71 atm, 20 cm/s, PMMA)...">${sanitize(this.noteText)}</textarea>
+
+          <div class="note-actions-row">
+            <button class="btn-voice-input" id="${this.id}-btn-voice" title="Click to speak (Web Speech API)">
+              <span class="voice-icon">🎙</span>
+              <span class="voice-btn-text">VOICE INPUT</span>
+            </button>
+            <button class="btn-compile-note" id="${this.id}-btn-compile" title="Compile note into Blueprint Architecture">
+              <span>COMPILE TO BLUEPRINT</span>
+            </button>
+          </div>
+
+          <div class="note-presets-group">
+            <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Flight Presets:</div>
+            <div class="note-preset-chip" data-note="Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s, PMMA. Monitor cabin pressure and temperature.">
+              <span>▸ Saffire V Cygnus (29.5% O₂, PMMA, 0.71 atm)</span>
+            </div>
+            <div class="note-preset-chip" data-note="PSI-117 Cool Flame: 21% O2, 1.0 atm, 0.5 cm/s, n-heptane droplet. Detect toxic CO.">
+              <span>▸ PSI-117 Cool Flame (n-Heptane, 0.5 cm/s, toxic CO)</span>
+            </div>
+            <div class="note-preset-chip" data-note="Apollo 13: 21% O2, 1.0 atm, 5.0 cm/s, 6.5% H2 gas leak in 15 m3 cabin. Check explosion.">
+              <span>▸ Apollo 13 H₂ Blast (6.5% H₂ leak, 15 m³ volume)</span>
+            </div>
+          </div>
+
+          <div class="note-summary-card" id="${this.id}-summary-card"></div>
+        </div>
+      `;
+
+      this.createDOM('', portsHtml, bodyHtml);
+      this.bindNoteEvents();
+      this.initSpeechRecognition();
+    }
+
+    initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        this.recognition = null;
+        return;
+      }
+      try {
+        const r = new SpeechRecognition();
+        r.continuous = false;
+        r.interimResults = false;
+        r.lang = 'ru-RU';
+
+        r.onstart = () => {
+          this.isRecording = true;
+          const btn = this.element.querySelector(`#${this.id}-btn-voice`);
+          if (btn) {
+            btn.classList.add('recording');
+            btn.querySelector('.voice-btn-text').textContent = 'LISTENING...';
+          }
+          showToast('Recording voice note... Speak flight parameters');
+        };
+
+        r.onresult = (e) => {
+          const transcript = e.results[0][0].transcript;
+          const textarea = this.element.querySelector(`#${this.id}-note-text`);
+          if (textarea) {
+            textarea.value = (textarea.value ? textarea.value + ' ' : '') + transcript;
+            this.noteText = textarea.value;
+          }
+          showToast('Voice note captured');
+        };
+
+        r.onerror = (e) => {
+          console.warn('[SpeechRec] Error:', e.error);
+          showToast('Voice note error: ' + e.error);
+          this.resetVoiceButton();
+        };
+
+        r.onend = () => {
+          this.resetVoiceButton();
+        };
+
+        this.recognition = r;
+      } catch (err) {
+        console.warn('[SpeechRec] Init failed:', err);
+        this.recognition = null;
+      }
+    }
+
+    resetVoiceButton() {
+      this.isRecording = false;
+      const btn = this.element.querySelector(`#${this.id}-btn-voice`);
+      if (btn) {
+        btn.classList.remove('recording');
+        btn.querySelector('.voice-btn-text').textContent = 'VOICE INPUT';
+      }
+    }
+
+    bindNoteEvents() {
+      const textarea = this.element.querySelector(`#${this.id}-note-text`);
+      textarea.addEventListener('input', () => {
+        this.noteText = textarea.value;
+      });
+
+      const voiceBtn = this.element.querySelector(`#${this.id}-btn-voice`);
+      voiceBtn.addEventListener('click', () => {
+        if (!this.recognition) {
+          showToast('SpeechRecognition API not available in this browser. Please type.');
+          return;
+        }
+        if (this.isRecording) {
+          this.recognition.stop();
+        } else {
+          try {
+            this.recognition.start();
+          } catch (e) {
+            console.warn('[SpeechRec] Start error:', e);
+          }
+        }
+      });
+
+      const compileBtn = this.element.querySelector(`#${this.id}-btn-compile`);
+      compileBtn.addEventListener('click', () => this.compile());
+
+      this.element.querySelectorAll('.note-preset-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          this.noteText = chip.dataset.note;
+          textarea.value = this.noteText;
+          this.compile();
+        });
+      });
+    }
+
+    async compile() {
+      const compileBtn = this.element.querySelector(`#${this.id}-btn-compile`);
+      compileBtn.disabled = true;
+      compileBtn.innerHTML = `<div class="spinner"></div> <span>COMPILING...</span>`;
+
+      try {
+        const res = await fetch(API_NOTE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            note_text: this.noteText,
+            language: 'ru'
+          })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const compiled = await res.json();
+
+        // Render summary card
+        const card = this.element.querySelector(`#${this.id}-summary-card`);
+        if (card) {
+          card.style.display = 'block';
+          card.innerHTML = `
+            <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">✓ MISSION ARCHITECTURE COMPILED</div>
+            <div style="margin-top: 4px; color: #F1F5F9;">${sanitize(compiled.summary || '')}</div>
+            <div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query || '')}</i></div>
+          `;
+        }
+
+        this.data = compiled;
+        showToast('Mission blueprint compiled');
+
+        // Propagate down the wire
+        propagateDataFrom(this.id, compiled);
+
+        // Apply to connected Variable node or direct pipeline
+        this.applyCompiledPlan(compiled);
+      } catch (err) {
+        console.error('[NoteNode] Compilation error:', err);
+        showToast('Compilation error: ' + err.message);
+      } finally {
+        compileBtn.disabled = false;
+        compileBtn.innerHTML = `<span>COMPILE TO BLUEPRINT</span>`;
+      }
+    }
+
+    applyCompiledPlan(compiled) {
+      // Find connected nodes from this node's out pin
+      const outgoingWires = state.wires.filter(w => w.fromNode === this.id);
+      let targetVar = null;
+
+      outgoingWires.forEach(w => {
+        const target = state.nodes.get(w.toNode);
+        if (target && target.type === 'variable') {
+          targetVar = target;
+        }
+      });
+
+      // If no directly wired Variable node, find the first Variable node on the canvas
+      if (!targetVar) {
+        for (const n of state.nodes.values()) {
+          if (n.type === 'variable') {
+            targetVar = n;
+            break;
+          }
+        }
+      }
+
+      if (targetVar && compiled.params) {
+        targetVar.setParams(compiled.params);
+      }
+
+      // Set graph channel if specified
+      if (compiled.pipeline && compiled.pipeline.graph_metric) {
+        state.nodes.forEach(n => {
+          if (n.type === 'graph') {
+            n.setChannel(compiled.pipeline.graph_metric);
+          } else if (n.type === 'prompt' && compiled.suggested_query) {
+            n.setQuery(compiled.suggested_query);
+          }
+        });
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // NODE 1: VARIABLE / PARAMETER
   // -------------------------------------------------------------------------
 
@@ -350,6 +585,10 @@
 
     init() {
       const portsHtml = `
+        <div class="pin pin-in" data-pin="in">
+          <div class="pin-socket"></div>
+          <span>IN (Plan)</span>
+        </div>
         <div class="pin pin-out" data-pin="out">
           <span>OUT (Eval Stream)</span>
           <div class="pin-socket"></div>
@@ -506,6 +745,13 @@
       this.queueEvaluate();
     }
 
+    onReceiveData(data) {
+      super.onReceiveData(data);
+      if (data && data.params) {
+        this.setParams(data.params);
+      }
+    }
+
     queueEvaluate() {
       if (state.evalDebounceTimer) clearTimeout(state.evalDebounceTimer);
       state.evalDebounceTimer = setTimeout(() => {
@@ -523,17 +769,150 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        // Pack params + evaluation + benchmark
+        // Pack params + evaluation + benchmark + sim_to_real
         this.data = {
           params: Object.assign({}, this.params),
           evaluation: data.evaluation,
-          nearest_benchmark: data.nearest_benchmark
+          nearest_benchmark: data.nearest_benchmark,
+          sim_to_real: data.sim_to_real
         };
 
         propagateDataFrom(this.id, this.data);
         saveGraphToLocalStorage();
       } catch (err) {
         console.error('[VariableNode] Eval error:', err);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // NODE 1.5: SIM-TO-REAL (NASA PSI Flight Grounding)
+  // -------------------------------------------------------------------------
+
+  class SimToRealNode extends BaseNode {
+    constructor(id, x, y) {
+      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, 420);
+      this.init();
+    }
+
+    init() {
+      const portsHtml = `
+        <div class="pin pin-in" data-pin="in">
+          <div class="pin-socket"></div>
+          <span>IN (Eval Stream)</span>
+        </div>
+        <div class="pin pin-out" data-pin="out">
+          <span>OUT (Calibrated Stream)</span>
+          <div class="pin-socket"></div>
+        </div>
+      `;
+
+      const bodyHtml = `
+        <div class="s2r-header-metrics">
+          <div class="s2r-metric-box">
+            <div class="s2r-metric-title">Sim-to-Real Confidence</div>
+            <div class="s2r-metric-val-row">
+              <span class="s2r-metric-val" id="${this.id}-conf-val">88.5%</span>
+              <span style="font-family: var(--font-mono); font-size: 10px; color: #10B981;">HIGH</span>
+            </div>
+            <div class="confidence-meter">
+              <div class="confidence-bar-fill" id="${this.id}-conf-bar" style="width: 88.5%;"></div>
+            </div>
+          </div>
+
+          <div class="s2r-metric-box">
+            <div class="s2r-metric-title">Empirical Reality Gap</div>
+            <div class="s2r-metric-val-row">
+              <span class="s2r-metric-val" id="${this.id}-gap-val">24.0%</span>
+              <span class="gap-badge gap-moderate" id="${this.id}-gap-badge">CALIBRATED</span>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-muted);">Against 41 Flight Runs</div>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; margin-top: 4px;">
+          Top-3 Flight Benchmarks (NASA PSI & Saffire):
+        </div>
+        <div class="s2r-matches-list" id="${this.id}-matches-list">
+          <div class="s2r-match-item">Awaiting physical evaluation stream...</div>
+        </div>
+
+        <div class="s2r-explanation-card" id="${this.id}-explanation-card">
+          Grounded across 41 documented flight runs (Saffire I–VI, BASS-II, PSI-117, PSI-10, PSI-60, PSI-179, Apollo, Mir).
+        </div>
+      `;
+
+      this.createDOM('', portsHtml, bodyHtml);
+    }
+
+    onReceiveData(data) {
+      super.onReceiveData(data);
+      this.updateSimToRealDisplay();
+      propagateDataFrom(this.id, data);
+    }
+
+    updateSimToRealDisplay() {
+      if (!this.data) return;
+      const s2r = this.data.sim_to_real;
+      if (!s2r) return;
+
+      const confVal = s2r.sim_to_real_confidence_pct || 85.0;
+      const gapVal = s2r.reality_gap_pct || 15.0;
+
+      // Confidence
+      const confEl = this.element.querySelector(`#${this.id}-conf-val`);
+      const confBar = this.element.querySelector(`#${this.id}-conf-bar`);
+      if (confEl) confEl.textContent = `${confVal.toFixed(1)}%`;
+      if (confBar) confBar.style.width = `${Math.min(100, Math.max(0, confVal))}%`;
+
+      // Reality Gap
+      const gapEl = this.element.querySelector(`#${this.id}-gap-val`);
+      const gapBadge = this.element.querySelector(`#${this.id}-gap-badge`);
+      if (gapEl) gapEl.textContent = `${gapVal.toFixed(1)}%`;
+      if (gapBadge) {
+        if (gapVal <= 20) {
+          gapBadge.className = 'gap-badge gap-low';
+          gapBadge.textContent = 'HIGH ACCURACY';
+        } else if (gapVal <= 45) {
+          gapBadge.className = 'gap-badge gap-moderate';
+          gapBadge.textContent = 'CALIBRATED';
+        } else {
+          gapBadge.className = 'gap-badge gap-high';
+          gapBadge.textContent = 'DIVERGENCE';
+        }
+      }
+
+      // Top matches
+      const matchesList = this.element.querySelector(`#${this.id}-matches-list`);
+      if (matchesList && Array.isArray(s2r.top_matches)) {
+        matchesList.innerHTML = s2r.top_matches.slice(0, 3).map((m, idx) => `
+          <div class="s2r-match-item">
+            <div class="s2r-match-top">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="s2r-rank-tag">#${idx + 1}</span>
+                <span class="s2r-match-title">${sanitize(m.id || '')} &middot; ${sanitize(m.investigation || m.title || '')}</span>
+              </div>
+              <span class="s2r-match-score">${(m.match_pct || 90).toFixed(1)}%</span>
+            </div>
+            <div class="s2r-match-details">
+              <span>O₂: ${m.o2_percent}%</span>
+              <span>P: ${m.pressure_atm} atm</span>
+              <span>V_g: ${m.flow_velocity_cms} cm/s</span>
+              <span>Regime: ${(m.measured_regime || 'nominal').toUpperCase()}</span>
+            </div>
+            <div>
+              <a href="${m.url || 'https://psi.nasa.gov'}" target="_blank" rel="noopener noreferrer" class="s2r-link">
+                View Official Investigation Telemetry ↗
+              </a>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Explanation
+      const explCard = this.element.querySelector(`#${this.id}-explanation-card`);
+      if (explCard && s2r.gap_explanation) {
+        explCard.innerHTML = `<span style="font-family: var(--font-mono); font-size: 10px; color: #06B6D4; font-weight: 700;">PHYSICAL GROUNDING ANALYSIS:</span><br>${sanitize(s2r.gap_explanation)}`;
       }
     }
   }
@@ -1039,6 +1418,15 @@
       this.init();
     }
 
+    setChannel(channel) {
+      if (['spread', 'temp', 'pressure', 'co'].includes(channel)) {
+        this.selectedChannel = channel;
+        const select = this.element.querySelector(`#${this.id}-channel-select`);
+        if (select) select.value = channel;
+        this.renderGraph();
+      }
+    }
+
     init() {
       const portsHtml = `
         <div class="pin pin-in" data-pin="in">
@@ -1124,9 +1512,12 @@
       // Extract time_series
       const evalData = this.data ? this.data.evaluation : null;
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
+      const simToReal = this.data ? this.data.sim_to_real : null;
+      const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
 
       const tSec = (series && series.t_sec) ? series.t_sec : [0, 100, 200, 300, 400, 500, 600];
       let yValues = [];
+      let yRealValues = [];
       let yUnit = '';
       let thresholdVal = null;
       let thresholdLabel = '';
@@ -1134,28 +1525,33 @@
 
       if (this.selectedChannel === 'spread') {
         yValues = (series && series.front_cm) ? series.front_cm : [0, 2, 4, 6, 8, 10, 12];
+        yRealValues = (overlay && overlay.measured_front_cm) ? overlay.measured_front_cm : [];
         yUnit = 'cm';
         strokeColor = '#10B981';
       } else if (this.selectedChannel === 'temp') {
         yValues = (series && series.cabin_temp_c) ? series.cabin_temp_c : [25, 28, 32, 38, 45, 52, 60];
+        yRealValues = (overlay && overlay.measured_cabin_temp_c) ? overlay.measured_cabin_temp_c : [];
         yUnit = '°C';
         strokeColor = '#F59E0B';
       } else if (this.selectedChannel === 'pressure') {
         yValues = (series && series.cabin_pressure_kpa) ? series.cabin_pressure_kpa : [101, 101, 102, 102, 103, 104, 104];
+        yRealValues = (overlay && overlay.measured_cabin_pressure_kpa) ? overlay.measured_cabin_pressure_kpa : [];
         yUnit = 'kPa';
         thresholdVal = 146.0; // 101 + 45 kPa limit
         thresholdLabel = 'HULL PROOF LIMIT';
         strokeColor = '#EF4444';
       } else { // 'co'
         yValues = (series && series.co_ppm) ? series.co_ppm : [5, 12, 22, 34, 48, 62, 75];
+        yRealValues = (overlay && overlay.measured_co_ppm) ? overlay.measured_co_ppm : [];
         yUnit = 'ppm';
         thresholdVal = 55.0; // NASA SMAC 1-hr threshold
         thresholdLabel = 'NASA SMAC LIMIT (55 ppm)';
         strokeColor = '#A855F7';
       }
 
-      const maxYData = Math.max(...yValues, thresholdVal || 1);
-      const minYData = Math.min(...yValues, 0);
+      const allValues = [...yValues, ...(yRealValues || [])];
+      const maxYData = Math.max(...allValues, thresholdVal || 1);
+      const minYData = Math.min(...allValues, 0);
       const yMax = Math.max(maxYData * 1.15, 1.0);
       const yMin = Math.min(minYData, 0);
 
@@ -1209,7 +1605,39 @@
         ctx.restore();
       }
 
-      // Draw Main Curve
+      // Draw Real NASA Flight Overlay (Dashed line with circular marker points)
+      const hasReal = yRealValues && yRealValues.length === tSec.length;
+      if (hasReal) {
+        ctx.save();
+        ctx.strokeStyle = '#F59E0B'; // Amber Real Line
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+
+        tSec.forEach((t, idx) => {
+          const px = padLeft + (t / 600) * plotW;
+          const py = padTop + plotH - ((yRealValues[idx] - yMin) / (yMax - yMin)) * plotH;
+          if (idx === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Points
+        ctx.fillStyle = '#F59E0B';
+        tSec.forEach((t, idx) => {
+          if (t % 100 === 0) {
+            const px = padLeft + (t / 600) * plotW;
+            const py = padTop + plotH - ((yRealValues[idx] - yMin) / (yMax - yMin)) * plotH;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+        ctx.restore();
+      }
+
+      // Draw Main Curve (Sim Model)
       if (tSec.length > 1 && yValues.length === tSec.length) {
         ctx.save();
         ctx.strokeStyle = strokeColor;
@@ -1235,6 +1663,23 @@
         ctx.fill();
         ctx.restore();
       }
+
+      // Top Right Legend
+      ctx.save();
+      ctx.font = '9px "JetBrains Mono"';
+      ctx.textAlign = 'right';
+
+      if (hasReal) {
+        ctx.fillStyle = '#F59E0B';
+        ctx.fillText('● REAL (NASA Flight)', w - padRight, padTop - 6);
+
+        ctx.fillStyle = strokeColor;
+        ctx.fillText('■ SIM (Physics)', w - padRight - 116, padTop - 6);
+      } else {
+        ctx.fillStyle = strokeColor;
+        ctx.fillText('■ SIM (Physics Model)', w - padRight, padTop - 6);
+      }
+      ctx.restore();
 
       // Hover Crosshair
       if (hoverTime !== null) {
@@ -1267,22 +1712,40 @@
       // Find nearest point
       const evalData = this.data ? this.data.evaluation : null;
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
+      const simToReal = this.data ? this.data.sim_to_real : null;
+      const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
+
       const tSec = (series && series.t_sec) ? series.t_sec : [0, 100, 200, 300, 400, 500, 600];
 
       let yValues = [];
+      let yReal = [];
       let unit = '';
-      if (this.selectedChannel === 'spread') { yValues = series ? series.front_cm : []; unit = 'cm'; }
-      else if (this.selectedChannel === 'temp') { yValues = series ? series.cabin_temp_c : []; unit = '°C'; }
-      else if (this.selectedChannel === 'pressure') { yValues = series ? series.cabin_pressure_kpa : []; unit = 'kPa'; }
-      else { yValues = series ? series.co_ppm : []; unit = 'ppm'; }
+      if (this.selectedChannel === 'spread') {
+        yValues = series ? series.front_cm : [];
+        yReal = overlay ? overlay.measured_front_cm : [];
+        unit = 'cm';
+      } else if (this.selectedChannel === 'temp') {
+        yValues = series ? series.cabin_temp_c : [];
+        yReal = overlay ? overlay.measured_cabin_temp_c : [];
+        unit = '°C';
+      } else if (this.selectedChannel === 'pressure') {
+        yValues = series ? series.cabin_pressure_kpa : [];
+        yReal = overlay ? overlay.measured_cabin_pressure_kpa : [];
+        unit = 'kPa';
+      } else {
+        yValues = series ? series.co_ppm : [];
+        yReal = overlay ? overlay.measured_co_ppm : [];
+        unit = 'ppm';
+      }
 
       const idx = Math.min(yValues.length - 1, Math.max(0, Math.round(tHover / 10)));
       const val = yValues[idx] !== undefined ? yValues[idx] : 0;
+      const realVal = (yReal && yReal[idx] !== undefined) ? yReal[idx] : null;
 
       tooltip.style.display = 'block';
       tooltip.style.left = `${mx + 10}px`;
       tooltip.style.top = `30px`;
-      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; <b>${val} ${unit}</b>`;
+      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${val} ${unit}</b>${realVal !== null ? `<br><span style="color: #F59E0B;">REAL: <b>${realVal} ${unit}</b></span>` : ''}`;
     }
   }
 
@@ -1295,6 +1758,12 @@
       super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, 380);
       this.query = 'Оценить риск взрыва и пробоя гермооболочки';
       this.init();
+    }
+
+    setQuery(q) {
+      this.query = q;
+      const textarea = this.element.querySelector(`#${this.id}-query-text`);
+      if (textarea) textarea.value = q;
     }
 
     init() {
@@ -1483,8 +1952,12 @@
     const id = `node_${state.nodeCounter}`;
     let node = null;
 
-    if (type === 'variable') {
+    if (type === 'note') {
+      node = new NoteNode(id, x, y);
+    } else if (type === 'variable') {
       node = new VariableNode(id, x, y, initialData);
+    } else if (type === 'simtoreal') {
+      node = new SimToRealNode(id, x, y);
     } else if (type === 'sim') {
       node = new SimNode(id, x, y);
     } else if (type === 'graph') {
@@ -1628,7 +2101,9 @@
         const x = Math.round(state.contextMenuPos.x);
         const y = Math.round(state.contextMenuPos.y);
 
-        if (action === 'spawn_variable') spawnNode('variable', x, y);
+        if (action === 'spawn_note') spawnNode('note', x, y);
+        else if (action === 'spawn_variable') spawnNode('variable', x, y);
+        else if (action === 'spawn_simtoreal') spawnNode('simtoreal', x, y);
         else if (action === 'spawn_sim') spawnNode('sim', x, y);
         else if (action === 'spawn_graph') spawnNode('graph', x, y);
         else if (action === 'spawn_prompt') spawnNode('prompt', x, y);
@@ -1713,31 +2188,28 @@
   }
 
   function autoLayoutGraph() {
-    // Arrange: Column 1 (Variable), Column 2 (SIM, Graph), Column 3 (Prompt, Brief)
-    let varY = 80;
-    let midY = 80;
-    let rightY = 80;
-
     state.nodes.forEach(node => {
-      if (node.type === 'variable') {
-        node.x = 80;
-        node.y = varY;
-        varY += 460;
+      if (node.type === 'note') {
+        node.x = 40;
+        node.y = 50;
+      } else if (node.type === 'variable') {
+        node.x = 40;
+        node.y = 440;
+      } else if (node.type === 'simtoreal') {
+        node.x = 460;
+        node.y = 50;
       } else if (node.type === 'sim') {
-        node.x = 440;
-        node.y = midY;
-        midY += 440;
+        node.x = 940;
+        node.y = 50;
       } else if (node.type === 'graph') {
-        node.x = 440;
-        node.y = midY;
-        midY += 320;
+        node.x = 940;
+        node.y = 530;
       } else if (node.type === 'prompt') {
-        node.x = 920;
-        node.y = rightY;
-        rightY += 340;
+        node.x = 1420;
+        node.y = 50;
       } else if (node.type === 'brief') {
-        node.x = 1340;
-        node.y = 80;
+        node.x = 1840;
+        node.y = 50;
       }
       if (node.element) {
         node.element.style.left = `${node.x}px`;
@@ -1745,8 +2217,8 @@
       }
     });
 
-    state.pan = { x: 40, y: 30 };
-    state.scale = 0.88;
+    state.pan = { x: 30, y: 25 };
+    state.scale = 0.85;
     updateWorldTransform();
     saveGraphToLocalStorage();
     showToast('Auto-layout arranged');
@@ -1824,11 +2296,14 @@
   function buildDefaultGraph() {
     clearGraph();
 
-    state.pan = { x: 40, y: 30 };
-    state.scale = 0.92;
+    state.pan = { x: 30, y: 25 };
+    state.scale = 0.85;
 
-    // Node 1: Variable / Parameter
-    const varNode = spawnNode('variable', 60, 60, {
+    // Node 0: Note AI // JARVIS Architect
+    const noteNode = spawnNode('note', 40, 50);
+
+    // Node 1: Variable / Parameter Feed
+    const varNode = spawnNode('variable', 40, 440, {
       o2_percent: 21.0,
       pressure_atm: 1.0,
       flow_velocity_cms: 10.0,
@@ -1837,19 +2312,27 @@
       cabin_volume_m3: 28.0
     });
 
-    // Node 2: SIM Spacecraft Cutaway
-    const simNode = spawnNode('sim', 420, 60);
+    // Node 2: Sim-to-Real NASA Grounding
+    const s2rNode = spawnNode('simtoreal', 460, 50);
 
-    // Node 3: Graph Time Telemetry
-    const graphNode = spawnNode('graph', 420, 520);
+    // Node 3: SIM Spacecraft Cutaway
+    const simNode = spawnNode('sim', 940, 50);
 
-    // Node 4: Prompt AI Safety Officer
-    const promptNode = spawnNode('prompt', 900, 60);
+    // Node 4: Graph Time Telemetry
+    const graphNode = spawnNode('graph', 940, 530);
 
-    // Wires: Variable -> SIM, Graph, Prompt
-    addWire(varNode.id, 'out', simNode.id, 'in');
-    addWire(varNode.id, 'out', graphNode.id, 'in');
-    addWire(varNode.id, 'out', promptNode.id, 'in');
+    // Node 5: Prompt AI Safety Officer
+    const promptNode = spawnNode('prompt', 1420, 50);
+
+    // Wires:
+    // Note AI out -> Variable in
+    addWire(noteNode.id, 'out', varNode.id, 'in');
+    // Variable out -> Sim-to-Real in
+    addWire(varNode.id, 'out', s2rNode.id, 'in');
+    // Sim-to-Real out -> SIM in, Graph in, Prompt in
+    addWire(s2rNode.id, 'out', simNode.id, 'in');
+    addWire(s2rNode.id, 'out', graphNode.id, 'in');
+    addWire(s2rNode.id, 'out', promptNode.id, 'in');
 
     updateWorldTransform();
     saveGraphToLocalStorage();

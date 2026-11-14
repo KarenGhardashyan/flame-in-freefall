@@ -14,6 +14,7 @@ Grounded in:
 
 import os
 import json
+import re
 from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
@@ -513,4 +514,244 @@ def _generate_blueprint_fallback(
         "nearest_benchmark": nearest_benchmark,
         "retrieved_chunks": retrieved_chunks
     }
+
+
+# =========================================================================
+# JARVIS NOTE AI // BLUEPRINT ARCHITECT COMPILER
+# =========================================================================
+
+NOTE_ARCHITECT_SYSTEM_INSTRUCTION = """
+You are the JARVIS Systems Architect for the NASA "Flame in Freefall" Mission Control Dashboard.
+Your role is to compile spoken or written mission notes into a precise, physical simulation configuration and blueprint graph pipeline.
+
+Parameters to extract:
+- o2_percent: float (e.g. 21.0, 29.5, 95.0, 14.0). Default: 21.0
+- pressure_atm: float (e.g. 1.0, 0.71, 1.4). Default: 1.0
+- flow_velocity_cms: float (e.g. 10.0, 20.0, 0.5, 0.0). Default: 10.0
+- fuel: string in ["pmma", "sibal", "n-heptane", "h2", "methane"]. Default: "pmma"
+- h2_conc_pct: float (flammable gas leakage concentration in volume %, 0 to 15). Default: 0.0 (or 6.5 if fuel is h2, 5.5 if methane)
+- cabin_volume_m3: float (15.0 for crew capsule, 28.0 for Cygnus, 106.0 for ISS Destiny lab). Default: 28.0
+- is_ignited: bool. Default: True
+
+Pipeline & Graph options:
+- needs_sim: bool (true)
+- needs_graph: bool (true)
+- needs_prompt: bool (true)
+- needs_sim_to_real: bool (true)
+- graph_metric: string in ["temp", "pressure", "co", "spread"]. Choose the most relevant parameter mentioned.
+
+You MUST respond strictly with a valid JSON object in this format:
+{
+  "params": {
+    "o2_percent": 21.0,
+    "pressure_atm": 1.0,
+    "flow_velocity_cms": 10.0,
+    "fuel": "pmma",
+    "h2_conc_pct": 0.0,
+    "cabin_volume_m3": 28.0,
+    "is_ignited": true
+  },
+  "pipeline": {
+    "needs_sim": true,
+    "needs_graph": true,
+    "needs_prompt": true,
+    "needs_sim_to_real": true,
+    "graph_metric": "temp"
+  },
+  "summary": "Engineering summary of the mission scenario",
+  "suggested_query": "Precise question for the Gemini AI Safety Officer",
+  "followup_question": "Optional recommendation or follow-up question"
+}
+"""
+
+
+def compile_note_to_blueprint(note_text: str, language: str = "ru") -> Dict[str, Any]:
+    """
+    Compiles free-form voice or text engineering notes into a structured Blueprint graph pipeline.
+    Uses Gemini 2.5 Flash if available, otherwise executes high-fidelity regex/keyword fallback.
+    """
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    lang_code = language.lower() if language else "ru"
+    lang_instruction = (
+        "Сформируй summary, suggested_query и followup_question на РУССКОМ ЯЗЫКЕ."
+        if lang_code == "ru" else
+        "Formulate summary, suggested_query, and followup_question in ENGLISH."
+    )
+
+    prompt = f"""
+{lang_instruction}
+
+ENGINEERING NOTE / ГОЛОСОВАЯ ИЛИ ТЕКСТОВАЯ ЗАМЕТКА ИНЖЕНЕРА:
+"{note_text}"
+
+Parse all physical parameters, select the primary telemetry channel for the graph, and generate the blueprint layout plan JSON.
+"""
+
+    if api_key and api_key != "YOUR_GEMINI_API_KEY":
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=NOTE_ARCHITECT_SYSTEM_INSTRUCTION,
+                    temperature=0.10,
+                    response_mime_type="application/json"
+                )
+            )
+            if response and response.text:
+                parsed = json.loads(response.text)
+                return {
+                    "source": "gemini-2.5-flash",
+                    "status": "success",
+                    "params": parsed.get("params", {}),
+                    "pipeline": parsed.get("pipeline", {}),
+                    "summary": parsed.get("summary", "Compiled by Gemini AI Architect"),
+                    "suggested_query": parsed.get("suggested_query", "Assess microgravity fire safety"),
+                    "followup_question": parsed.get("followup_question", "")
+                }
+        except Exception as e:
+            print(f"[NOTE COMPILER] Gemini API error: {e}. Executing deterministic fallback parser.")
+
+    return _compile_note_fallback(note_text, lang_code)
+
+
+def _compile_note_fallback(note_text: str, lang: str = "ru") -> Dict[str, Any]:
+    """
+    High-fidelity deterministic parser for engineering notes when Gemini API is offline.
+    Extracts physical parameters, cabin volume, fuel type, and target graph channel.
+    """
+    text = note_text.lower()
+
+    # Defaults
+    o2_pct = 21.0
+    pressure_atm = 1.0
+    flow_velocity_cms = 10.0
+    fuel = "pmma"
+    h2_conc_pct = 0.0
+    cabin_volume_m3 = 28.0
+    is_ignited = True
+
+    # 1. Oxygen percentage: e.g. "29.5%", "30% O2", "95 %", "21 pct"
+    o2_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|pct|percent|кислород|o2|o₂)", text)
+    if o2_match:
+        val = float(o2_match.group(1))
+        if 5.0 <= val <= 100.0:
+            o2_pct = val
+
+    # 2. Pressure: e.g. "0.71 atm", "1.4 bar", "101 kpa", "0.7 атм", "1 бар"
+    p_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:atm|атм|bar|бар|кпа|kpa)", text)
+    if p_match:
+        val = float(p_match.group(1))
+        unit_str = text[p_match.end()-3:p_match.end()]
+        if "kpa" in text[p_match.start():p_match.end()+4] or "кпа" in text[p_match.start():p_match.end()+4]:
+            pressure_atm = round(val / 101.325, 2)
+        elif 0.1 <= val <= 5.0:
+            pressure_atm = val
+
+    # 3. Flow velocity: e.g. "20 cm/s", "0.5 см/с", "10 cms", "обдув 5", "поток 20"
+    v_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:cm/s|см/с|cms|см/сек)", text)
+    if not v_match:
+        v_match = re.search(r"(?:обдув|поток|сквозняк|скорост[ьи]|flow|draft)\s*[:=]?\s*(\d+(?:\.\d+)?)", text)
+        if v_match:
+            flow_velocity_cms = float(v_match.group(1))
+    else:
+        flow_velocity_cms = float(v_match.group(1))
+
+    # 4. Fuel type
+    if any(k in text for k in ["h2", "водород", "hydrogen"]):
+        fuel = "h2"
+        h2_conc_pct = 6.5
+    elif any(k in text for k in ["methane", "метан", "ch4"]):
+        fuel = "methane"
+        h2_conc_pct = 5.5
+    elif any(k in text for k in ["sibal", "сибал", "fabric", "хлопок", "ткань"]):
+        fuel = "sibal"
+    elif any(k in text for k in ["heptane", "гептан", "droplet", "капл", "flex"]):
+        fuel = "n-heptane"
+    elif any(k in text for k in ["pmma", "пмма", "акрил", "plexiglas", "оргстекло", "тверд", "solid"]):
+        fuel = "pmma"
+
+    # Gas concentration override if specified
+    gas_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:h2|водород|ch4|метан|газ|утечк)", text)
+    if gas_match:
+        h2_conc_pct = float(gas_match.group(1))
+
+    # 5. Cabin volume: e.g. "15 m3", "28 м3", "106 м3", "cygnus", "капсул", "destiny", "iss"
+    vol_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m3|м3|m\^3|куб)", text)
+    if vol_match:
+        cabin_volume_m3 = float(vol_match.group(1))
+    elif any(k in text for k in ["cygnus", "сигнус", "saffire"]):
+        cabin_volume_m3 = 28.0
+    elif any(k in text for k in ["capsule", "капсул", "apollo", "аполлон"]):
+        cabin_volume_m3 = 15.0
+    elif any(k in text for k in ["iss", "мкс", "destiny", "лаборатор"]):
+        cabin_volume_m3 = 106.0
+
+    # 6. Graph metric selection
+    if any(k in text for k in ["press", "давлен", "proof", "наддув", "пробо"]):
+        graph_metric = "pressure"
+    elif any(k in text for k in ["co", "угарн", "токсич", "smac", "ядовит", "отрав"]):
+        graph_metric = "co"
+    elif any(k in text for k in ["spread", "распростран", "фронт", "скорост горен"]):
+        graph_metric = "spread"
+    else:
+        graph_metric = "temp"
+
+    # Summaries & queries
+    fuel_labels = {
+        "pmma": "PMMA Solid (Оргстекло)",
+        "sibal": "SIBAL Cotton Fabric (Saffire)",
+        "n-heptane": "n-Heptane Droplet (FLEX)",
+        "h2": f"Hydrogen H₂ Leak ({h2_conc_pct}%)",
+        "methane": f"Methane CH₄ Leak ({h2_conc_pct}%)"
+    }
+
+    if lang == "ru":
+        summary = (
+            f"Скомпилирована миссия: O₂={o2_pct:.1f}%, P={pressure_atm:.2f} атм, "
+            f"обдув={flow_velocity_cms:.1f} см/с, топливо={fuel_labels.get(fuel, fuel)}, V={cabin_volume_m3:.0f} м³."
+        )
+        if graph_metric == "pressure":
+            suggested_query = f"Оценить динамику нарастания избыточного давления в отсеке V={cabin_volume_m3:.0f} м³ и риск гидродинамического пробоя гермооболочки."
+        elif graph_metric == "co":
+            suggested_query = f"Оценить темп выделения токсичного угарного газа CO и время до превышения предела NASA SMAC 55 ppm."
+        elif graph_metric == "spread":
+            suggested_query = f"Рассчитать скорость распространения фронта пламени по U-кривой обдува при V_g={flow_velocity_cms:.1f} см/с."
+        else:
+            suggested_query = f"Оценить пожарный риск, тепловую нагрузку на корпус и статус безопасности при O₂={o2_pct:.1f}% и P={pressure_atm:.2f} атм."
+        followup = "Рекомендуется проверить калибровку с ближайшим летным эталоном NASA в узле Sim-to-Real."
+    else:
+        summary = (
+            f"Mission compiled: O₂={o2_pct:.1f}%, P={pressure_atm:.2f} atm, "
+            f"drift={flow_velocity_cms:.1f} cm/s, fuel={fuel}, volume={cabin_volume_m3:.0f} m³."
+        )
+        suggested_query = f"Evaluate spacecraft fire safety margins and {graph_metric} telemetry under current ECLSS flow conditions."
+        followup = "Verify empirical fidelity against closest flight benchmark via the Sim-to-Real node."
+
+    return {
+        "source": "deterministic-note-compiler",
+        "status": "success",
+        "params": {
+            "o2_percent": o2_pct,
+            "pressure_atm": pressure_atm,
+            "flow_velocity_cms": flow_velocity_cms,
+            "fuel": fuel,
+            "h2_conc_pct": h2_conc_pct,
+            "cabin_volume_m3": cabin_volume_m3,
+            "is_ignited": is_ignited
+        },
+        "pipeline": {
+            "needs_sim": True,
+            "needs_graph": True,
+            "needs_prompt": True,
+            "needs_sim_to_real": True,
+            "graph_metric": graph_metric
+        },
+        "summary": summary,
+        "suggested_query": suggested_query,
+        "followup_question": followup
+    }
+
 

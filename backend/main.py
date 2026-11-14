@@ -39,8 +39,17 @@ if HAS_FASTAPI:
     import time
     from ml_models.anomaly_detector import EarlyFireDetector
     from backend.firebase_client import initialize_firebase, record_telemetry_event, get_connection_status
-    from backend.gemini_advisor import generate_safety_advisory, ask_gemini_safety_officer, ask_blueprint_copilot
-    from backend.knowledge_retriever import find_nearest_nasa_benchmark, search_knowledge_bm25
+    from backend.gemini_advisor import (
+        generate_safety_advisory,
+        ask_gemini_safety_officer,
+        ask_blueprint_copilot,
+        compile_note_to_blueprint
+    )
+    from backend.knowledge_retriever import (
+        find_nearest_nasa_benchmark,
+        search_knowledge_bm25,
+        compute_sim_to_real
+    )
 
     app = FastAPI(
         title="Flame in Freefall API",
@@ -172,20 +181,34 @@ if HAS_FASTAPI:
     def blueprint_eval_endpoint(payload: Dict[str, Any]):
         """
         Fast evaluation endpoint for Blueprint dashboard nodes.
-        Computes 5-module physical evaluation + finds nearest NASA PSI benchmark in < 20 ms.
+        Computes 5-module physical evaluation + finds nearest NASA PSI benchmark +
+        calibrates Sim-to-Real ground truth across 40+ documented flight modes in < 20 ms.
         Consumes 0 LLM tokens.
         """
         t0 = time.time()
         params = payload.get("params", payload) if "params" in payload and isinstance(payload.get("params"), dict) else payload
         eval_res = evaluate_fire_safety(params)
         nearest = find_nearest_nasa_benchmark(params)
+        sim_to_real = compute_sim_to_real(params, eval_res)
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         return {
             "evaluation": eval_res,
             "nearest_benchmark": nearest,
+            "sim_to_real": sim_to_real,
             "status": "success",
             "latency_ms": elapsed_ms
         }
+
+    @app.post("/api/blueprint-note")
+    def blueprint_note_endpoint(payload: Dict[str, Any]):
+        """
+        JARVIS Note AI Architect Endpoint.
+        Accepts voice or text engineering notes, extracts physical flight parameters,
+        decides pipeline and graph channel, and compiles auto-wired blueprint architecture.
+        """
+        note_text = payload.get("note_text") or payload.get("text") or payload.get("note") or ""
+        lang = str(payload.get("language", "ru"))
+        return compile_note_to_blueprint(note_text=note_text, language=lang)
 
     @app.post("/api/blueprint-prompt")
     def blueprint_prompt_endpoint(payload: Dict[str, Any]):

@@ -790,7 +790,9 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         # Distributed radiant & convective heat flux onto vehicle walls
         hull_heat_flux_kw_m2 = max(0.5, (q_dot_chem_watts * 0.35 / a_hull) * 1.0e-3)
 
-    # Numerical integration across 600 s (dt = 10 s, 61 points)
+    # Numerical integration across 600 s (dt_step = 10 s, 61 points)
+    # Using internal sub-step integration with dt_sub = 0.25 s (40 sub-steps per step)
+    # to eliminate explicit Euler numerical stiffness and sawtooth oscillations.
     t_series_sec = []
     front_series_cm = []
     temp_series_c = []
@@ -801,6 +803,8 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     curr_front_cm = 0.0
     curr_co_ppm = 5.0
     dt_step = 10.0
+    dt_sub = 0.25
+    n_sub = int(round(dt_step / dt_sub))  # 40 sub-steps per 10-second reporting step
 
     # CO production yield in microgravity: incomplete combustion phi ~ 1.3 -> 0.08 kg CO / kg PMMA
     co_yield = 0.08 if regime != "extinction" else 0.0
@@ -816,18 +820,21 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         pressure_series_kpa.append(round(curr_p_kpa, 1))
         co_series_ppm.append(round(curr_co_ppm, 1))
 
-        # Euler step for thermal balance: dT/dt = (Q_chem - Q_loss) / (m_air * C_v)
-        q_loss = h_eff * a_hull * (curr_t_cabin - t_inf)
-        dt_cabin = ((q_dot_chem_watts - q_loss) / (m_air * cv_air)) * dt_step
-        curr_t_cabin = max(t_inf, curr_t_cabin + dt_cabin)
+        # Advance state across dt_step using stable sub-stepping
+        if step_idx < 60:
+            for _ in range(n_sub):
+                # Sub-step thermal balance: dT/dt = (Q_chem - Q_loss) / (m_air * C_v)
+                q_loss = h_eff * a_hull * (curr_t_cabin - t_inf)
+                dt_cabin = ((q_dot_chem_watts - q_loss) / (m_air * cv_air)) * dt_sub
+                curr_t_cabin = max(t_inf, curr_t_cabin + dt_cabin)
 
-        # Front progression
-        curr_front_cm = min(100.0, curr_front_cm + (spread_rate_mm_s * 0.1) * dt_step)
+                # Front progression
+                curr_front_cm = min(100.0, curr_front_cm + (spread_rate_mm_s * 0.1) * dt_sub)
 
-        # CO accumulation
-        delta_co_mass = m_dot_fuel * co_yield * dt_step
-        delta_co_ppm = (delta_co_mass / m_air) * (28.97 / 28.01) * 1.0e6
-        curr_co_ppm += delta_co_ppm
+                # CO accumulation
+                delta_co_mass = m_dot_fuel * co_yield * dt_sub
+                delta_co_ppm = (delta_co_mass / m_air) * (28.97 / 28.01) * 1.0e6
+                curr_co_ppm += delta_co_ppm
 
     final_delta_p_kpa = pressure_series_kpa[-1] - (p_pa * 1.0e-3)
     cabin_overpressure_kpa = max(0.0, final_delta_p_kpa) + delta_p_blast_kpa

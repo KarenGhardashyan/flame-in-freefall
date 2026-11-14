@@ -31,8 +31,16 @@ from physics_engine.combustion_model import (
     saffire_flight_replay,
     evaluate_fire_safety
 )
-from backend.gemini_advisor import ask_gemini_safety_officer, ask_blueprint_copilot
-from backend.knowledge_retriever import find_nearest_nasa_benchmark, search_knowledge_bm25
+from backend.gemini_advisor import (
+    ask_gemini_safety_officer,
+    ask_blueprint_copilot,
+    compile_note_to_blueprint
+)
+from backend.knowledge_retriever import (
+    find_nearest_nasa_benchmark,
+    search_knowledge_bm25,
+    compute_sim_to_real
+)
 
 BENCHMARKS_FILE = os.path.join(PROJECT_ROOT, "Resources", "nasa_psi_benchmarks.json")
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
@@ -111,6 +119,8 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_post_blueprint_eval()
         elif path == "/api/blueprint-prompt":
             self.handle_post_blueprint_prompt()
+        elif path == "/api/blueprint-note":
+            self.handle_post_blueprint_note()
         else:
             self.send_response(404)
             self.send_header("Content-Type", "application/json")
@@ -357,14 +367,38 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
 
             eval_res = evaluate_fire_safety(params)
             nearest = find_nearest_nasa_benchmark(params)
+            sim_to_real = compute_sim_to_real(params, eval_res)
             elapsed_ms = round((time.time() - t0) * 1000.0, 2)
 
             resp = {
                 "evaluation": eval_res,
                 "nearest_benchmark": nearest,
+                "sim_to_real": sim_to_real,
                 "status": "success",
                 "latency_ms": elapsed_ms
             }
+            data_bytes = json.dumps(resp, indent=2, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_post_blueprint_note(self):
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8")) if body else {}
+
+            note_text = payload.get("note_text") or payload.get("text") or payload.get("note") or ""
+            lang = str(payload.get("language", "ru"))
+
+            resp = compile_note_to_blueprint(note_text=note_text, language=lang)
             data_bytes = json.dumps(resp, indent=2, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
