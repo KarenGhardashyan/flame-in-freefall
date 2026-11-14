@@ -142,7 +142,7 @@ def run_scenario_4_h2_detonation():
         "o2_percent": 21.0,
         "pressure_atm": 1.0,
         "flow_velocity_cms": 5.0,
-        "fuel": "pmma",
+        "fuel": "h2",
         "gravity_level": 0.0
     }
     res = evaluate_fire_safety(params)

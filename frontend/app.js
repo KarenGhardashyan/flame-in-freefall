@@ -368,16 +368,16 @@
 
           <div class="note-presets-group">
             <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">Flight Presets:</div>
-            <div class="note-preset-chip" data-note="Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s, PMMA. Monitor cabin pressure and temperature.">
+            <div class="note-preset-chip" data-note="Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s, PMMA. Monitor cabin pressure and temperature." data-o2="29.5" data-p="0.71" data-v="20.0" data-fuel="pmma" data-gas="0.0" data-vol="28">
               <span>▸ Saffire V Cygnus (29.5% O₂, PMMA, 0.71 atm)</span>
             </div>
-            <div class="note-preset-chip" data-note="PSI-117 Cool Flame: 21% O2, 1.0 atm, 0.5 cm/s, n-heptane droplet. Detect toxic CO.">
+            <div class="note-preset-chip" data-note="PSI-117 Cool Flame: 21% O2, 1.0 atm, 0.5 cm/s, n-heptane droplet. Detect toxic CO." data-o2="21.0" data-p="1.0" data-v="0.5" data-fuel="n-heptane" data-gas="0.0" data-vol="28">
               <span>▸ PSI-117 Cool Flame (n-Heptane, 0.5 cm/s, toxic CO)</span>
             </div>
-            <div class="note-preset-chip" data-note="Apollo 13: 21% O2, 1.0 atm, 5.0 cm/s, 6.5% H2 gas leak in 15 m3 cabin. Check explosion.">
+            <div class="note-preset-chip" data-note="Apollo 13: 21% O2, 1.0 atm, 5.0 cm/s, 6.5% H2 gas leak in 15 m3 cabin. Check explosion." data-o2="21.0" data-p="1.0" data-v="5.0" data-fuel="h2" data-gas="6.5" data-vol="15">
               <span>▸ Apollo 13 H₂ Blast (6.5% H₂ leak, 15 m³ volume)</span>
             </div>
-            <div class="note-preset-chip" data-note="Hazard Audit: Uranium fuel pellet ignition at 35% O2, 1.2 atm, 15 cm/s flow. Check safety compliance.">
+            <div class="note-preset-chip" data-note="Hazard Audit: Uranium fuel pellet ignition at 35% O2, 1.2 atm, 15 cm/s flow. Check safety compliance." data-o2="35.0" data-p="1.2" data-v="15.0" data-fuel="pmma" data-gas="0.0" data-vol="28">
               <span>▸ Hazard Test (Uranium fuel pellet, 35% O₂ [Out-of-Domain])</span>
             </div>
           </div>
@@ -479,6 +479,18 @@
         chip.addEventListener('click', () => {
           this.noteText = chip.dataset.note;
           textarea.value = this.noteText;
+          if (chip.dataset.o2) {
+            const instantParams = {
+              o2_percent: parseFloat(chip.dataset.o2),
+              pressure_atm: parseFloat(chip.dataset.p),
+              flow_velocity_cms: parseFloat(chip.dataset.v),
+              fuel: chip.dataset.fuel,
+              h2_conc_pct: parseFloat(chip.dataset.gas || 0),
+              gas_vol_pct: parseFloat(chip.dataset.gas || 0),
+              cabin_volume_m3: parseFloat(chip.dataset.vol || 28)
+            };
+            this.applyCompiledPlan({ params: instantParams });
+          }
           this.compile();
         });
       });
@@ -725,11 +737,24 @@
         this.params.fuel = fuelSel.value;
         const isGas = ['h2', 'methane'].includes(this.params.fuel);
         this.element.querySelector(`#${this.id}-gas-row`).style.display = isGas ? 'flex' : 'none';
-        if (isGas && this.params.h2_conc_pct === 0) {
+        if (!isGas) {
+          this.params.h2_conc_pct = 0.0;
+          this.params.gas_vol_pct = 0.0;
+          const gasR = this.element.querySelector(`#${this.id}-gas-range`);
+          const gasN = this.element.querySelector(`#${this.id}-gas-num`);
+          const gasD = this.element.querySelector(`#${this.id}-gas-disp`);
+          if (gasR) gasR.value = 0.0;
+          if (gasN) gasN.value = 0.0;
+          if (gasD) gasD.textContent = '0.0%';
+        } else if (this.params.h2_conc_pct === 0) {
           this.params.h2_conc_pct = (this.params.fuel === 'h2') ? 6.5 : 5.5;
-          this.element.querySelector(`#${this.id}-gas-range`).value = this.params.h2_conc_pct;
-          this.element.querySelector(`#${this.id}-gas-num`).value = this.params.h2_conc_pct;
-          this.element.querySelector(`#${this.id}-gas-disp`).textContent = `${this.params.h2_conc_pct.toFixed(1)}%`;
+          this.params.gas_vol_pct = this.params.h2_conc_pct;
+          const gasR = this.element.querySelector(`#${this.id}-gas-range`);
+          const gasN = this.element.querySelector(`#${this.id}-gas-num`);
+          const gasD = this.element.querySelector(`#${this.id}-gas-disp`);
+          if (gasR) gasR.value = this.params.h2_conc_pct;
+          if (gasN) gasN.value = this.params.h2_conc_pct;
+          if (gasD) gasD.textContent = `${this.params.h2_conc_pct.toFixed(1)}%`;
         }
         this.queueEvaluate();
       });
@@ -743,6 +768,11 @@
 
     setParams(newParams) {
       Object.assign(this.params, newParams);
+      const isGas = ['h2', 'methane'].includes(this.params.fuel);
+      if (!isGas) {
+        this.params.h2_conc_pct = 0.0;
+        this.params.gas_vol_pct = 0.0;
+      }
       // Update UI elements
       const updateField = (id, val, fmt) => {
         const elR = this.element.querySelector(`#${this.id}-${id}-range`);
@@ -839,7 +869,7 @@
             <div class="s2r-metric-title">Sim-to-Real Confidence</div>
             <div class="s2r-metric-val-row">
               <span class="s2r-metric-val" id="${this.id}-conf-val">88.5%</span>
-              <span style="font-family: var(--font-mono); font-size: 10px; color: #10B981;">HIGH</span>
+              <span class="confidence-badge confidence-high" id="${this.id}-conf-badge">HIGH</span>
             </div>
             <div class="confidence-meter">
               <div class="confidence-bar-fill" id="${this.id}-conf-bar" style="width: 88.5%;"></div>
@@ -887,9 +917,22 @@
 
       // Confidence
       const confEl = this.element.querySelector(`#${this.id}-conf-val`);
+      const confBadge = this.element.querySelector(`#${this.id}-conf-badge`);
       const confBar = this.element.querySelector(`#${this.id}-conf-bar`);
       if (confEl) confEl.textContent = `${confVal.toFixed(1)}%`;
       if (confBar) confBar.style.width = `${Math.min(100, Math.max(0, confVal))}%`;
+      if (confBadge) {
+        if (confVal >= 75.0) {
+          confBadge.className = 'confidence-badge confidence-high';
+          confBadge.textContent = 'HIGH';
+        } else if (confVal >= 45.0) {
+          confBadge.className = 'confidence-badge confidence-med';
+          confBadge.textContent = 'MODERATE';
+        } else {
+          confBadge.className = 'confidence-badge confidence-low';
+          confBadge.textContent = 'LOW';
+        }
+      }
 
       // Reality Gap
       const gapEl = this.element.querySelector(`#${this.id}-gap-val`);
@@ -1724,9 +1767,10 @@
         thresholdLabel = 'HULL PROOF LIMIT';
         strokeColor = '#EF4444';
       } else { // 'co'
-        yValues = (series && series.co_ppm) ? series.co_ppm : [5, 12, 22, 34, 48, 62, 75];
-        yMinValues = (series && series.co_ppm_min) ? series.co_ppm_min : yValues.map(v => Math.max(0, v * 0.88));
-        yMaxValues = (series && series.co_ppm_max) ? series.co_ppm_max : yValues.map(v => v * 1.12);
+        const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
+        yValues = (series && series.co_ppm) ? series.co_ppm : (isH2Fuel ? new Array(7).fill(0) : [5, 12, 22, 34, 48, 62, 75]);
+        yMinValues = (series && series.co_ppm_min) ? series.co_ppm_min : (isH2Fuel ? new Array(7).fill(0) : yValues.map(v => Math.max(0, v * 0.88)));
+        yMaxValues = (series && series.co_ppm_max) ? series.co_ppm_max : (isH2Fuel ? new Array(7).fill(0) : yValues.map(v => v * 1.12));
         yUnit = 'ppm';
         thresholdVal = 55.0; // NASA SMAC 1-hr threshold
         thresholdLabel = 'NASA SMAC LIMIT (55 ppm)';
@@ -1924,6 +1968,29 @@
         ctx.restore();
       }
 
+      // Carbon-Free H2 Banner for CO Channel
+      const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
+      if (this.selectedChannel === 'co' && isH2Fuel) {
+        ctx.save();
+        const bannerW = 280;
+        const bannerH = 26;
+        const bx = padLeft + (plotW - bannerW) / 2;
+        const by = padTop + (plotH - bannerH) / 2;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bannerW, bannerH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00E5FF';
+        ctx.font = 'bold 9.5px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.fillText('CO generation: N/A (carbon-free H2 fuel)', bx + bannerW / 2, by + 16);
+        ctx.restore();
+      }
+
       // Legend
       ctx.save();
       ctx.font = '9px "JetBrains Mono"';
@@ -2015,10 +2082,14 @@
         }
       }
 
+      const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
+      const isH2 = this.selectedChannel === 'co' && isH2Fuel;
+      const simValDisplay = isH2 ? 'N/A (carbon-free H2 fuel)' : `${val} ${unit}`;
+
       tooltip.style.display = 'block';
       tooltip.style.left = `${mx + 10}px`;
       tooltip.style.top = `30px`;
-      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${val} ${unit}</b>${realStr}`;
+      tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; SIM: <b>${simValDisplay}</b>${realStr}`;
     }
   }
 
@@ -2633,6 +2704,9 @@
 
   function loadGraphFromLocalStorage() {
     try {
+      if (localStorage.getItem('flame_blueprint_graph')) {
+        localStorage.removeItem('flame_blueprint_graph');
+      }
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
@@ -2643,7 +2717,12 @@
       state.pan = data.pan || { x: 40, y: 30 };
       state.scale = data.scale || 0.92;
 
+      let seenGraph = false;
       data.nodes.forEach(n => {
+        if (n.type === 'graph') {
+          if (seenGraph) return; // Discard duplicate graph nodes
+          seenGraph = true;
+        }
         spawnNode(n.type, n.x, n.y, n.params || {});
       });
 

@@ -568,7 +568,11 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
 
     gravity = float(params.get("gravity_level", params.get("gravity", 0.0)))
     fuel_name = str(params.get("fuel", "pmma")).lower()
-    h2_pct = float(params.get("h2_conc_pct", params.get("flammable_gas_pct", 0.0)))
+    is_gas_fuel = fuel_name in ["hydrogen", "h2", "methane", "ch4"]
+    if is_gas_fuel:
+        h2_pct = float(params.get("h2_conc_pct", params.get("flammable_gas_pct", params.get("gas_vol_pct", 0.0))))
+    else:
+        h2_pct = 0.0
     thickness_um = float(params.get("fuel_thickness_um", params.get("thickness_um", 100.0)))
     thickness_m = max(1.0e-5, thickness_um * 1.0e-6)
     cabin_vol_m3 = float(params.get("cabin_volume_m3", 19.2))  # Nominal Cygnus Saffire volume
@@ -665,8 +669,15 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         flame_color_mode = "sooty_yellow"
         regime = "hot_flame"
 
-    # Explosive deflagration / detonation override
-    is_explosive = (h2_pct >= 4.0) or (fuel_name in ["methane", "h2"] and x_o2 >= 0.15 and params.get("flammable_gas_pct", 0) >= 5.0)
+    # Explosive deflagration / detonation override (strictly for flammable gas leaks)
+    if is_gas_fuel:
+        if fuel_name in ["hydrogen", "h2"]:
+            is_explosive = (h2_pct >= 4.0)
+        else:  # methane / ch4
+            is_explosive = (h2_pct >= 5.0 and x_o2 >= 0.12)
+    else:
+        is_explosive = False
+
     if is_explosive:
         flame_color_mode = "explosion_flash"
         flame_temp_k = max(flame_temp_k, 2400.0)
@@ -744,17 +755,27 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     # MODULE 3: Volumetric Explosion & Inside -> Outside Spacecraft Breach Loop
     # (Chung K. Law Ch. 7 & Saffire V ICES-2024-310)
     # ---------------------------------------------------------
-    # Chapman-Jouguet detonation / deflagration overpressure
-    if h2_pct >= 4.0:
-        # Hydrogen detonation overpressure
-        delta_p_blast_kpa = p_bar * 100.0 * (6.5 + 2.8 * ((h2_pct - 4.0) / 4.0))
-        explosion_risk_pct = min(100.0, 85.0 + (h2_pct - 4.0) * 5.0)
-    elif is_explosive:
-        delta_p_blast_kpa = p_bar * 100.0 * 5.5
-        explosion_risk_pct = 90.0
+    # Chapman-Jouguet detonation / deflagration overpressure (strictly for gas fuels)
+    if not is_gas_fuel:
+        delta_p_blast_kpa = 0.0
+        explosion_risk_pct = 0.0
+    elif fuel_name in ["hydrogen", "h2"]:
+        if h2_pct >= 4.0:
+            delta_p_blast_kpa = p_bar * 100.0 * (6.5 + 2.8 * ((h2_pct - 4.0) / 4.0))
+            explosion_risk_pct = min(100.0, 85.0 + (h2_pct - 4.0) * 5.0)
+        else:
+            delta_p_blast_kpa = 0.0
+            explosion_risk_pct = max(0.0, min(25.0, (h2_pct / 4.0) * 20.0))
+    elif fuel_name in ["methane", "ch4"]:
+        if h2_pct >= 5.0 and x_o2 >= 0.12:
+            delta_p_blast_kpa = p_bar * 100.0 * (5.5 + 2.0 * ((h2_pct - 5.0) / 5.0))
+            explosion_risk_pct = min(100.0, 80.0 + (h2_pct - 5.0) * 4.0)
+        else:
+            delta_p_blast_kpa = 0.0
+            explosion_risk_pct = max(0.0, min(25.0, (h2_pct / 5.0) * 20.0))
     else:
         delta_p_blast_kpa = 0.0
-        explosion_risk_pct = max(0.0, min(25.0, (h2_pct / 4.0) * 20.0))
+        explosion_risk_pct = 0.0
 
     # Dynamic Cabin Heat Balance Integration over 600 seconds (Saffire V ICES-2024-310)
     # V_cabin, Huggett constant 13.1 kJ/g O2, h_eff = 150 W/(m^2*K), A_hull = 45 m^2
@@ -778,17 +799,34 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     if regime == "extinction":
         q_dot_chem_watts = 0.0
 
-    # Localized heat flux on vehicle hull / window (kW/m^2)
-    # In hyperoxic Apollo 1 flashover: fire directly impinges on pressure hull walls
-    # In Saffire V: fire is centered in tunnel -> radiation to walls is distributed over a_hull
-    if x_o2 >= 0.70:
-        local_flame_area = 0.20  # m^2 direct impingement on hull
-        hull_heat_flux_kw_m2 = (q_dot_chem_watts / local_flame_area) * 1.0e-3
-    elif regime == "extinction":
+    # Localized peak heat flux on vehicle hull / window (kW/m^2)
+    # Modelled via Stefan-Boltzmann radiation to nearest compartment bulkhead/window + convective boundary transfer:
+    # q_rad = eps * sigma * (T_f^4 - T_inf^4) * F_geom * (X_O2 / 0.21)^1.25
+    # q_conv = h_conv * (T_f - T_inf) * sqrt(V_g / 20) * sqrt(X_O2 / 0.21) * F_geom
+    if regime == "extinction" or flame_temp_k <= t_inf + 5.0:
         hull_heat_flux_kw_m2 = 0.0
     else:
-        # Distributed radiant & convective heat flux onto vehicle walls
-        hull_heat_flux_kw_m2 = max(0.5, (q_dot_chem_watts * 0.35 / a_hull) * 1.0e-3)
+        # Enclosed cabin volume V_cabin -> characteristic radius R_eff to nearest bulkhead/window
+        r_eff = max(0.6, 0.48 * (cabin_vol_m3 ** (1.0 / 3.0)))
+        f_geom = (1.35 / r_eff) ** 2  # Inverse square / view factor scaling
+
+        # Stefan-Boltzmann radiation (T_f^4 - T_inf^4) in kW/m^2
+        delta_t4 = max(0.0, (flame_temp_k ** 4) - (t_inf ** 4))
+        f_o2_rad = (x_o2 / 0.21) ** 1.25
+        q_rad_kw_m2 = STEFAN_BOLTZMANN * delta_t4 * 1.0e-3 * 0.0036 * f_o2_rad * f_geom
+
+        # Convective boundary layer transfer
+        f_o2_conv = math.sqrt(x_o2 / 0.21)
+        f_flow_conv = math.sqrt((v_g_cms + 1.0) / 20.0)
+        q_conv_kw_m2 = 0.0011 * (flame_temp_k - t_inf) * f_flow_conv * f_o2_conv * f_geom
+
+        hull_heat_flux_kw_m2 = q_rad_kw_m2 + q_conv_kw_m2
+
+        # Deflagration / detonation explosive pulse (80 - 180 kW/m^2)
+        if is_explosive:
+            hull_heat_flux_kw_m2 += 115.0
+
+        hull_heat_flux_kw_m2 = round(hull_heat_flux_kw_m2, 2)
 
     # Numerical integration across 600 s (dt_step = 10 s, 61 points)
     # Using internal sub-step integration with dt_sub = 0.25 s (40 sub-steps per step)
@@ -809,13 +847,18 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
 
     curr_t_cabin = t_inf
     curr_front_cm = 0.0
-    curr_co_ppm = 5.0
+    is_carbon_free = fuel_name in ["hydrogen", "h2"]
+    curr_co_ppm = 0.0 if is_carbon_free else 5.0
     dt_step = 10.0
     dt_sub = 0.25
     n_sub = int(round(dt_step / dt_sub))  # 40 sub-steps per 10-second reporting step
 
     # CO production yield in microgravity: incomplete combustion phi ~ 1.3 -> 0.08 kg CO / kg PMMA
-    co_yield = 0.08 if regime != "extinction" else 0.0
+    # Hydrogen is carbon-free -> 0.0 yield
+    if is_carbon_free or regime == "extinction":
+        co_yield = 0.0
+    else:
+        co_yield = 0.08
 
     for step_idx in range(61):
         t_now = step_idx * dt_step
@@ -853,12 +896,17 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         pressure_max_kpa.append(round(p_fluc + p_sigma, 1))
 
         # Toxic CO accumulation with incomplete combustion variance
-        co_nominal = round(curr_co_ppm, 1)
-        co_fluc = round(co_nominal + (0.10 * (fluc_factor - 1.0) * max(0.0, co_nominal - 5.0)), 1)
-        co_series_ppm.append(co_fluc)
-        co_sigma = max(0.5, 0.065 * max(0.0, co_fluc - 5.0) + 0.60)
-        co_min_ppm.append(round(max(0.0, co_fluc - co_sigma), 1))
-        co_max_ppm.append(round(co_fluc + co_sigma, 1))
+        if is_carbon_free:
+            co_series_ppm.append(0.0)
+            co_min_ppm.append(0.0)
+            co_max_ppm.append(0.0)
+        else:
+            co_nominal = round(curr_co_ppm, 1)
+            co_fluc = round(co_nominal + (0.10 * (fluc_factor - 1.0) * max(0.0, co_nominal - 5.0)), 1)
+            co_series_ppm.append(co_fluc)
+            co_sigma = max(0.5, 0.065 * max(0.0, co_fluc - 5.0) + 0.60)
+            co_min_ppm.append(round(max(0.0, co_fluc - co_sigma), 1))
+            co_max_ppm.append(round(co_fluc + co_sigma, 1))
 
         # Advance state across dt_step using stable sub-stepping
         if step_idx < 60:
@@ -872,9 +920,10 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
                 curr_front_cm = min(100.0, curr_front_cm + (spread_rate_mm_s * 0.1) * dt_sub)
 
                 # CO accumulation
-                delta_co_mass = m_dot_fuel * co_yield * dt_sub
-                delta_co_ppm = (delta_co_mass / m_air) * (28.97 / 28.01) * 1.0e6
-                curr_co_ppm += delta_co_ppm
+                if not is_carbon_free and regime != "extinction":
+                    delta_co_mass = m_dot_fuel * co_yield * dt_sub
+                    delta_co_ppm = (delta_co_mass / m_air) * (28.97 / 28.01) * 1.0e6
+                    curr_co_ppm += delta_co_ppm
 
     final_delta_p_kpa = pressure_series_kpa[-1] - (p_pa * 1.0e-3)
     cabin_overpressure_kpa = max(0.0, final_delta_p_kpa) + delta_p_blast_kpa
@@ -888,11 +937,15 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     # MODULE 4: Toxicity & Smoke vs Dust Discrimination
     # (BASS-II Sec. 1.4 & NASA PSI-179 / Shuttle Fire Detector)
     # ---------------------------------------------------------
-    co_rate_ppm_s = (m_dot_fuel * co_yield / m_air) * (28.97 / 28.01) * 1.0e6 if regime != "extinction" else 0.0
-    if co_rate_ppm_s > 1.0e-4:
-        time_to_smac_sec = max(1.0, (55.0 - 5.0) / co_rate_ppm_s)
-    else:
+    if is_carbon_free:
+        co_rate_ppm_s = 0.0
         time_to_smac_sec = 99999.0
+    else:
+        co_rate_ppm_s = (m_dot_fuel * co_yield / m_air) * (28.97 / 28.01) * 1.0e6 if regime != "extinction" else 0.0
+        if co_rate_ppm_s > 1.0e-4:
+            time_to_smac_sec = max(1.0, (55.0 - 5.0) / co_rate_ppm_s)
+        else:
+            time_to_smac_sec = 99999.0
 
     # Dual-wavelength Blue (450 nm) / IR (850 nm) scattering ratio
     # Fine soot dp < 0.1 um -> Rayleigh scattering (I ~ lambda^-4), Blue/IR ~ (850/450)^4 * 0.25 ~ 3.20
@@ -915,11 +968,11 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     # ---------------------------------------------------------
     # MODULE 5: Historical NASA Analog Classifier
     # ---------------------------------------------------------
-    if delta_p_blast_kpa >= 80.0 or h2_pct >= 4.0:
+    if is_gas_fuel and (delta_p_blast_kpa >= 80.0 or h2_pct >= 4.0):
         analog_name = "Apollo 13 Cryogenic Tank Deflagration (1970)"
         similarity_pct = round(min(100.0, 92.0 + min(8.0, h2_pct * 1.5)), 1)
         analog_reason = (
-            f"Combustible gas mixture above LFL (H2={h2_pct:.1f}%) causes volumetric blast overpressure "
+            f"Combustible gas mixture above LFL ({fuel_name.upper()}={h2_pct:.1f}%) causes volumetric blast overpressure "
             f"(Delta P = {delta_p_blast_kpa:.1f} kPa) matching the Apollo 13 Service Module tank rupture."
         )
     elif x_o2 >= 0.65 or (p_o2_bar >= 0.70 and x_o2 >= 0.40):
@@ -969,8 +1022,6 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
     else:
         # Base fire risk from oxygen and spread rate
         # BASS-II U-curve ventilation factor:
-        # Low draft (3-8 cm/s) moderate; 15-30 cm/s maximum convective oxidizer feed (peak risk);
-        # Above 35 cm/s, aerodynamic strain cooling starts lowering risk towards blowoff.
         if v_g_cms <= 5.0:
             f_flow_risk = 0.85 + 0.15 * (v_g_cms / 5.0)
         elif 15.0 <= v_g_cms <= 30.0:
@@ -978,14 +1029,19 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         elif v_g_cms < 15.0:
             f_flow_risk = 1.0 + 0.15 * ((v_g_cms - 5.0) / 10.0)
         else:  # v_g_cms > 30.0
-            # Drops from 1.15 down to 0.70 near blowoff
             f_flow_risk = max(0.60, 1.15 - 0.55 * ((v_g_cms - 30.0) / max(1.0, v_g_blowoff - 30.0)) ** 1.2)
 
         # Pressure scaling: chemical reaction rate and oxidizer density scale with P
         f_press_risk = (p_bar / 1.0) ** 0.35
 
-        raw_fire_risk = (30.0 + 42.0 * (x_o2 / 0.30) + 14.0 * min(1.0, spread_rate_mm_s / 5.0)) * f_flow_risk * f_press_risk
-        fire_risk_pct = min(100.0, max(5.0, raw_fire_risk))
+        excess_o2 = max(0.0, x_o2 - 0.15)
+        if x_o2 <= 0.21:
+            o2_risk = 12.0 * (excess_o2 / 0.06)
+        else:
+            o2_risk = 12.0 + 72.0 * min(1.0, (x_o2 - 0.21) / 0.44)
+        spread_risk = 7.0 * min(2.0, spread_rate_mm_s / 2.0)
+        raw_fire_risk = (4.0 + o2_risk + spread_risk) * f_flow_risk * f_press_risk
+        fire_risk_pct = min(100.0, max(4.0, raw_fire_risk))
 
     if breach_outside_risk or explosion_risk_pct >= 60.0 or fire_risk_pct >= 75.0 or x_o2 >= 0.65:
         flight_status = "NO-GO"
@@ -1038,6 +1094,8 @@ def evaluate_fire_safety(params: Dict[str, Any]) -> Dict[str, Any]:
         flow_statement,
         pressure_statement,
         (
+            "Cabin toxic atmosphere: CO generation: N/A (carbon-free H2 fuel); 0.0 ppm generated."
+            if is_carbon_free else
             f"Cabin toxic atmosphere: CO generation rate = {co_rate_ppm_s:.2f} ppm/s "
             f"(NASA SMAC 55 ppm threshold reached in {time_to_smac_sec:.0f} s; 600s total = {co_series_ppm[-1]:.0f} ppm)."
         ),

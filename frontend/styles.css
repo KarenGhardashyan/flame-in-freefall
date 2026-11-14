@@ -79,10 +79,12 @@ html, body {
   z-index: 1000;
 }
 
-.brand-section {
+.brand-section, .topbar-brand, .topbar .brand-section {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: max-content;
+  flex-shrink: 0;
 }
 
 .mission-indicator {
@@ -1206,6 +1208,34 @@ select {
 }
 
 .gap-high {
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.confidence-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.confidence-high {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.confidence-med {
+  background: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.confidence-low {
   background: rgba(239, 68, 68, 0.2);
   color: #EF4444;
   border: 1px solid rgba(239, 68, 68, 0.4);
