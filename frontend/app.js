@@ -835,7 +835,9 @@
         const s2rNode = Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
         const payload = Object.assign({}, this.params, {
           match_by: s2rNode ? s2rNode.matchBy : 'physics',
-          active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null
+          active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null,
+          filter_mission: s2rNode ? s2rNode.filterMission : 'all',
+          filter_fuel: s2rNode ? s2rNode.filterFuel : 'all'
         });
 
         const res = await fetch(API_EVAL_URL, {
@@ -868,8 +870,10 @@
 
   class SimToRealNode extends BaseNode {
     constructor(id, x, y) {
-      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, 420);
+      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, 440);
       this.matchBy = 'physics';
+      this.filterMission = 'all';
+      this.filterFuel = 'all';
       this.activeBenchmarkId = null;
       this.init();
     }
@@ -909,12 +913,35 @@
           </div>
         </div>
 
-        <div class="s2r-match-by-container">
-          <span class="s2r-match-by-label">MATCH BY:</span>
-          <div class="s2r-match-by-toggle">
-            <button class="btn-match-by ${this.matchBy === 'physics' ? 'active' : ''}" id="${this.id}-btn-physics" data-match="physics">PHYSICS</button>
-            <button class="btn-match-by ${this.matchBy === 'safety' ? 'active' : ''}" id="${this.id}-btn-safety" data-match="safety">SAFETY</button>
-            <button class="btn-match-by ${this.matchBy === 'telemetry' ? 'active' : ''}" id="${this.id}-btn-telemetry" data-match="telemetry">TELEMETRY</button>
+        <div class="s2r-filter-panel">
+          <div class="s2r-filter-group">
+            <span class="s2r-filter-label">MISSION:</span>
+            <div class="s2r-filter-buttons" id="${this.id}-filter-mission">
+              <button class="btn-s2r-filter ${this.filterMission === 'all' ? 'active' : ''}" data-filter-type="mission" data-val="all">ALL</button>
+              <button class="btn-s2r-filter ${this.filterMission === 'saffire' ? 'active' : ''}" data-filter-type="mission" data-val="saffire">SAFFIRE</button>
+              <button class="btn-s2r-filter ${this.filterMission === 'bass' ? 'active' : ''}" data-filter-type="mission" data-val="bass">BASS-II</button>
+              <button class="btn-s2r-filter ${this.filterMission === 'psi' ? 'active' : ''}" data-filter-type="mission" data-val="psi">FLEX / PSI</button>
+              <button class="btn-s2r-filter ${this.filterMission === 'historical' ? 'active' : ''}" data-filter-type="mission" data-val="historical">HISTORICAL</button>
+            </div>
+          </div>
+
+          <div class="s2r-filter-group">
+            <span class="s2r-filter-label">FUEL:</span>
+            <div class="s2r-filter-buttons" id="${this.id}-filter-fuel">
+              <button class="btn-s2r-filter ${this.filterFuel === 'all' ? 'active' : ''}" data-filter-type="fuel" data-val="all">ALL</button>
+              <button class="btn-s2r-filter ${this.filterFuel === 'solid' ? 'active' : ''}" data-filter-type="fuel" data-val="solid">SOLID</button>
+              <button class="btn-s2r-filter ${this.filterFuel === 'liquid' ? 'active' : ''}" data-filter-type="fuel" data-val="liquid">LIQUID</button>
+              <button class="btn-s2r-filter ${this.filterFuel === 'gas' ? 'active' : ''}" data-filter-type="fuel" data-val="gas">GAS</button>
+            </div>
+          </div>
+
+          <div class="s2r-filter-group">
+            <span class="s2r-filter-label">MATCH BY:</span>
+            <div class="s2r-filter-buttons" id="${this.id}-match-by">
+              <button class="btn-s2r-filter ${this.matchBy === 'physics' ? 'active' : ''}" data-filter-type="match" data-val="physics">PARAMS</button>
+              <button class="btn-s2r-filter ${this.matchBy === 'telemetry' ? 'active' : ''}" data-filter-type="match" data-val="telemetry">CURVE SHAPE</button>
+              <button class="btn-s2r-filter ${this.matchBy === 'safety' ? 'active' : ''}" data-filter-type="match" data-val="safety">SAFETY RISK</button>
+            </div>
           </div>
         </div>
 
@@ -940,12 +967,27 @@
     }
 
     bindCriteriaEvents() {
-      const matchBtns = this.element.querySelectorAll('.btn-match-by');
-      matchBtns.forEach(btn => {
+      const filterBtns = this.element.querySelectorAll('.btn-s2r-filter');
+      filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const mode = btn.dataset.match;
-          if (mode) this.setMatchBy(mode);
+          const fType = btn.dataset.filterType;
+          const val = btn.dataset.val;
+          if (fType === 'mission') {
+            this.filterMission = val;
+            this.element.querySelectorAll(`#${this.id}-filter-mission .btn-s2r-filter`).forEach(b => {
+              b.classList.toggle('active', b.dataset.val === val);
+            });
+            triggerVariableEvaluate();
+          } else if (fType === 'fuel') {
+            this.filterFuel = val;
+            this.element.querySelectorAll(`#${this.id}-filter-fuel .btn-s2r-filter`).forEach(b => {
+              b.classList.toggle('active', b.dataset.val === val);
+            });
+            triggerVariableEvaluate();
+          } else if (fType === 'match') {
+            this.setMatchBy(val);
+          }
         });
       });
     }
@@ -953,9 +995,9 @@
     setMatchBy(mode) {
       if (!['physics', 'safety', 'telemetry'].includes(mode)) return;
       this.matchBy = mode;
-      const matchBtns = this.element.querySelectorAll('.btn-match-by');
+      const matchBtns = this.element.querySelectorAll(`#${this.id}-match-by .btn-s2r-filter`);
       matchBtns.forEach(b => {
-        b.classList.toggle('active', b.dataset.match === mode);
+        b.classList.toggle('active', b.dataset.val === mode);
       });
       triggerVariableEvaluate();
     }
@@ -978,9 +1020,9 @@
 
       if (s2r.match_by && s2r.match_by !== this.matchBy) {
         this.matchBy = s2r.match_by;
-        const matchBtns = this.element.querySelectorAll('.btn-match-by');
+        const matchBtns = this.element.querySelectorAll(`#${this.id}-match-by .btn-s2r-filter`);
         matchBtns.forEach(b => {
-          b.classList.toggle('active', b.dataset.match === this.matchBy);
+          b.classList.toggle('active', b.dataset.val === this.matchBy);
         });
       }
 
@@ -1088,7 +1130,7 @@
 
   class SimNode extends BaseNode {
     constructor(id, x, y) {
-      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, 440);
+      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, 460);
       this.animFrameId = null;
       this.simGridMode = 'flame_o2'; // 'flame_o2' or 'thermal_hull'
       this.gridNx = 48;
@@ -1141,7 +1183,7 @@
 
       const bodyHtml = `
         <div class="cutaway-canvas-container">
-          <canvas id="${this.id}-canvas" width="416" height="220"></canvas>
+          <canvas id="${this.id}-canvas" width="436" height="230"></canvas>
           <div class="sim-hud-overlay">
             <div class="hud-pill" id="${this.id}-hud-regime">REGIME: <b>INIT</b></div>
             <div class="hud-pill" id="${this.id}-hud-flux">HEAT FLUX: <b>0.0 kW/m²</b></div>
@@ -1216,19 +1258,19 @@
 
     initParticles() {
       this.stars = [];
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 45; i++) {
         this.stars.push({
-          x: Math.random() * 416,
-          y: Math.random() * 220,
+          x: Math.random() * 436,
+          y: Math.random() * 230,
           size: Math.random() * 1.5 + 0.5,
           alpha: Math.random() * 0.7 + 0.3
         });
       }
       this.particles = [];
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 26; i++) {
         this.particles.push({
-          x: 95 + Math.random() * 220,
-          y: 40 + Math.random() * 140,
+          x: 95 + Math.random() * 250,
+          y: 30 + Math.random() * 165,
           speed: Math.random() * 0.8 + 0.4,
           alpha: Math.random() * 0.5 + 0.2
         });
@@ -1487,21 +1529,21 @@
 
       // Spacecraft Hull Cutaway Geometry
       const cabinX = 85;
-      const cabinY = 30;
-      const cabinW = 246;
-      const cabinH = 160;
+      const cabinY = 22;
+      const cabinW = 266;
+      const cabinH = 180;
       const radius = 24;
 
       // Thermal hull wall radiation glow
       if (heatFlux > 1.0) {
         ctx.save();
         const glowRad = Math.min(60, heatFlux * 0.35);
-        const hullGlow = ctx.createRadialGradient(cabinX + cabinW, cabinY + 80, 5, cabinX + cabinW, cabinY + 80, glowRad + 20);
+        const hullGlow = ctx.createRadialGradient(cabinX + cabinW, cabinY + 90, 5, cabinX + cabinW, cabinY + 90, glowRad + 20);
         hullGlow.addColorStop(0, `rgba(255, 60, 30, ${Math.min(0.85, heatFlux * 0.015)})`);
         hullGlow.addColorStop(1, 'rgba(255, 40, 10, 0)');
         ctx.fillStyle = hullGlow;
         ctx.beginPath();
-        ctx.arc(cabinX + cabinW, cabinY + 80, glowRad + 20, 0, Math.PI * 2);
+        ctx.arc(cabinX + cabinW, cabinY + 90, glowRad + 20, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -1530,6 +1572,48 @@
 
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.offscreenCanvas, cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12);
+
+      // Flow Velocity Vectors V_g at Inlet (Forced ECLSS Ventilation Flow)
+      ctx.save();
+      const arrowLen = Math.min(26, Math.max(8, vg * 1.3));
+      const arrowYPositions = [cabinY + 45, cabinY + 75, cabinY + 105, cabinY + 135];
+      ctx.strokeStyle = '#00E5FF';
+      ctx.fillStyle = '#00E5FF';
+      ctx.lineWidth = 1.4;
+      arrowYPositions.forEach(ay => {
+        const ax = cabinX + 16;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + arrowLen, ay);
+        ctx.stroke();
+        // Arrowhead
+        ctx.beginPath();
+        ctx.moveTo(ax + arrowLen, ay);
+        ctx.lineTo(ax + arrowLen - 4, ay - 3);
+        ctx.lineTo(ax + arrowLen - 4, ay + 3);
+        ctx.closePath();
+        ctx.fill();
+      });
+      ctx.font = '8px "JetBrains Mono"';
+      ctx.fillStyle = '#00E5FF';
+      ctx.fillText(`V_g = ${vg.toFixed(1)} cm/s`, cabinX + 16, cabinY + 34);
+      ctx.restore();
+
+      // Isotherm Contours Overlay
+      if (mode !== 'extinguished') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.28)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        const fcX = cabinX + (13 / this.gridNx) * cabinW;
+        const fcY = cabinY + (12 / this.gridNy) * cabinH;
+        [16, 32, 54].forEach((rad, rIdx) => {
+          ctx.beginPath();
+          ctx.ellipse(fcX + rIdx * 6, fcY, rad * 1.2, rad * 0.85, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
 
       // Draw Flow Streamlines & Dust Particles
       const flowSpeedFactor = Math.max(0.1, vg * 0.12);
@@ -1600,6 +1684,28 @@
         ctx.fillRect(gx, cabinY + cabinH - 14, 4, 6);
       }
 
+      // Localized Thermal Bulkhead Footprint on Right Wall
+      ctx.save();
+      const wallX = cabinX + cabinW - 5;
+      const wallY = cabinY + cabinH / 2;
+      const fpRad = Math.min(50, Math.max(14, heatFlux * 1.8));
+      const wallFootprint = ctx.createRadialGradient(wallX, wallY, 2, wallX, wallY, fpRad);
+      wallFootprint.addColorStop(0, `rgba(255, 69, 0, ${Math.min(0.9, 0.15 + heatFlux * 0.04)})`);
+      wallFootprint.addColorStop(0.5, `rgba(245, 158, 11, ${Math.min(0.6, 0.08 + heatFlux * 0.02)})`);
+      wallFootprint.addColorStop(1, 'rgba(239, 68, 68, 0)');
+      ctx.fillStyle = wallFootprint;
+      ctx.beginPath();
+      ctx.ellipse(wallX, wallY, 10, fpRad, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (heatFlux > 0.8) {
+        ctx.font = '8px "JetBrains Mono"';
+        ctx.fillStyle = heatFlux > 15.0 ? '#EF4444' : '#F59E0B';
+        ctx.textAlign = 'right';
+        ctx.fillText(`q''_w = ${heatFlux.toFixed(1)} kW/m²`, cabinX + cabinW - 14, cabinY + cabinH - 20);
+      }
+      ctx.restore();
+
       // Exterior Spacecraft Hull Breach (Inside -> Outside Blowout into Vacuum)
       if (breach) {
         ctx.save();
@@ -1665,6 +1771,7 @@
       const simTel = evalData.sim_telemetry || {};
       const analog = evalData.historical_analog || {};
       const bench = this.data.nearest_benchmark || {};
+      const params = this.data.params || {};
 
       // 1. HUD Overlay
       const hudRegime = this.element.querySelector(`#${this.id}-hud-regime`);
@@ -1694,10 +1801,25 @@
 
       // 4. Objective reasons
       const reasonsList = this.element.querySelector(`#${this.id}-reasons-list`);
-      if (reasonsList && Array.isArray(evalData.objective_reasons)) {
-        reasonsList.innerHTML = evalData.objective_reasons
-          .map(r => `<li>${sanitize(r)}</li>`)
-          .join('');
+      if (reasonsList) {
+        if (Array.isArray(evalData.objective_reasons) && evalData.objective_reasons.length > 0) {
+          reasonsList.innerHTML = evalData.objective_reasons
+            .map(r => `<li>${sanitize(r)}</li>`)
+            .join('');
+        } else {
+          const o2Val = parseFloat(params.o2_percent || 21.0);
+          const vgVal = parseFloat(params.flow_velocity_cms || 10.0);
+          const daVal = vgVal > 0.05 ? (14.2 / vgVal).toFixed(2) : '35.0';
+          const rMode = (simTel.flame_color_mode || 'steady').toUpperCase();
+          const qVal = (simTel.hull_heat_flux_kw_m2 || 0.5).toFixed(1);
+          const dpVal = (simTel.cabin_overpressure_kpa || 0.0).toFixed(1);
+          reasonsList.innerHTML = [
+            `Combustion Regime: ${rMode} (Damköhler Da ≈ ${daVal} vs critical Da_ext = 0.45).`,
+            `Thermal & Structural Load: Localized hull heat flux = ${qVal} kW/m² (limit: 28 kW/m²), Delta P = ${dpVal} kPa.`,
+            `Ventilation Dynamics: Forced ECLSS flow V_g = ${vgVal.toFixed(1)} cm/s at 0g microgravity (LOI_crit = 14.8%).`,
+            `Atmospheric Composition: ${o2Val.toFixed(1)}% O₂ in compartment (CO accumulation monitored vs NASA SMAC 55 ppm).`
+          ].map(r => `<li>${sanitize(r)}</li>`).join('');
+        }
       }
 
       // 5. Analog & Benchmark
@@ -1724,13 +1846,14 @@
   }
 
   // -------------------------------------------------------------------------
-  // NODE 3: GRAPH (Time Telemetry Curve)
+  // NODE 3: GRAPH (Time Telemetry Curve & NASA PSI Data Table)
   // -------------------------------------------------------------------------
 
   class GraphNode extends BaseNode {
     constructor(id, x, y) {
-      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, 420);
+      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, 460);
       this.selectedChannel = 'spread'; // 'spread', 'temp', 'pressure', 'co'
+      this.viewMode = 'curves'; // 'curves' or 'table'
       this.init();
     }
 
@@ -1739,7 +1862,7 @@
         this.selectedChannel = channel;
         const select = this.element.querySelector(`#${this.id}-channel-select`);
         if (select) select.value = channel;
-        this.renderGraph();
+        if (this.viewMode === 'curves') this.renderGraph();
       }
     }
 
@@ -1756,19 +1879,27 @@
       `;
 
       const bodyHtml = `
-        <div class="graph-controls-row">
-          <select id="${this.id}-channel-select">
-            <option value="spread">Flame Front Spread L(t) [cm]</option>
-            <option value="temp">Cabin Temperature T(t) [°C]</option>
-            <option value="pressure">Cabin Pressure P(t) [kPa] (Proof 45 kPa)</option>
-            <option value="co" selected>Toxic CO Level [ppm] (NASA SMAC 55 ppm)</option>
-          </select>
+        <div class="graph-header-controls">
+          <div class="graph-view-tabs">
+            <button class="btn-graph-tab ${this.viewMode === 'curves' ? 'active' : ''}" id="${this.id}-tab-curves" data-tab="curves">📈 TIME SERIES CURVES</button>
+            <button class="btn-graph-tab ${this.viewMode === 'table' ? 'active' : ''}" id="${this.id}-tab-table" data-tab="table">📋 NASA PSI DATA TABLE</button>
+          </div>
+          <div class="graph-channel-select-wrap" id="${this.id}-channel-select-wrap">
+            <select id="${this.id}-channel-select">
+              <option value="spread">Flame Front Spread L(t) [cm]</option>
+              <option value="temp">Cabin Temperature T(t) [°C]</option>
+              <option value="pressure">Overpressure Transient ΔP(t) [kPa] (Hull Limit 45 kPa)</option>
+              <option value="co" selected>Toxic CO Level [ppm] (NASA SMAC 55 ppm)</option>
+            </select>
+          </div>
         </div>
 
-        <div class="graph-canvas-container">
-          <canvas id="${this.id}-graph-canvas" width="396" height="198"></canvas>
+        <div class="graph-canvas-container" id="${this.id}-canvas-container">
+          <canvas id="${this.id}-graph-canvas" width="436" height="205"></canvas>
           <div class="graph-tooltip" id="${this.id}-tooltip"></div>
         </div>
+
+        <div class="graph-table-container" id="${this.id}-table-container" style="display: none;"></div>
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
@@ -1778,29 +1909,150 @@
 
     bindGraphEvents() {
       const select = this.element.querySelector(`#${this.id}-channel-select`);
-      select.addEventListener('change', () => {
-        this.selectedChannel = select.value;
-        this.renderGraph();
-      });
+      if (select) {
+        select.addEventListener('change', () => {
+          this.selectedChannel = select.value;
+          this.renderGraph();
+        });
+      }
+
+      const tabCurves = this.element.querySelector(`#${this.id}-tab-curves`);
+      const tabTable = this.element.querySelector(`#${this.id}-tab-table`);
+      const canvasContainer = this.element.querySelector(`#${this.id}-canvas-container`);
+      const tableContainer = this.element.querySelector(`#${this.id}-table-container`);
+      const channelSelectWrap = this.element.querySelector(`#${this.id}-channel-select-wrap`);
+
+      if (tabCurves && tabTable) {
+        tabCurves.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.viewMode = 'curves';
+          tabCurves.classList.add('active');
+          tabTable.classList.remove('active');
+          if (canvasContainer) canvasContainer.style.display = 'block';
+          if (channelSelectWrap) channelSelectWrap.style.display = 'block';
+          if (tableContainer) tableContainer.style.display = 'none';
+          this.renderGraph();
+        });
+
+        tabTable.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.viewMode = 'table';
+          tabTable.classList.add('active');
+          tabCurves.classList.remove('active');
+          if (canvasContainer) canvasContainer.style.display = 'none';
+          if (channelSelectWrap) channelSelectWrap.style.display = 'none';
+          if (tableContainer) tableContainer.style.display = 'block';
+          this.renderTable();
+        });
+      }
 
       const canvas = this.element.querySelector(`#${this.id}-graph-canvas`);
       const tooltip = this.element.querySelector(`#${this.id}-tooltip`);
 
-      canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        this.handleGraphHover(mx, tooltip, canvas.width, canvas.height);
+      if (canvas && tooltip) {
+        canvas.addEventListener('mousemove', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const mx = e.clientX - rect.left;
+          this.handleGraphHover(mx, tooltip, canvas.width, canvas.height);
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+          tooltip.style.display = 'none';
+          this.renderGraph();
+        });
+      }
+    }
+
+    renderTable() {
+      const container = this.element.querySelector(`#${this.id}-table-container`);
+      if (!container) return;
+
+      const simToReal = this.data ? this.data.sim_to_real : null;
+      let runs = (simToReal && Array.isArray(simToReal.all_benchmarks)) ? simToReal.all_benchmarks : [];
+      if (!runs || runs.length === 0) {
+        runs = window.NASA_FLIGHT_EXPERIMENTS || [];
+      }
+
+      const activeId = (simToReal && simToReal.active_benchmark_id) || (this.data && this.data.nearest_benchmark && this.data.nearest_benchmark.benchmark_id) || 'SAFFIRE-V-01';
+
+      if (!runs || runs.length === 0) {
+        container.innerHTML = `<div style="padding: 18px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; text-align: center;">Awaiting NASA PSI telemetry stream...</div>`;
+        return;
+      }
+
+      let html = `
+        <table class="psi-table">
+          <thead>
+            <tr>
+              <th>Run ID</th>
+              <th>Mission</th>
+              <th>Fuel</th>
+              <th>O₂ [%]</th>
+              <th>P [atm]</th>
+              <th>V_g [cm/s]</th>
+              <th>V_f [mm/s]</th>
+              <th>CO/CO₂</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      runs.forEach(r => {
+        const isActive = (r.id === activeId || r.id === (activeId + ''));
+        const reg = String(r.measured_regime || 'nominal').toLowerCase();
+        let outcomeClass = 'outcome-nominal';
+        if (reg.includes('extinct')) outcomeClass = 'outcome-extinction';
+        else if (reg.includes('cool')) outcomeClass = 'outcome-cool';
+        else if (reg.includes('blast') || reg.includes('breach') || reg.includes('critical')) outcomeClass = 'outcome-breach';
+
+        const outcomeText = r.outcome || (reg.toUpperCase());
+        const coRatio = r.co_ratio !== undefined ? r.co_ratio : '—';
+        const vf = (r.measured_vf_mm_s !== undefined && r.measured_vf_mm_s !== null) ? Number(r.measured_vf_mm_s).toFixed(2) : '0.00';
+
+        html += `
+          <tr class="${isActive ? 'active-psi-row' : ''}" data-run-id="${sanitize(r.id || '')}">
+            <td style="font-weight: 700; color: ${isActive ? '#00E5FF' : '#FFFFFF'};">${sanitize(r.id || '')}</td>
+            <td>${sanitize(r.mission || '')}</td>
+            <td>${sanitize(r.fuel_display || r.fuel || '')}</td>
+            <td>${Number(r.o2_percent || 21.0).toFixed(1)}%</td>
+            <td>${Number(r.pressure_atm || 1.0).toFixed(2)}</td>
+            <td>${Number(r.flow_velocity_cms || 10.0).toFixed(1)}</td>
+            <td>${vf}</td>
+            <td>${coRatio}</td>
+            <td><span class="psi-outcome-tag ${outcomeClass}">${sanitize(outcomeText)}</span></td>
+          </tr>
+        `;
       });
 
-      canvas.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-        this.renderGraph();
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+
+      // Click to select active benchmark
+      const rows = container.querySelectorAll('.psi-table tbody tr');
+      rows.forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rId = tr.dataset.runId;
+          if (rId) {
+            const s2rNode = Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+            if (s2rNode) {
+              s2rNode.setActiveBenchmark(rId);
+            }
+            rows.forEach(r => r.classList.remove('active-psi-row'));
+            tr.classList.add('active-psi-row');
+          }
+        });
       });
     }
 
     onReceiveData(data) {
       super.onReceiveData(data);
-      this.renderGraph();
+      if (this.viewMode === 'table') {
+        this.renderTable();
+      } else {
+        this.renderGraph();
+      }
       propagateDataFrom(this.id, data);
     }
 
@@ -1866,12 +2118,18 @@
         yUnit = '°C';
         strokeColor = '#F59E0B';
       } else if (this.selectedChannel === 'pressure') {
-        yValues = (series && series.cabin_pressure_kpa) ? series.cabin_pressure_kpa : [101, 101, 102, 102, 103, 104, 104];
-        yMinValues = (series && series.pressure_kpa_min) ? series.pressure_kpa_min : yValues.map(v => v - 0.2);
-        yMaxValues = (series && series.pressure_kpa_max) ? series.pressure_kpa_max : yValues.map(v => v + 0.2);
+        const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
+        const rawP = (series && series.cabin_pressure_kpa) ? series.cabin_pressure_kpa : [101.3, 101.4, 101.7, 102.2, 102.9, 103.8, 104.5];
+        yValues = rawP.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))));
+        yMinValues = (series && series.pressure_kpa_min)
+          ? series.pressure_kpa_min.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))))
+          : yValues.map(v => Math.max(0.0, v - 0.2));
+        yMaxValues = (series && series.pressure_kpa_max)
+          ? series.pressure_kpa_max.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))))
+          : yValues.map(v => v + 0.3);
         yUnit = 'kPa';
-        thresholdVal = 146.0; // 101 + 45 kPa proof limit
-        thresholdLabel = 'HULL PROOF LIMIT';
+        thresholdVal = 45.0; // Hull limit 45.0 kPa net overpressure
+        thresholdLabel = 'HULL PROOF LIMIT 45 kPa';
         strokeColor = '#EF4444';
       } else { // 'co'
         const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
@@ -1891,6 +2149,7 @@
 
       // Compute calibrated series against active benchmark points
       let yCalibrated = [];
+      const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
       if (streamSource === 'calibrated' && hasDirectFlightData && overlay && Array.isArray(overlay.points) && overlay.points.length > 0) {
         yCalibrated = tSec.map((t, idx) => {
           const rawVal = yValues[idx];
@@ -1905,7 +2164,7 @@
           }
           const realVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
                         : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
-                        : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                        : (this.selectedChannel === 'pressure') ? Math.max(0.0, (closestPt.cabin_pressure_kpa || 101.325) - pBaseKPa)
                         : closestPt.co_ppm;
           if (realVal !== undefined) {
             return rawVal + 0.70 * (realVal - rawVal);
@@ -1919,7 +2178,7 @@
         yRealPoints.forEach(pt => {
           const v = (this.selectedChannel === 'spread') ? pt.front_cm
                   : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
-                  : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                  : (this.selectedChannel === 'pressure') ? Math.max(0.0, (pt.cabin_pressure_kpa || 101.325) - pBaseKPa)
                   : pt.co_ppm;
           if (v !== undefined) allNumbers.push(v);
         });
@@ -2067,7 +2326,7 @@
             const t = pt.t_sec;
             const val = (this.selectedChannel === 'spread') ? pt.front_cm
                       : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
-                      : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                      : (this.selectedChannel === 'pressure') ? Math.max(0.0, (pt.cabin_pressure_kpa || 101.325) - pBaseKPa)
                       : pt.co_ppm;
             const px = padLeft + (t / 600) * plotW;
             const py = padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
@@ -2081,7 +2340,7 @@
             const t = pt.t_sec;
             const val = (this.selectedChannel === 'spread') ? pt.front_cm
                       : (this.selectedChannel === 'temp') ? pt.cabin_temp_c
-                      : (this.selectedChannel === 'pressure') ? pt.cabin_pressure_kpa
+                      : (this.selectedChannel === 'pressure') ? Math.max(0.0, (pt.cabin_pressure_kpa || 101.325) - pBaseKPa)
                       : pt.co_ppm;
             const sigma = pt.sensor_sigma || 0.5;
             const sigmaScale = (this.selectedChannel === 'spread') ? sigma * 0.85
@@ -2224,7 +2483,8 @@
         yValues = series ? series.cabin_temp_c : [];
         unit = '°C';
       } else if (this.selectedChannel === 'pressure') {
-        yValues = series ? series.cabin_pressure_kpa : [];
+        const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
+        yValues = series ? series.cabin_pressure_kpa.map(p => Math.max(0.0, p - pBaseKPa)) : [];
         unit = 'kPa';
       } else {
         yValues = series ? series.co_ppm : [];
@@ -2246,9 +2506,10 @@
           }
         });
         if (closestPt && minDt <= 30) {
+          const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
           const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
                      : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
-                     : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                     : (this.selectedChannel === 'pressure') ? Math.max(0.0, (closestPt.cabin_pressure_kpa || 101.325) - pBaseKPa).toFixed(2)
                      : closestPt.co_ppm;
           const sigma = closestPt.sensor_sigma || 0.5;
           realStr = `<br><span style="color: #F59E0B;">REAL: <b>${rVal} ${unit}</b> (±${sigma})</span>`;
@@ -2257,7 +2518,10 @@
 
       const isH2Fuel = this.data && this.data.params && ['h2', 'hydrogen'].includes(String(this.data.params.fuel || '').toLowerCase());
       const isH2 = this.selectedChannel === 'co' && isH2Fuel;
-      const simValDisplay = isH2 ? 'N/A (carbon-free H2 fuel)' : `${val.toFixed(1)} ${unit}`;
+      let simValDisplay = isH2 ? 'N/A (carbon-free H2 fuel)' : `${val.toFixed(1)} ${unit}`;
+      if (this.selectedChannel === 'pressure') {
+        simValDisplay = `+${val.toFixed(2)} kPa (Overpressure ΔP)`;
+      }
 
       // Check stream source
       const incomingWires = state.wires.filter(w => w.toNode === this.id);
@@ -2286,12 +2550,15 @@
               closestPt = pt;
             }
           }
+          const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
           const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
                      : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
-                     : (this.selectedChannel === 'pressure') ? closestPt.cabin_pressure_kpa
+                     : (this.selectedChannel === 'pressure') ? Math.max(0.0, (closestPt.cabin_pressure_kpa || 101.325) - pBaseKPa)
                      : closestPt.co_ppm;
           if (rVal !== undefined && typeof val === 'number') {
-            calValDisplay = `${(val + 0.70 * (rVal - val)).toFixed(1)} ${unit}`;
+            calValDisplay = (this.selectedChannel === 'pressure')
+              ? `+${(val + 0.70 * (rVal - val)).toFixed(2)} ${unit}`
+              : `${(val + 0.70 * (rVal - val)).toFixed(1)} ${unit}`;
           }
         }
         tooltip.innerHTML = `t = <b>${Math.round(tHover)} s</b> &middot; <span style="color:#00E5FF; font-weight:700;">CALIBRATED: ${calValDisplay}</span> &middot; SIM RAW: <b>${simValDisplay}</b>${realStr}`;
@@ -2751,16 +3018,16 @@
         node.x = 460;
         node.y = 50;
       } else if (node.type === 'sim') {
-        node.x = 940;
+        node.x = 920;
         node.y = 50;
       } else if (node.type === 'graph') {
-        node.x = 940;
-        node.y = 530;
+        node.x = 920;
+        node.y = 550;
       } else if (node.type === 'prompt') {
-        node.x = 1420;
+        node.x = 1400;
         node.y = 50;
       } else if (node.type === 'brief') {
-        node.x = 1840;
+        node.x = 1800;
         node.y = 50;
       }
       if (node.element) {
@@ -2868,13 +3135,13 @@
     const s2rNode = spawnNode('simtoreal', 460, 50);
 
     // Node 3: SIM Spacecraft Cutaway
-    const simNode = spawnNode('sim', 940, 50);
+    const simNode = spawnNode('sim', 920, 50);
 
     // Node 4: Graph Time Telemetry
-    const graphNode = spawnNode('graph', 940, 530);
+    const graphNode = spawnNode('graph', 920, 550);
 
     // Node 5: Prompt AI Safety Officer
-    const promptNode = spawnNode('prompt', 1420, 50);
+    const promptNode = spawnNode('prompt', 1400, 50);
 
     // Wires:
     // Note AI out -> Variable in

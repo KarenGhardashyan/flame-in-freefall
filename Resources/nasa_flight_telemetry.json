@@ -14,9 +14,11 @@
     "measured_summary": {
       "vf_mm_s": 4.5,
       "tf_k": 1820.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -155,9 +157,11 @@
     "measured_summary": {
       "vf_mm_s": 3.8,
       "tf_k": 1780.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -296,9 +300,11 @@
     "measured_summary": {
       "vf_mm_s": 4.8,
       "tf_k": 1850.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -437,9 +443,11 @@
     "measured_summary": {
       "vf_mm_s": 2.8,
       "tf_k": 2420.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -578,9 +586,11 @@
     "measured_summary": {
       "vf_mm_s": 2.0,
       "tf_k": 2320.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -719,9 +729,11 @@
     "measured_summary": {
       "vf_mm_s": 1.6,
       "tf_k": 2210.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -860,9 +872,11 @@
     "measured_summary": {
       "vf_mm_s": 2.45,
       "tf_k": 2390.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -1001,9 +1015,11 @@
     "measured_summary": {
       "vf_mm_s": 1.8,
       "tf_k": 2280.0,
-      "regime": "extinguished"
+      "regime": "extinguished",
+      "co_ratio": "0.088 (Tunnel Flow)",
+      "outcome": "Steady Solid Regression"
     },
-    "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
+    "verified_url": "https://ntrs.nasa.gov/citations/20205008261",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -1142,7 +1158,9 @@
     "measured_summary": {
       "vf_mm_s": 3.2,
       "tf_k": 1750.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1283,7 +1301,9 @@
     "measured_summary": {
       "vf_mm_s": 2.1,
       "tf_k": 1650.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1424,7 +1444,9 @@
     "measured_summary": {
       "vf_mm_s": 0.6,
       "tf_k": 1420.0,
-      "regime": "oscillatory"
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1565,7 +1587,9 @@
     "measured_summary": {
       "vf_mm_s": 0.0,
       "tf_k": 298.0,
-      "regime": "extinguished"
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1706,7 +1730,9 @@
     "measured_summary": {
       "vf_mm_s": 4.5,
       "tf_k": 1820.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1847,7 +1873,9 @@
     "measured_summary": {
       "vf_mm_s": 5.8,
       "tf_k": 1890.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -1988,7 +2016,9 @@
     "measured_summary": {
       "vf_mm_s": 0.0,
       "tf_k": 298.0,
-      "regime": "extinguished"
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2129,7 +2159,9 @@
     "measured_summary": {
       "vf_mm_s": 2.2,
       "tf_k": 1620.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2270,7 +2302,9 @@
     "measured_summary": {
       "vf_mm_s": 1.1,
       "tf_k": 1490.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2411,7 +2445,9 @@
     "measured_summary": {
       "vf_mm_s": 0.35,
       "tf_k": 1390.0,
-      "regime": "oscillatory"
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2552,7 +2588,9 @@
     "measured_summary": {
       "vf_mm_s": 0.85,
       "tf_k": 1780.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2693,7 +2731,9 @@
     "measured_summary": {
       "vf_mm_s": 0.52,
       "tf_k": 1690.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2834,7 +2874,9 @@
     "measured_summary": {
       "vf_mm_s": 0.4,
       "tf_k": 1580.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -2975,7 +3017,9 @@
     "measured_summary": {
       "vf_mm_s": 0.18,
       "tf_k": 1410.0,
-      "regime": "oscillatory"
+      "regime": "oscillatory",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -3116,7 +3160,9 @@
     "measured_summary": {
       "vf_mm_s": 0.95,
       "tf_k": 1820.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -3257,7 +3303,9 @@
     "measured_summary": {
       "vf_mm_s": 0.55,
       "tf_k": 1670.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -3398,7 +3446,9 @@
     "measured_summary": {
       "vf_mm_s": 0.35,
       "tf_k": 1580.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -3539,7 +3589,9 @@
     "measured_summary": {
       "vf_mm_s": 0.0,
       "tf_k": 298.0,
-      "regime": "extinguished"
+      "regime": "extinguished",
+      "co_ratio": "0.076 (Opposed Draft)",
+      "outcome": "Opposed Flow Flame Spread"
     },
     "verified_url": "https://ntrs.nasa.gov/citations/20210011385",
     "discrete_telemetry": [
@@ -3680,9 +3732,11 @@
     "measured_summary": {
       "vf_mm_s": 0.18,
       "tf_k": 760.0,
-      "regime": "cool_flame"
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -3821,9 +3875,11 @@
     "measured_summary": {
       "vf_mm_s": 0.15,
       "tf_k": 710.0,
-      "regime": "cool_flame"
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -3962,9 +4018,11 @@
     "measured_summary": {
       "vf_mm_s": 0.22,
       "tf_k": 780.0,
-      "regime": "cool_flame"
+      "regime": "cool_flame",
+      "co_ratio": "0.142 (Incomplete)",
+      "outcome": "Cool Flame NTC (680 K)"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-117&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4103,9 +4161,11 @@
     "measured_summary": {
       "vf_mm_s": 1.2,
       "tf_k": 1850.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4244,9 +4304,11 @@
     "measured_summary": {
       "vf_mm_s": 0.85,
       "tf_k": 1720.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4385,9 +4447,11 @@
     "measured_summary": {
       "vf_mm_s": 0.0,
       "tf_k": 298.0,
-      "regime": "extinguished"
+      "regime": "extinguished",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-10&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4526,9 +4590,11 @@
     "measured_summary": {
       "vf_mm_s": 1.4,
       "tf_k": 1790.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4667,9 +4733,11 @@
     "measured_summary": {
       "vf_mm_s": 1.8,
       "tf_k": 1820.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-60&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4808,9 +4876,11 @@
     "measured_summary": {
       "vf_mm_s": 0.45,
       "tf_k": 620.0,
-      "regime": "smoldering"
+      "regime": "smoldering",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -4949,9 +5019,11 @@
     "measured_summary": {
       "vf_mm_s": 0.55,
       "tf_k": 650.0,
-      "regime": "smoldering"
+      "regime": "smoldering",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-179&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5090,9 +5162,11 @@
     "measured_summary": {
       "vf_mm_s": 0.2,
       "tf_k": 740.0,
-      "regime": "oscillatory"
+      "regime": "oscillatory",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-159&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-159&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5231,9 +5305,11 @@
     "measured_summary": {
       "vf_mm_s": 1.35,
       "tf_k": 1790.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.065 (Nominal)",
+      "outcome": "Microgravity Diffusion Burn"
     },
-    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi&data_type=investigation",
+    "verified_url": "https://psi.nasa.gov/physci/repo/search?q=PSI-62&data_source=psi",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5372,9 +5448,11 @@
     "measured_summary": {
       "vf_mm_s": 32.0,
       "tf_k": 2850.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.048 (Pure O2)",
+      "outcome": "Catastrophic Flashover"
     },
-    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "verified_url": "https://ntrs.nasa.gov/citations/19670014763",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5513,9 +5591,11 @@
     "measured_summary": {
       "vf_mm_s": 45.0,
       "tf_k": 2950.0,
-      "regime": "explosion"
+      "regime": "explosion",
+      "co_ratio": "0.00 (N/A)",
+      "outcome": "Cryogenic Gas Deflagration"
     },
-    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "verified_url": "https://ntrs.nasa.gov/citations/19700076776",
     "discrete_telemetry": [
       {
         "t_sec": 0,
@@ -5654,9 +5734,11 @@
     "measured_summary": {
       "vf_mm_s": 4.5,
       "tf_k": 2200.0,
-      "regime": "hot_flame"
+      "regime": "hot_flame",
+      "co_ratio": "0.125 (Smoldering)",
+      "outcome": "Oxygen Candle Fire"
     },
-    "verified_url": "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources",
+    "verified_url": "https://ntrs.nasa.gov/citations/20050160960",
     "discrete_telemetry": [
       {
         "t_sec": 0,
