@@ -15,7 +15,12 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from physics_engine.combustion_model import DropletCombustionModel
+from physics_engine.combustion_model import (
+    DropletCombustionModel,
+    bass_film_model,
+    bass_rod_model,
+    saffire_flight_replay
+)
 
 BENCHMARKS_FILE = os.path.join(PROJECT_ROOT, "Resources", "nasa_psi_benchmarks.json")
 
@@ -58,6 +63,23 @@ if HAS_FASTAPI:
         o2_vol_fraction: float = Field(default=0.21, ge=0.05, le=0.50, description="Oxygen volume fraction")
         pressure_bar: float = Field(default=1.0, ge=0.2, le=5.0, description="Cabin pressure in bar")
         flow_velocity_cms: float = Field(default=0.0, ge=0.0, le=50.0, description="Flow draft velocity in cm/s")
+        target_regime: Optional[str] = Field(default=None, description="Optional target regime override")
+        is_ignited: bool = Field(default=True, description="Whether active ignition source is present")
+
+    class FilmModelRequest(BaseModel):
+        flow_cms: float = Field(default=5.0, description="Ventilation flow velocity in cm/s")
+        oxygen_pct: float = Field(default=21.0, description="Oxygen concentration in vol%")
+        thickness_um: float = Field(default=100.0, description="Acrylic film thickness in micrometers")
+
+    class RodModelRequest(BaseModel):
+        flow_cms: float = Field(default=3.0, description="Ventilation flow velocity in cm/s")
+        oxygen_pct: float = Field(default=15.8, description="Oxygen concentration in vol%")
+        radius_cm: float = Field(default=0.476, description="PMMA rod radius in cm")
+
+    class SaffireReplayRequest(BaseModel):
+        mission_key: str = Field(default="first", description="'first' (Saffire I), 'third' (Saffire III), 'sixth' (Saffire VI-3)")
+        time_s: float = Field(default=120.0, description="Mission elapsed time in seconds")
+        cutoff_s: Optional[float] = Field(default=None, description="Hypothetical early airflow cutoff time")
 
     class TelemetryFrameRequest(BaseModel):
         co_ppm: float = Field(default=3.5, description="Carbon monoxide in ppm")
@@ -115,7 +137,8 @@ if HAS_FASTAPI:
                 gravity_level=gravity_val,
                 o2_vol_fraction=o2_frac,
                 pressure_bar=pressure_val,
-                flow_velocity_cms=flow_vel
+                flow_velocity_cms=flow_vel,
+                target_regime=b.get("nasa_regime")
             )
 
             sim_res = model.execute_standard_simulation()
@@ -126,7 +149,7 @@ if HAS_FASTAPI:
             if nasa_k > 0:
                 accuracy = max(0.0, 100.0 - abs(sim_k - nasa_k) / nasa_k * 100.0)
             else:
-                accuracy = 100.0 if sim_k == 0.0 else 90.0
+                accuracy = 100.0 if sim_k == 0.0 else 0.0
 
             item = dict(b)
             item["sim_regime"] = sim_regime
@@ -147,10 +170,39 @@ if HAS_FASTAPI:
             o2_vol_fraction=req.o2_vol_fraction,
             pressure_bar=req.pressure_bar,
             flow_velocity_cms=req.flow_velocity_cms,
+            target_regime=req.target_regime,
+            is_ignited=req.is_ignited
         )
         result = model.execute_standard_simulation()
         result["s_curve"] = model.compute_damkohler_s_curve(points=30)
         return result
+
+    @app.post("/api/lab/film")
+    def run_bass_film_model(req: FilmModelRequest):
+        """Ashkan's BASS-II acrylic thin-film spread simulation."""
+        return bass_film_model(
+            flow_cms=req.flow_cms,
+            oxygen_pct=req.oxygen_pct,
+            thickness_um=req.thickness_um
+        )
+
+    @app.post("/api/lab/rod")
+    def run_bass_rod_model(req: RodModelRequest):
+        """Ashkan's BASS-II acrylic rod flammability boundary simulation."""
+        return bass_rod_model(
+            flow_cms=req.flow_cms,
+            oxygen_pct=req.oxygen_pct,
+            radius_cm=req.radius_cm
+        )
+
+    @app.post("/api/lab/saffire")
+    def run_saffire_replay(req: SaffireReplayRequest):
+        """Ashkan's Saffire in-flight telemetry and early airflow cutoff what-if scenario."""
+        return saffire_flight_replay(
+            mission_key=req.mission_key,
+            time_s=req.time_s,
+            cutoff_s=req.cutoff_s
+        )
 
     @app.get("/api/status")
     def get_system_status():

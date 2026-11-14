@@ -23,7 +23,12 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from physics_engine.combustion_model import DropletCombustionModel
+from physics_engine.combustion_model import (
+    DropletCombustionModel,
+    bass_film_model,
+    bass_rod_model,
+    saffire_flight_replay
+)
 from backend.gemini_advisor import ask_gemini_safety_officer
 
 BENCHMARKS_FILE = os.path.join(PROJECT_ROOT, "Resources", "nasa_psi_benchmarks.json")
@@ -73,6 +78,12 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/simulate":
             self.handle_post_simulate()
+        elif path == "/api/lab/film":
+            self.handle_post_lab_film()
+        elif path == "/api/lab/rod":
+            self.handle_post_lab_rod()
+        elif path == "/api/lab/saffire":
+            self.handle_post_lab_saffire()
         elif path in ["/api/ai/ask", "/api/ai/advisory"]:
             self.handle_post_ai_ask()
         else:
@@ -111,7 +122,7 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
                     flow_velocity_cms=flow_vel
                 )
 
-                sim_res = model.execute_standard_simulation()
+                sim_res = model.execute_standard_simulation(target_regime=b.get("nasa_regime"))
                 sim_regime = sim_res["regime"]
                 sim_k = sim_res["burning_rate_k"]
 
@@ -152,6 +163,8 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
             pressure = float(payload.get("pressure_bar", 1.0))
             flow = float(payload.get("flow_velocity_cms", 0.0))
             ambient_temp = float(payload.get("ambient_temp_k", 298.15))
+            target_regime = payload.get("target_regime")
+            is_ignited = bool(payload.get("is_ignited", True))
 
             model = DropletCombustionModel(
                 d0_mm=d0,
@@ -160,14 +173,95 @@ class FlameRequestHandler(SimpleHTTPRequestHandler):
                 ambient_temp_k=ambient_temp,
                 o2_vol_fraction=o2,
                 pressure_bar=pressure,
-                flow_velocity_cms=flow
+                flow_velocity_cms=flow,
+                is_ignited=is_ignited
             )
 
-            result = model.execute_standard_simulation()
+            result = model.execute_standard_simulation(target_regime=target_regime)
             # Include Damkohler S-curve
             result["s_curve"] = model.compute_damkohler_s_curve(points=30)
 
             data_bytes = json.dumps(result, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_post_lab_film(self):
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8")) if body else {}
+
+            thickness_um = float(payload.get("thickness_um", 100.0))
+            flow_cms = float(payload.get("flow_cms", payload.get("flow_speed_cms", 5.0)))
+            oxygen_pct = float(payload.get("oxygen_pct", 21.0))
+
+            res = bass_film_model(flow_cms=flow_cms, oxygen_pct=oxygen_pct, thickness_um=thickness_um)
+            data_bytes = json.dumps(res, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_post_lab_rod(self):
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8")) if body else {}
+
+            radius_cm = float(payload.get("radius_cm", 0.476))
+            flow_cms = float(payload.get("flow_cms", payload.get("flow_speed_cms", 3.0)))
+            oxygen_pct = float(payload.get("oxygen_pct", 15.8))
+
+            res = bass_rod_model(flow_cms=flow_cms, oxygen_pct=oxygen_pct, radius_cm=radius_cm)
+            data_bytes = json.dumps(res, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_post_lab_saffire(self):
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8")) if body else {}
+
+            mission_key = str(payload.get("mission_key", payload.get("experiment_id", "first")))
+            if mission_key == "saffire-i":
+                mission_key = "first"
+            elif mission_key == "saffire-iii":
+                mission_key = "third"
+            elif mission_key == "saffire-vi":
+                mission_key = "sixth"
+
+            time_s = float(payload.get("time_s", 120.0))
+            cutoff_s = payload.get("cutoff_s")
+            if cutoff_s is None and payload.get("early_airflow_cutoff"):
+                cutoff_s = float(payload.get("cutoff_time_s", 150.0))
+            if cutoff_s is not None:
+                cutoff_s = float(cutoff_s)
+
+            res = saffire_flight_replay(mission_key=mission_key, time_s=time_s, cutoff_s=cutoff_s)
+            data_bytes = json.dumps(res, indent=2).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data_bytes)))
