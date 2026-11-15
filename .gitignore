@@ -69,3 +69,11 @@ Resources/raw_large_blobs/
 *.zip
 *.h5
 *.mat
+
+# Media & Video Processing
+*.mp4
+*.mkv
+*.mov
+*.wav
+temp_video_work/
+

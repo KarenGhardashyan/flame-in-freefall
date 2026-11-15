@@ -1,0 +1,19 @@
+1
+00:00:00,200 --> 00:00:06,600
+In microgravity, buoyancy vanishes—turning flames spherical and invisible.
+Meet Flame in Freefall, grounded in 41 NASA PSI flight experiments.
+
+2
+00:00:07,200 --> 00:00:13,200
+Our 2D finite-volume solver tracks flame expansion,
+oxygen depletion, and hull thermal breach in real time.
+
+3
+00:00:14,200 --> 00:00:21,000
+We compare parallel cabin atmospheres side-by-side in AI Diff—
+isolating exact safety deltas and ECLSS countermeasures.
+
+4
+00:00:22,200 --> 00:00:26,000
+Turning NASA microgravity data into actionable spacecraft safety.
+
