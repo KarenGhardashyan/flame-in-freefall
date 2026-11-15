@@ -1,7 +1,37 @@
 /**
- * FLAME IN FREEFALL // BLUEPRINT TELEMETRY ENGINE
- * SpaceX Telemetry / Mission Control Node Graph System
- * NASA Physical Sciences Informatics (PSI) & Sisyphus Architecture
+ * ============================================================================
+ * FLAME IN FREEFALL // MISSION CONTROL VISUAL BLUEPRINT ENGINE
+ * NASA Space Apps Challenge 2026 | Team Sisyphus
+ * Production URL: https://microgravitational-flame.web.app
+ * ============================================================================
+ *
+ * ARCHITECTURAL DESIGN & TOPOLOGY:
+ * - Directed Acyclic Graph (DAG) with strictly enforced OUT -> IN pin routing.
+ * - Multi-Network Isolation: Supports parallel independent branches on a single
+ *   infinite canvas for side-by-side trade-off evaluations (e.g. Branch A vs Branch B).
+ * - Reactive Push-Pull Evaluation: Upstream parameter changes propagate down
+ *   connected wires in real time, triggering simulation re-runs and metric updates.
+ *
+ * 9 SPECIALIZED BLUEPRINT NODES:
+ * 1. NOTE AI: Natural language and speech-to-text mission planner compiling into active graphs.
+ * 2. ENV VARIABLES: Upstream control for O2, pressure, ventilation, fuel chemistry, and volume.
+ * 3. SIM 2D: Transient 2D finite-volume solver (0–600s) rendering flame front Rf(t),
+ *    O2 wake, ventilation streamlines, and thermal hull heat flux qw''(t) vs 28 kW/m² breach.
+ * 4. SIM-TO-REAL: Real-time similarity matcher against 41 NASA PSI empirical flight benchmarks.
+ * 5. GRAPH: Multi-channel time-series telemetry monitor (0–600s) for flame spread, T, P, and CO.
+ * 6. TABLE: Interactive telemetry summary and verified 41-run NASA PSI catalog with open URLs.
+ * 7. AI DIFF: 2-pin differential safety evaluator comparing two parallel spacecraft branches.
+ * 8. PROMPT: AI Safety Officer for structured emergency queries and NASA flight rule checks.
+ * 9. AI BRIEF: Formatted NASA Flight Readiness Brief generator with mitigation protocols.
+ *
+ * INTERACTION & TOUCH HARDWARE SUPPORT:
+ * - Full Pointer Events with unified mouse, stylus, and touch gesture handling.
+ * - Smooth canvas panning, infinite grid scaling, and pinch-to-zoom.
+ * - Interactive node & wire selection with keyboard deletion (Delete / Backspace).
+ * - Context menu triggered by right-click or 500ms touch long-press.
+ * - Independent 1x / 1.5x / 2x zoom scaling, 6-color accent coding, and 2D card resizing.
+ * - Full responsive design adapting to mobile, tablet, and multi-monitor displays.
+ * ============================================================================
  */
 
 (function () {

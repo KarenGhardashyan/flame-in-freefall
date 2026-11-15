@@ -1,7 +1,26 @@
 """
-Flame in Freefall - FastAPI & Standard Application Server
-AI-Powered Fire Safety Insights from Microgravity Combustion Data
-NASA International Space Apps Challenge - Team Sisyphus
+================================================================================
+FLAME IN FREEFALL // FASTAPI REST & WEBSOCKET APPLICATION SERVER
+NASA Space Apps Challenge 2026 | Team Sisyphus
+Production URL: https://microgravitational-flame.web.app
+================================================================================
+
+SERVER ARCHITECTURE & ENDPOINTS:
+- REST API:
+  * POST /api/evaluate-combustion: Analytical ODE integration, Damköhler S-Curve,
+    and 2D finite-volume transient combustion calculations.
+  * POST /api/ai-diff: Multi-branch differential safety analysis comparing two
+    spacecraft atmosphere/fuel configurations with delta metrics.
+  * POST /api/blueprint-prompt & /api/blueprint-note: AI copilot and natural language
+    mission planner compiling into active blueprint topologies.
+  * GET  /api/nasa-benchmarks: 41 documented flight runs from NASA PSI/NTRS archives.
+- WebSockets:
+  * /ws/telemetry: Real-time telemetry streaming (flame spread, T, P, CO, q''_w).
+- Dual Operation Mode:
+  * Mode A (Production / Cloud): Standalone client-side engine in standalone_api.js
+    executing directly in browser with 100% mathematical fidelity.
+  * Mode B (Local Server): FastAPI + Uvicorn server for local development and CLI tests.
+================================================================================
 """
 
 import os

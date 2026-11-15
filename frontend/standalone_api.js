@@ -1,7 +1,40 @@
 /**
- * Flame in Freefall - Standalone Client-Side Physical Engine & Fallback Router
- * Automatically intercepts /api/* calls when running without local Python backend.
- * Provides 100% mathematical fidelity with Chung K. Law, BASS-II, and Saffire models.
+ * ============================================================================
+ * FLAME IN FREEFALL // STANDALONE CLIENT-SIDE PHYSICS ENGINE & FALLBACK ROUTER
+ * NASA Space Apps Challenge 2026 | Team Sisyphus
+ * Production URL: https://microgravitational-flame.web.app
+ * ============================================================================
+ * 
+ * ARCHITECTURAL OVERVIEW:
+ * This module delivers full client-side computational autonomy in the browser.
+ * When running statically (e.g. on Firebase Hosting or offline field demos) without
+ * a local Python/FastAPI server, this router intercepts `fetch('/api/*')` calls
+ * and executes 100% deterministic, high-fidelity combustion physics, empirical
+ * Sim-to-Real correlation against 41 NASA PSI flight datasets, and multi-branch
+ * safety comparator differential analyses directly in JavaScript.
+ *
+ * COMPUTATIONAL CORE CAPABILITIES:
+ * 1. Damköhler Non-Equilibrium Extinction (S-Curve):
+ *    - Da = tau_flow / tau_chem via Arrhenius kinetics & convective residence time
+ *    - Multi-regime classification: EXTINCTION, COOL_BLUE, SOOTY_YELLOW, EXPLOSION_FLASH
+ * 2. Flammability Boundaries & Limiting Oxygen Index (LOI):
+ *    - Chung K. Law's 15.0% critical spacecraft O2 threshold (Y_O2,crit >= 0.15)
+ *    - Pressure-dependent hypobaric shifts & microgravity radiative quenching limit
+ * 3. 2D Transient Flame & Structural Hull Thermal Dynamics (0–600s):
+ *    - Flame front expansion Rf(t), burn area progression, and mass consumption
+ *    - Radiative & convective hull heat flux q''_w(t) vs 28.0 kW/m² structural breach limit
+ *    - Cabin overpressure Delta P(t) vs 45.0 kPa structural proof limit
+ *    - Toxic CO evolution with NASA JSC 20584 Rev D 7-day SMAC threshold (55 ppm)
+ * 4. Empirical Grounding & Sim-to-Real Benchmark Library:
+ *    - 41 documented NASA flight experiments (Saffire I–VI, BASS-II, FLEX/PSI-117,
+ *      ACME/PSI-159, Apollo 1, Apollo 13, Mir 1997) with verified repository URLs
+ *    - Multi-criteria similarity scoring (Physics, Safety, Telemetry curve-shape)
+ * 5. Multi-Branch AI Safety Comparator (AI DIFF) & NASA Flight Readiness Brief:
+ *    - Resolves independent upstream branch telemetry (Branch A vs Branch B)
+ *    - Computes metric differentials (Delta Vf, Delta Tf, Delta q''_w, Delta P, Delta CO)
+ *    - Produces automated safety verdicts (BRANCH_A_SAFER, BRANCH_B_SAFER, EQUAL_RISK)
+ *    - Generates markdown NASA Flight Rules compliance briefs for astronaut crew
+ * ============================================================================
  */
 (function() {
   'use strict';

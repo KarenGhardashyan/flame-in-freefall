@@ -1,19 +1,40 @@
 """
-Microgravity Combustion Physics Engine & NASA Validation Models
-Implements droplet combustion under 0g and 1g regimes, d^2-law,
-critical flammability limits, Damköhler number S-curve, cool flames dynamics,
-and NASA PSI / Saffire V / BASS-II validation benchmarks.
+================================================================================
+FLAME IN FREEFALL // MICROGRAVITY COMBUSTION PHYSICS ENGINE & NASA VALIDATION
+NASA Space Apps Challenge 2026 | Team Sisyphus
+Production URL: https://microgravitational-flame.web.app
+================================================================================
 
-Integrates:
+MATHEMATICAL & THEORETICAL FORMULATIONS:
+1. Quasi-Steady Droplet Combustion (d²-Law):
+   d²(t) = d₀² - K · t
+   K = (8 · λ_g / (ρ_l · c_p,g)) · ln(1 + B)
+   where B is the thermodynamic Spalding mass transfer number.
+
+2. Damköhler Non-Equilibrium Extinction (S-Curve):
+   Da = τ_flow / τ_chem = (L / V_g) / [A⁻¹ · exp(E_a / (R · T_f)) · ρⁿ · Y_Fᵃ · Y_O2ᵇ]
+   Governs non-equilibrium extinction, hot-flame transitions, and cool-flame regimes
+   (NASA PSI-117 / FLEX, 600–800 K low-temperature oxidation without visible light).
+
+3. Solid Combustion & Opposed-Flow Flame Spread:
+   V_f = V_f,0 · [(Y_O2 - Y_O2,ext) / (Y_O2,ref - Y_O2,ext)]ⁿ · f(V_g)
+   Calibrated against NASA BASS-II flight runs (NASA TM-20210011385).
+   Enforces Chung K. Law's critical spacecraft oxygen boundary (Y_O2,crit >= 15.0%).
+
+4. Spacecraft Structural Hull Dynamics & Hazard Metrics:
+   - Radiative & convective heat flux: q''_w(t) [kW/m²] vs. 28.0 kW/m² breach threshold.
+   - Compartment overpressure: ΔP(t) [kPa] vs. 45.0 kPa proof pressure limit.
+   - Toxic product accumulation: CO generation tracking vs. 55 ppm 7-day SMAC
+     (NASA JSC 20584 Rev D reference limit, with 0 ppm for pure H₂).
+
+EMPIRICAL FLIGHT DATASETS INTEGRATED:
 - Chung K. Law, "Combustion Physics" (Cambridge University Press, 2006)
-- NASA PSI-117 (FLEX Cool Flames CFD, DOI: 10.60555/gz0q-b577)
-- NASA Saffire V (ICES-2024-310, Niehaus et al., NASA Glenn)
-- NASA PSI-10 (ACME Flame Design, DOI: 10.60555/acme-flame-10)
-- NASA PSI-60 (SPICE 1g vs 0g, DOI: 10.60555/spice-soot-60)
-- NASA PSI-159 (ACME CFI-G, DOI: 10.60555/acme-cfig-159)
-- NASA PSI-179 (Aerosol Sampling Experiment - ASE)
-- NASA BASS-II Thin-Film & Rod Combustion Models (Ashkan Ashkani / NASA TM-20210011385)
-- NASA Saffire I, III, VI-3 Spacecraft In-Flight Telemetry
+- NASA BASS-II (Burning and Suppression of Solids - II, NASA TM-20210011385)
+- NASA Saffire I–VI Spacecraft Fire Safety Experiments (ICES-2024-310)
+- NASA PSI-117 (Flame Extinction Experiment / FLEX Cool Flames)
+- NASA PSI-159 (Advanced Combustion via Microgravity Experiments / ACME)
+- Historical Spacecraft Telemetry: Apollo 1, Apollo 13, and Mir (1997)
+================================================================================
 """
 
 import math

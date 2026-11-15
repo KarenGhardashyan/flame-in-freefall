@@ -1,169 +1,256 @@
-# 🔥 Flame in Freefall: AI-Powered Spacecraft Fire Safety & Microgravity Combustion Engine
+# 🔥 Flame in Freefall: AI-Powered Fire Safety Insights from Microgravity Combustion Data
 
-**NASA International Space Apps Challenge 2024** | **Team Sisyphus**  
-**Production Live URL:** [https://microgravitational-flame.web.app](https://microgravitational-flame.web.app)  
-**GitHub Repository:** [https://github.com/KarenGhardashyan/flame-in-freefall.git](https://github.com/KarenGhardashyan/flame-in-freefall.git)  
-**Target Spacecraft & Facilities:** International Space Station (ISS CIR / MDCA / ACME / BASS-II), Cygnus (Saffire-I–VI), Gateway, and Artemis Lunar/Martian Habitats.
+[![NASA Space Apps Challenge 2026](https://img.shields.io/badge/NASA%20Space%20Apps-2026%20Challenge-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
+[![Live Production App](https://img.shields.io/badge/Live%20App-microgravitational--flame.web.app-00E5FF?style=for-the-badge&logo=firebase&logoColor=black)](https://microgravitational-flame.web.app)
+[![Team Sisyphus](https://img.shields.io/badge/Team-Sisyphus-FF9100?style=for-the-badge)](https://github.com/KarenGhardashyan/flame-in-freefall)
+[![Target Facilities](https://img.shields.io/badge/Spacecraft-ISS%20%7C%20Cygnus%20%7C%20Gateway%20%7C%20Artemis-10B981?style=for-the-badge)](#)
+
+> **Live Production Dashboard:** [https://microgravitational-flame.web.app](https://microgravitational-flame.web.app)  
+> **GitHub Repository:** [https://github.com/KarenGhardashyan/flame-in-freefall](https://github.com/KarenGhardashyan/flame-in-freefall)  
+> **NASA Space Apps Challenge Category:** *Flame in Freefall*  
+> **Team:** Team Sisyphus (Karen Ghardashyan, Ashkan Ashkani, Lala Margaryan)
 
 ---
 
 ## 🌟 Executive Summary
 
-In terrestrial normal gravity ($1g$), buoyancy forces driven by density gradients:
-$$F_b \propto g \cdot (\rho_\infty - \rho_b)$$
-sweep hot combustion products upward into a buoyant thermal plume. In microgravity ($\mu g \approx 0$), **buoyancy is virtually eliminated**. Flames form symmetric, spherical diffusion envelopes governed strictly by molecular transport, burning at reduced mass consumption rates with dramatically increased flame standoff distances:
-$$\frac{r_f}{r_s} \approx 8 - 15$$
+In terrestrial normal gravity ($1g$), density gradients generate buoyant plumes that transport smoke and heat directly upward toward ceiling detectors. In microgravity ($\mu g \approx 0$), **buoyancy is virtually absent**, causing combustion to form spherical diffusion envelopes dominated by molecular transport where conventional ceiling-mounted detectors fail to trigger. Unchecked radiative soot losses induce transitions into invisible **cool flames** ($600 - 800\text{ K}$, demonstrated in NASA PSI-117 / FLEX) that silently exhaust crew oxygen and generate lethal carbon monoxide without visible illumination, while localized radiative and convective heat fluxes ($q''_w$) threaten spacecraft pressure hulls with catastrophic structural breach.
 
-Conventional ceiling-mounted smoke detectors fail catastrophically in $0g$ because smoke does not rise. Furthermore, quiescent microgravity conditions enhance radiative heat loss from soot, triggering **cool flame transitions** (NASA PSI-117 / FLEX) — low-temperature ($600 - 800\text{ K}$) quasi-steady combustion regimes that emit zero visible radiation yet continuously consume onboard oxygen and emit toxic carbon monoxide ($CO$).
-
-**Flame in Freefall** bridges theoretical combustion physics, empirical flight telemetry from NASA missions (BASS-II, Saffire, FLEX, ACME), and autonomous AI control into a real-time **Mission Control Blueprint Dashboard** designed with a minimal SpaceX Telemetry aesthetic.
+**Flame in Freefall** solves this life-critical challenge through a high-performance **Visual Blueprint Mission Control Simulator**. It integrates a 2D finite-volume transient combustion solver, real-time empirical grounding against 41 NASA PSI and historical spaceflight experiments, and a directed multi-network graph architecture (`OUT -> IN`) that enables flight directors and astronaut crews to run side-by-side trade-off analyses (`AI DIFF`), evaluate ECLSS fire-suppression protocols, and export automated NASA Flight Readiness Briefs.
 
 ---
 
-## 🧮 Theoretical & Mathematical Formulations
+## 🚀 Core Capabilities (Production Build)
 
-### 1. Quasi-Steady Droplet Combustion ($d^2$-Law)
-Under spherical symmetry in microgravity, the droplet diameter regression follows the classical Law & Williams formulation:
-$$d^2(t) = d_0^2 - K \cdot t$$
+### 1. Multi-Network Visual Blueprint Editor (`OUT -> IN` Directed Topology)
+* **Arbitrary Parallel Networks:** Evaluate independent spacecraft configurations on the same infinite canvas simultaneously with zero cross-network crosstalk (e.g., comparing Nominal ISS Cabin vs. Hypobaric Lunar Habitat).
+* **Color-Coded Visual Organization:** 6 selectable blueprint card accent themes (Default Cyan, Emerald, Amber, Violet, Rose, Crimson) with dedicated $1\times / 1.5\times / 2\times$ zoom scaling and free 2D bidirectional card resizing.
+* **9 Interactive Blueprint Node Types:**
+  1. `NOTE AI // JARVIS ARCHITECT`: Natural language and speech-to-text mission planner compiling spoken crew requests directly into active graph topologies.
+  2. `ENV VARIABLES // ATMOSPHERIC FEED`: Independent atmospheric controls for oxygen concentration ($10.0 - 100.0\%$), cabin pressure ($0.30 - 2.00\text{ atm}$), ECLSS ventilation speed ($0.0 - 70.0\text{ cm/s}$), fuel chemistry (PMMA solid slab, Sibal fabric, n-Heptane droplet, Hydrogen $H_2$, Methane $CH_4$), compartment volume ($10 - 200\text{ m}^3$), and ignition triggers.
+  3. `SIM 2D // FINITE-VOLUME COMBUSTION SOLVER`: Real-time 2D transient visualizer rendering the expanding flame front $R_f(t)$, downstream $O_2$ depletion wake, ventilation streamlines $\vec{V}_g$, and thermal hull heating $q''_w(t)$ against the $28.0\text{ kW/m}^2$ structural breach threshold.
+  4. `SIM-TO-REAL // NASA PSI GROUNDING`: Similarity calibration engine matching simulated state vectors against 41 NASA flight experiments across 3 matching criteria (`PARAMS`, `CURVE SHAPE`, `SAFETY RISK`).
+  5. `GRAPH // TIME TELEMETRY (0–600s)`: Interactive multi-channel time-series telemetry tracking flame spread distance $L(t)$, cabin temperature $T_{cabin}(t)$, hull overpressure $\Delta P(t)$, and toxic $CO$ concentration against the NASA 7-day SMAC limit.
+  6. `TABLE // NASA PSI MATRIX`: Live telemetry statistics matrix alongside a searchable catalog of all 41 NASA spaceflight runs with direct links to verified NASA Physical Sciences Informatics (PSI) and NASA NTRS repositories.
+  7. `AI DIFF // COMPARATOR`: 2-pin differential safety engine connecting `IN A` and `IN B` to perform delta evaluations ($\Delta V_f, \Delta T_f, \Delta q''_w, \Delta P, \Delta CO$) and compute automated safety verdicts.
+  8. `PROMPT // AI SAFETY OFFICER`: Copilot querying spacecraft emergency procedures, NASA STD-6001 materials compliance, and ECLSS ventilation cutoffs.
+  9. `AI BRIEF // FLIGHT READINESS REPORT`: 1-click structured safety brief generator compiling upstream telemetry into formatted mission documentation.
+* **1-Click Rapid Demonstrations:** Instant `Load 2-Network Trade-Off Demo` pre-spawning Branch A (Nominal 21% $O_2$) and Branch B (Saffire 29.5% $O_2$) wired into `AI DIFF` and `AI BRIEF`.
+* **Hardware-Agnostic Touch & Gesture Support:** Unified Pointer Events engine supporting desktop mice, styluses, and touchscreens: pinch-to-zoom, two-finger canvas panning, tap-to-connect wire routing, 500ms long-press / right-click context menu, and keyboard selection deletion via `Delete` or `Backspace`.
+* **Dark / Light Theme Engine:** High-contrast spacecraft telemetry palette optimized for both dim mission control rooms and bright field presentations.
 
-Where the burning rate constant $K$ is determined by transport properties and the thermodynamic Spalding mass transfer number $B$:
-$$K = \frac{8 \lambda_g}{\rho_l c_{p,g}} \ln(1 + B)$$
+---
 
-The Spalding transfer number $B$ incorporates both thermal convection and oxygen mass fraction $Y_{O_2,\infty}$:
-$$B = \frac{\frac{Y_{O_2,\infty} \Delta H_c}{\nu_{O_2} W_{O_2}} + c_{p,g}(T_\infty - T_s)}{L_v + \frac{\dot{Q}_{rad}}{\dot{m}_f}}$$
+### 2. 2D Finite-Volume Transient Flame & Hull Thermal Solver (0–600s)
+* **Interactive Time Evolution:** Scrubber and play/pause controls stepping through $0 - 600\text{ s}$ of combustion transient dynamics.
+* **Dual Visualization Views:**
+  * **FLAME + O₂ FIELD:** Illustrates the expanding spherical/elliptic flame boundary $R_f(t)$, downstream oxygen-starved wake, and cabin ventilation flow vectors $\vec{V}_g$.
+  * **THERMAL HULL MAP:** Maps radiative soot emissions and convective boundary layer heat transfer onto the spacecraft pressure hull.
+* **Critical Safety Threshold Warnings:**
+  * **Hull Thermal Breach Limit:** $q''_w \ge 28.0\text{ kW/m}^2$ (structural aluminum / composite degradation hazard).
+  * **Hull Structural Overpressure Proof Limit:** $\Delta P(t) \ge 45.0\text{ kPa}$ ($0.44\text{ atm}$ delta pressure hull failure risk).
+  * **7-Day SMAC Toxicity Limit:** $[CO] \ge 55\text{ ppm}$ per NASA JSC 20584 Rev D (with $0\text{ ppm}$ emission for carbon-free pure $H_2$).
+
+---
+
+### 3. Sim-to-Real Empirical Grounding (41 NASA PSI & Flight Runs)
+Simulations are validated and dynamically calibrated against **41 documented NASA flight experiments** from the NASA Physical Sciences Informatics (PSI) and NASA Technical Reports Server (NTRS):
+* **Cygnus Saffire I–VI (2016–2024):** Large-scale spacecraft fire safety tests burning Sibal cotton-fiberglass fabric and thick PMMA slabs under controlled microgravity tunnel drafts (ICES-2024-310).
+* **ISS BASS-II (NASA TM-20210011385):** Opposed-flow flame spread over thin acrylic films and solid cylindrical rods across oxygen concentrations ($15.8\% - 21.0\%$) and forced draft velocities ($0.5 - 35.0\text{ cm/s}$).
+* **FLEX / NASA PSI-117:** Radiative extinction of isolated $n$-heptane droplets and the discovery of low-temperature cool flame phenomena in microgravity.
+* **ACME / NASA PSI-159:** Coflow laminar diffusion flame structure and soot formation under microgravity.
+* **Historical Spaceflight Anomalies:** Apollo 1 (high-pressure $100\% \text{ O}_2$ flashover), Apollo 13 ($H_2/O_2$ cryogenic tank combustion transient), and Mir 1997 ($O_2$ generator candle deflagration).
+* **Transparent Scientific Labeling:** Explicit visual distinction between reconstructed flight telemetry curves and direct flight endpoints, ensuring judges and researchers have full scientific transparency.
+
+---
+
+### 4. 2-Pin `AI DIFF // COMPARATOR` & Mission Brief Synthesis
+* **Side-by-Side Differential Telemetry:** Connects two independent branches (`IN A` and `IN B`) to compute quantitative differences:
+  $$\Delta V_f = V_{f,B} - V_{f,A} \quad [\text{mm/s}]$$
+  $$\Delta T_f = T_{f,B} - T_{f,A} \quad [\text{K}]$$
+  $$\Delta q''_w = q''_{w,B} - q''_{w,A} \quad [\text{kW/m}^2]$$
+  $$\Delta(\Delta P) = \Delta P_B - \Delta P_A \quad [\text{kPa}]$$
+  $$\Delta [CO] = [CO]_B - [CO]_A \quad [\text{ppm}]$$
+* **Automated Risk Scoring & Verdict:** Calculates weighted relative safety differentials to award deterministic flight verdicts: `BRANCH_A_SAFER`, `BRANCH_B_SAFER`, or `EQUAL_RISK`.
+* **NASA Flight Readiness Brief:** Generates mission flight briefs formatted per NASA Flight Rules and emergency mitigation checklists (ECLSS airflow cutoff, depressurization vent, $CO_2$ fire extinguisher deployment).
+
+---
+
+## 🧮 Physics & Mathematical Formulations
+
+The physics core (`frontend/standalone_api.js` and `physics_engine/combustion_model.py`) executes first-principles microgravity combustion formulations:
+
+### 1. Damköhler Non-Equilibrium Extinction & S-Curve Classification
+The transition between vigorous hot burning, radiative quenching, cool flames, and convective blowout is governed by the non-dimensional Damköhler number $Da$:
+$$Da = \frac{\tau_{flow}}{\tau_{chem}}$$
+
+The characteristic flow residence time $\tau_{flow}$ and chemical kinetic time $\tau_{chem}$ are formulated as:
+$$\tau_{flow} = \frac{\delta_f}{V_g + V_{diff}}$$
+$$\tau_{chem} = \left[ A \cdot P^n \cdot X_{O_2} \cdot \exp\left(-\frac{E_a}{R \cdot T_{ref}}\right) \right]^{-1}$$
 
 Where:
-* $d_0$: initial fuel droplet diameter ($\text{mm}$)
-* $\lambda_g$: gas-phase thermal conductivity ($\text{W}/(\text{m}\cdot\text{K})$)
-* $\rho_l$: liquid fuel density ($\text{kg}/\text{m}^3$)
-* $c_{p,g}$: specific heat capacity of gas ($\text{J}/(\text{kg}\cdot\text{K})$)
-* $L_v$: latent heat of fuel vaporization ($\text{J}/\text{kg}$)
-* $\Delta H_c$: heat of combustion ($\text{J}/\text{kg}$)
+* $\delta_f$: Flame thickness ($\approx 8.0\text{ mm}$)
+* $V_g$: Forced cabin ventilation velocity ($\text{m/s}$)
+* $V_{diff}$: Molecular oxygen diffusion velocity ($\approx 0.005\text{ m/s}$)
+* $A$: Arrhenius pre-exponential kinetic constant ($3.2 \times 10^7\text{ s}^{-1}$)
+* $E_a / R$: Activation temperature ($\approx 14,500\text{ K}$)
+* $T_{ref}$: Kinetic reference temperature ($1,500\text{ K}$)
+
+#### Combustion Regime Evaluation:
+* **EXTINCTION ($Da < 0.20$ or $Y_{O_2} < LOI_{crit}$):**
+  Flame cannot sustain chemical reaction; temperature cools to ambient $T_\infty = 298.15\text{ K}$.
+* **COOL FLAME ($Da < Da_{ext}$ with $n$-Heptane, $14.8\% \le X_{O_2} \le 22.0\%$, $V_g \le 1.2\text{ cm/s}$):**
+  Low-temperature quasi-steady chemical oxidation without soot formation ($T_f \approx 650 - 780\text{ K}$), validated against **NASA PSI-117 / FLEX**:
+  $$T_{cool} = 650.0 + 130.0 \cdot \tanh\left(50.0 \cdot (X_{O_2} - 0.15)\right) \quad [\text{K}]$$
+* **HOT FLAME ($Da \ge Da_{ext}$):**
+  Vigorous hydrocarbon combustion with adiabatic flame temperature $T_{ad}$ tempered by radiative heat loss $\eta_{rad}$:
+  $$T_f = T_\infty + (T_{ad} - T_\infty) \cdot \left(1.0 - \eta_{rad} \cdot \frac{0.8}{1.0 + 0.2 \cdot V_g}\right)$$
+* **EXPLOSION FLASH (Premixed $H_2 \ge 4.0\%$ or $CH_4 \ge 5.0\%$):**
+  Deflagration shock characterized by immediate pressure surge and peak flame temperatures exceeding $2,400\text{ K}$.
 
 ---
 
-### 2. Solid Material Flammability & Opposed-Flow Flame Spread (NASA BASS-II)
-For solid spacecraft combustibles (PMMA, Nomex, Sibal fabric) under forced cabin ventilation velocity $V_g$, the flame spread rate $V_f$ is governed by thermal Peclet number and oxygen availability:
-$$V_f = V_{f,0} \left(\frac{Y_{O_2} - Y_{O_2,ext}}{Y_{O_2,ref} - Y_{O_2,ext}}\right)^n \cdot f(V_g)$$
+### 2. Flammability Boundaries & Chung K. Law's 15% Spacecraft Criterion
+Solid material ignition and opposed-flow propagation obey Chung K. Law's critical spacecraft oxygen boundary:
+$$LOI_{crit} = 15.0\% \cdot \left(\frac{1.0\text{ bar}}{P}\right)^{0.10}$$
+$$\text{If } X_{O_2} < LOI_{crit} \implies \text{Combustion is thermodynamically unviable} \implies \text{EXTINCTION}$$
 
-The flammability boundary obeys Chung K. Law's critical spacecraft oxygen threshold:
-$$Y_{O_2,crit} \approx 15.0\% \quad (0.15 \text{ mol/mol})$$
-When $Y_{O_2} < 0.15$ or Damköhler number $Da < Da_{ext}$, vigorous gas-phase combustion is thermodynamically unviable, leading to extinction or transition into smoldering.
-
----
-
-### 3. Large-Scale Spacecraft Cabin Heat & Pressure Dynamics (NASA Saffire-I–VI)
-Cabin thermal response is modeled as an open lumped capacitance system with sub-step numerical integration ($\Delta t_{sub} = 0.25\text{ s}$):
-$$\frac{dT_{cabin}}{dt} = \frac{\dot{Q}_{comb} - \dot{Q}_{rad} - h_{eff} A_{hull}(T_{cabin} - T_{space})}{M_{air} c_v}$$
-
-Where:
-$$\dot{Q}_{comb} = \dot{m}_f \Delta H_c \cdot \eta_{comb}$$
-$$\dot{Q}_{rad} = \varepsilon \sigma A_{flame} (T_f^4 - T_{cabin}^4)$$
-
-Cabin pressure response $P(t)$ obeys the real gas thermodynamic state equation:
-$$P(t) = \frac{n_{air}(t) \cdot R \cdot T_{cabin}(t)}{V_{cabin}} + \Delta P_{blast}$$
-
-Where $\Delta P_{blast} > 0$ triggers exclusively during flammable premixed gas deflagrations (e.g., $H_2 \ge 4.0\%$ or $CH_4 \ge 5.0\%$).
+Under microgravity, the absence of buoyant convective cooling alters the traditional terrestrial flammability envelope into a **U-shaped boundary**:
+* **Low-Velocity Quenching ($V_g < 0.5\text{ cm/s}$):** Radiative heat loss from accumulated combustion products and soot freezes the reaction zone.
+* **High-Velocity Blowoff ($V_g > 35.0\text{ cm/s}$):** Excessive convective strain thins the reaction zone until chemical residence time $\tau_{flow} < \tau_{chem}$.
 
 ---
 
-### 4. S-Curve & Damköhler Limit Phenomena
-The transition between vigorous burning, cool flame incubation, and radiative extinction is characterized by the Damköhler number $Da$:
-$$Da = \frac{\tau_{flow}}{\tau_{chem}} = \frac{L / V_g}{A^{-1} \exp\left(\frac{E_a}{R T_f}\right) \cdot \rho^n Y_F^a Y_{O_2}^b}$$
+### 3. Solid Opposed-Flow Flame Spread Rate ($V_f$)
+Calibrated against **NASA BASS-II (TM-20210011385)** and **Saffire I–VI**, the solid flame spread rate $V_f$ [mm/s] over acrylic (PMMA) and fabric (Sibal) is governed by:
+$$V_f = V_{f,ref} \cdot \left(\frac{X_{O_2} - LOI}{0.21 - LOI}\right)^{1.35} \cdot \left(\frac{P}{1.0\text{ atm}}\right)^{0.45} \cdot f(V_g) \cdot \left(\frac{100\,\mu\text{m}}{\delta_{fuel}}\right)^{0.75}$$
 
-* **Upper Branch ($Da > Da_{ign}$):** Vigorous hot-flame combustion ($T_f \approx 1800 - 2300\text{ K}$).
-* **Middle Branch:** Unstable transition zone with hysteresis.
-* **Cool Flame Branch ($Da_{ext,rad} < Da < Da_{ext,hot}$):** Low-temperature chemical oxidation ($T_f \approx 600 - 850\text{ K}$).
-* **Extinction Regime ($Da < Da_{ext,kin}$):** Complete blowout due to convective blow-off or radiative freezing.
+Where ventilation influence $f(V_g)$ models thermal boundary layer enhancement up to blowoff:
+$$f(V_g) = \left(\frac{V_g + 1.0}{21.0}\right)^{0.42}$$
 
 ---
 
-### 5. NASA Sim-to-Real Multi-Criteria Correlation
-Simulated state vectors are mapped to the empirical NASA flight library (41 documented runs from BASS-II, Saffire-I–VI, FLEX / PSI-117, PSI-10, PSI-60, PSI-179, Apollo, and Mir):
-$$\mathcal{D} = \sqrt{\sum_{k} w_k \cdot \left(\frac{p_{sim,k} - p_{nasa,k}}{\sigma_k}\right)^2}$$
+### 4. Structural Hull Radiative & Convective Heat Flux ($q''_w$)
+Heat transfer from the microgravity flame to the spacecraft pressure boundary combines Stefan-Boltzmann radiative transfer and turbulent boundary layer convection:
+$$q''_w(t) = q''_{rad}(t) + q''_{conv}(t) \quad [\text{kW/m}^2]$$
+$$q''_{rad} = \varepsilon \cdot \sigma \cdot \left(T_f^4 - T_\infty^4\right) \cdot \mathcal{F}_{view} \cdot \left(\frac{X_{O_2}}{0.21}\right)^{1.25}$$
+$$q''_{conv} = h_c \cdot (T_f - T_\infty) \cdot \sqrt{\frac{V_g + 1.0}{20.0}} \cdot \sqrt{\frac{X_{O_2}}{0.21}} \cdot \mathcal{F}_{view}$$
 
-The confidence percentage is computed via an exponential metric:
-$$\text{Confidence } \% = \min\left(99.4\%,\, 100.0 \cdot \exp(-0.55 \cdot \mathcal{D})\right)$$
-
-Supported matching criteria:
-* **Physics Criterion:** Weights oxygen fraction $Y_{O_2}$, cabin pressure $P$, ventilation speed $V_g$, and fuel chemistry.
-* **Safety Criterion:** Prioritizes peak temperature excursion $T_{max}$, radiative emission, hazard classification, and suppression protocol.
-* **Telemetry Criterion:** Direct $L_2$-norm over time-series heat release and pressure profiles.
+* **Structural Integrity Threshold:** When $q''_w(t) \ge 28.0\text{ kW/m}^2$, localized yield strength of aerospace aluminum (Al 2219 / Al-Li 2195) drops by $>60\%$, signaling immediate hull penetration risk.
 
 ---
 
-## 🛰 Blueprint Mission Control Dashboard Architecture
+### 5. Cabin Thermal Response & Transient Overpressure ($\Delta P(t)$)
+Cabin thermal response is integrated over sub-steps ($\Delta t_{sub} = 0.25\text{ s}$):
+$$\frac{dT_{cabin}}{dt} = \frac{\dot{Q}_{chem} - \dot{Q}_{hull\_loss}}{M_{air} \cdot c_v}$$
+$$\Delta P(t) = P(t) - P(0) = \frac{n_{air} \cdot R \cdot T_{cabin}(t)}{V_{cabin}} - P_0 + \Delta P_{blast}$$
 
-```mermaid
-flowchart LR
-    A["ENV VARIABLES<br/>(O₂, P, V_g, Fuel, g-level)"] -->|Eval Stream| B["SIMULATION CORE<br/>(2D Finite-Volume Solver)"]
-    A -->|Eval Stream| C["SIM-TO-REAL BRIDGE<br/>(41 NASA PSI Benchmarks)"]
-    C -->|Calibrated Stream| D["TABLE MATRIX<br/>(Telemetry & NASA Catalog)"]
-    C -->|Calibrated Stream| E["GRAPH MONITOR<br/>(Time Telemetry 0–600s)"]
-    C -->|Calibrated Stream| F["AI SAFETY ADVISOR<br/>(Gemini Copilot)"]
-    F -->|Advisory Stream| G["AI BRIEF<br/>(NASA Flight Rules)"]
-    H["NOTE AI ARCHITECT<br/>(JARVIS Voice / Text)"] -->|Mission Plan| A
+* **Structural Pressure Limit:** Spacecraft habitable pressure hulls are proof-tested to $\Delta P \le 45.0\text{ kPa}$ ($0.44\text{ atm}$). Exceeding this triggers automated structural rupture warnings.
+
+---
+
+### 6. Carbon Monoxide Generation & SMAC 55 ppm Tracking
+Toxic carbon monoxide accumulation is calculated dynamically from fuel mass burning rate $\dot{m}_f$:
+$$\frac{d[CO]}{dt} = \left(\frac{\dot{m}_f \cdot Y_{CO}}{M_{air}}\right) \cdot \left(\frac{W_{air}}{W_{CO}}\right) \cdot 10^6 \quad [\text{ppm/s}]$$
+
+* **Spacecraft Maximum Allowable Concentration (SMAC):** Evaluated against **NASA JSC 20584 Rev D** (7-day emergency threshold = **55 ppm**).
+* **Time-to-SMAC Calculation:**
+  $$t_{SMAC} = \frac{55.0 - [CO]_0}{d[CO]/dt} \quad [\text{seconds}]$$
+* Pure Hydrogen fuel ($H_2$) combustion emits strictly water vapor ($H_2O$), resulting in $0\text{ ppm}$ CO yield.
+
+---
+
+## 📂 Repository Structure
+
+```
+c:\NasaSpaceAPPFlameInFreefall/
+├── frontend/
+│   ├── index.html                 # Main Mission Control UI with SVG canvas and topbar
+│   ├── styles.css                 # SpaceX Telemetry CSS, theme tokens, touch & mobile rules
+│   ├── app.js                     # DAG node engine, 2D finite-volume canvas, touch/pointer handler
+│   └── standalone_api.js          # Offline client-side physics engine, NASA PSI catalog & router
+├── backend/
+│   ├── main.py                    # Optional FastAPI REST & WebSocket application server
+│   ├── firebase_client.py         # Firebase Admin SDK telemetry logger
+│   ├── gemini_advisor.py          # Google GenAI Gemini Copilot integration
+│   ├── knowledge_retriever.py     # Local BM25 search & Sim-to-Real matching engine
+│   └── data/
+│       └── nasa_flight_telemetry.json # 41 NASA PSI flight runs with verified URLs
+├── physics_engine/
+│   ├── combustion_model.py        # Python microgravity combustion solver (d²-law, S-Curve, BASS-II)
+│   └── __init__.py
+├── ml_models/
+│   ├── anomaly_detector.py        # Microgravity thermal run-up & fire anomaly detector
+│   └── __init__.py
+├── Resources/
+│   ├── CITATIONS.md               # Scientific peer-reviewed literature & NASA papers
+│   ├── nasa_psi_benchmarks.json   # NASA Physical Sciences Informatics benchmark catalog
+│   └── Law_Combustion_Physics.pdf # Primary theoretical combustion physics reference
+├── firebase.json                  # Firebase Hosting configuration
+├── .firebaserc                    # Firebase project binding (microgravitational-flame)
+├── requirements.txt               # Optional Python backend dependencies
+└── README.md                      # Complete system documentation for NASA Space Apps
 ```
 
-### Dashboard Core Nodes:
-1. **NOTE AI // JARVIS ARCHITECT:** Voice and natural language parser that compiles freeform mission notes into active blueprint architectures.
-2. **ENV VARIABLES // FEED:** Dynamic controls for oxygen concentration ($10 - 100\%$), cabin pressure ($0.3 - 2.0\text{ atm}$), ECLSS ventilation ($0 - 70\text{ cm/s}$), fuel selection (PMMA, Sibal, n-Heptane, $H_2$, $CH_4$), and compartment volume.
-3. **SIM-TO-REAL // NASA GROUNDING:** Calibration engine matching live simulations against 41 NASA PSI flight runs (Saffire I–VI, BASS-II, PSI-117, Apollo 13) with selectable active benchmark.
-4. **SIM // 2D FINITE-VOLUME SOLVER:** Real-time 2D finite-volume combustion simulation showing spherical flame structure, soot radiation, hull heat flux, and automated engineering verdict.
-5. **GRAPH // TIME TELEMETRY:** Multi-channel time-series curves ($0 - 600\text{ s}$) monitoring flame spread $L(t)$, cabin temperature $T(t)$, overpressure $\Delta P(t)$, and toxic $CO$ levels with SMAC threshold warnings.
-6. **TABLE // NASA PSI MATRIX:** Interactive telemetry summary and complete catalog of all 41 NASA spaceflight runs with direct links to verified NASA PSI repositories.
-7. **AI DIFF // COMPARATOR:** 2-pin differential safety evaluator that compares two separate networks/branches and computes parameter deltas and risk differentials.
-8. **PROMPT // AI SAFETY OFFICER & AI BRIEF:** AI Copilot executing structured safety inquiries with verified NASA PSI citations and actionable emergency protocols.
-9. **Interactive Customization:** Every node supports independent $1\times / 1.5\times / 2\times$ zoom scaling, 6-color accent grouping, and free 2D resizing. Single-language English interface with seamless standalone client-side fallback.
+---
+
+## 🛠 How to Run
+
+### Option 1: Instant Live / Standalone Mode (Recommended)
+Zero backend setup required! The client-side physics engine runs 100% autonomously in any modern browser:
+
+* **Official Live Production URL:** [https://microgravitational-flame.web.app](https://microgravitational-flame.web.app)
+* **Or Run Locally with Any Static Server:**
+  ```bash
+  # Using Node.js npx serve
+  npx serve frontend
+
+  # Or using Python's built-in static server
+  python -m http.server 8080 --directory frontend
+  ```
+  Open `http://localhost:8080` in Chrome, Safari, Edge, or Firefox.
 
 ---
 
-## 💻 Tech Stack & Deployment
+### Option 2: Optional Local FastAPI Server
+For developers wishing to run the Python backend and test WebSocket streams locally:
 
-* **Frontend:** Vanilla ES6+, HTML5 Canvas, SVG wire routers, Chart-less custom high-performance rendering. Hosted on **Firebase Hosting**.
-* **Physics Core:** Pure Python scientific formulations (NumPy, SciPy, analytical ODE solvers).
-* **Backend:** FastAPI, Uvicorn, WebSockets, BM25 local indexing, Google GenAI SDK.
-* **Hosting URL:** [https://microgravitational-flame.web.app](https://microgravitational-flame.web.app)
-
----
-
-## 🚀 Quick Start Guide
-
-### 1. Clone & Setup
 ```bash
+# 1. Clone repository
 git clone https://github.com/KarenGhardashyan/flame-in-freefall.git
 cd flame-in-freefall
 
+# 2. Create and activate virtual environment
 python -m venv venv
 # On Windows:
 .\venv\Scripts\activate
 # On Linux/macOS:
 source venv/bin/activate
 
+# 3. Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Run Backend & Dashboard Locally
-```bash
-python backend/main.py 5000
+# 4. Start FastAPI server
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-Open [http://localhost:5000](http://localhost:5000) in your browser.
-
-### 3. Deploy Frontend to Firebase Hosting
-```bash
-firebase deploy --only hosting
-```
-Or run the automated deployment script on Windows:
-```cmd
-deploy.bat
-```
+Open `http://localhost:8000` to inspect interactive API docs via Swagger UI (`http://localhost:8000/docs`).
 
 ---
 
-## 📜 Scientific References & Citations
-* **Chung K. Law:** *Combustion Physics*, Cambridge University Press (2006).
-* **NASA BASS-II:** *Burning and Suppression of Solids - II*, NASA TM-20210011385.
-* **NASA Saffire:** *Spacecraft Fire Safety Experiments I–VI*, ICES-2024-310.
-* **NASA PSI-117:** *Flame Extinction Experiment (FLEX / Cool Flames)*.
-* **NASA PSI-159:** *Advanced Combustion via Microgravity Experiments (ACME)*.
-* Full citations and open DOIs available in [Resources/CITATIONS.md](Resources/CITATIONS.md).
+## 👥 Team Sisyphus & Scientific Citations
+
+### Team Members
+* **Karen Ghardashyan** — *Team Lead & System Architect*  
+  System architecture, visual blueprint DAG engine, client-side fallback router, touch/mobile optimization, and cloud deployment.
+* **Ashkan Ashkani** — *Combustion Physics Lead & UI/UX Designer*  
+  Microgravity combustion mathematical formulation, Damköhler non-equilibrium S-curve, NASA BASS-II thin-film models, and SpaceX telemetry aesthetic.
+* **Lala Margaryan** — *Frontend Engineer & Motion Visualization*  
+  2D finite-volume transient flame field canvas renderer, thermal hull heat flux mapping, and interactive chart time-series monitors.
+
+### Primary Scientific Citations
+1. **Chung K. Law:** *Combustion Physics*, Cambridge University Press, New York, 2006. ([Law_Combustion_Physics.pdf](Resources/Law_Combustion_Physics.pdf))
+2. **NASA BASS-II:** *Burning and Suppression of Solids - II*, NASA Glenn Research Center, NASA TM-20210011385.
+3. **NASA Saffire Program:** *Spacecraft Fire Safety Demonstration Project (Saffire I–VI)*, ICES-2024-310 / NASA Glenn Research Center.
+4. **NASA PSI-117:** *Flame Extinction Experiment (FLEX / Droplet Cool Flames)*, NASA Physical Sciences Informatics Repository.
+5. **NASA PSI-159:** *Advanced Combustion via Microgravity Experiments (ACME / Coflow Flame)*, NASA PSI Repository.
+6. **NASA Spacecraft Toxicology:** *Spacecraft Maximum Allowable Concentrations for Selected Airborne Contaminants*, NASA JSC 20584 Rev D (Carbon Monoxide 55 ppm limit).
