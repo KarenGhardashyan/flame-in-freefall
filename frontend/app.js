@@ -504,7 +504,6 @@
       el.dataset.nodeScale = String(this.nodeScale);
       el.dataset.accentColor = this.accentColor;
       el.style.setProperty('--node-scale', this.nodeScale);
-      el.style.setProperty('--node-body-limit', `${NODE_TYPES[this.type].bodyLimit}px`);
 
       el.innerHTML = `
         <div class="node-header">
@@ -4006,15 +4005,15 @@
   // =========================================================================
 
   const NODE_TYPES = {
-    note: { Node: NoteNode, width: 350, bodyLimit: 310 },
-    variable: { Node: VariableNode, width: 322, bodyLimit: 390 },
-    simtoreal: { Node: SimToRealNode, width: 374, bodyLimit: 350 },
-    table: { Node: TableNode, width: 476, bodyLimit: 376 },
-    aidiff: { Node: AiDiffNode, width: 440, bodyLimit: 460 },
-    sim: { Node: SimNode, width: 408, bodyLimit: 398 },
-    graph: { Node: GraphNode, width: 386, bodyLimit: 344 },
-    prompt: { Node: PromptNode, width: 312, bodyLimit: 275 },
-    brief: { Node: BriefNode, width: 410, bodyLimit: 390 }
+    note: { Node: NoteNode, width: 382, previousWidth: 350 },
+    variable: { Node: VariableNode, width: 344, previousWidth: 322 },
+    simtoreal: { Node: SimToRealNode, width: 620, previousWidth: 374 },
+    table: { Node: TableNode, width: 620, previousWidth: 476 },
+    aidiff: { Node: AiDiffNode, width: 520, previousWidth: 440 },
+    sim: { Node: SimNode, width: 444, previousWidth: 408 },
+    graph: { Node: GraphNode, width: 460, previousWidth: 386 },
+    prompt: { Node: PromptNode, width: 344, previousWidth: 312 },
+    brief: { Node: BriefNode, width: 520, previousWidth: 410 }
   };
 
   function spawnNode(type, x, y, initialData = {}, width = null, height = null, nodeScale = 1.0, accentColor = 'default') {
@@ -4084,21 +4083,18 @@
     if (!node) return;
 
     if (node.type === 'variable') {
-      node.params = {
+      node.setParams({
         o2_percent: 21.0,
         pressure_atm: 1.0,
         flow_velocity_cms: 10.0,
         fuel: 'pmma',
         h2_conc_pct: 0.0,
         cabin_volume_m3: 28.0
-      };
-      if (typeof node.updateInputValues === 'function') node.updateInputValues();
-      node.queueEvaluate();
+      });
     } else if (node.type === 'note') {
       const textarea = node.element ? node.element.querySelector('textarea') : null;
-      if (textarea) textarea.value = '';
+      if (textarea) textarea.value = node.noteText = '';
     } else {
-      node.setNodeScale(1.0);
       node.setAccentColor('default');
     }
     showToast(`Reset ${node.title}`);
@@ -4644,8 +4640,15 @@
     const btnReset = document.getElementById('btn-reset-graph');
     if (btnReset) {
       btnReset.addEventListener('click', () => {
-        if (confirm('Reset canvas to default starter blueprint graph?')) {
-          buildDefaultGraph();
+        if (confirm('Reset to the starter blueprint? Your node sizes will be kept.')) {
+          const sizes = new Map();
+          for (const node of state.nodes.values()) {
+            const customized = node.baseWidth !== NODE_TYPES[node.type].width || node.baseHeight !== null || node.nodeScale !== 1;
+            if (customized && (!sizes.has(node.type) || state.selectedNodeId === node.id)) {
+              sizes.set(node.type, { width: node.baseWidth, height: node.baseHeight, scale: node.nodeScale });
+            }
+          }
+          buildDefaultGraph(sizes);
           showToast('Blueprint canvas reset to nominal state');
         }
       });
@@ -4722,23 +4725,22 @@
 
   function autoLayoutGraph() {
     const columns = [
-      { x: 40, types: ['note', 'variable'], minimumY: { variable: 425 } },
-      { x: 460, types: ['sim', 'simtoreal'], minimumY: { simtoreal: 520 } },
-      { x: 960, types: ['graph', 'table'], minimumY: { table: 460 } },
-      { x: 1540, types: ['prompt', 'aidiff'] },
-      { x: 2120, types: ['brief'] }
+      ['note', 'variable'], ['sim'], ['simtoreal'], ['graph', 'table'], ['prompt', 'aidiff'], ['brief']
     ];
-    let rightEdge = 0;
+    const nodes = Array.from(state.nodes.values());
+    layoutNodeColumns(columns.map(types => types.flatMap(type => nodes.filter(node => node.type === type))));
+  }
+
+  function layoutNodeColumns(columns, rowStarts = []) {
+    let x = 40;
     for (const column of columns) {
-      const nodes = column.types.flatMap(type => Array.from(state.nodes.values()).filter(node => node.type === type));
-      if (!nodes.length) continue;
-      const x = Math.max(column.x, rightEdge ? rightEdge + 36 : 0);
+      if (!column.length) continue;
       let y = 40;
-      for (const node of nodes) {
-        node.moveTo(x, Math.max(y, column.minimumY?.[node.type] ?? 40));
-        y = node.y + node.element.offsetHeight + 26;
-        rightEdge = Math.max(rightEdge, x + node.element.offsetWidth);
+      for (const [index, node] of column.entries()) {
+        node.moveTo(x, Math.max(y, rowStarts[index] ?? 40));
+        y = node.y + node.element.offsetHeight + 28;
       }
+      x += Math.max(...column.map(node => node.element.offsetWidth)) + 42;
     }
     fitView(28);
   }
@@ -4845,44 +4847,50 @@
   // STARTER GRAPH & PERSISTENCE
   // =========================================================================
 
-  function buildDefaultGraph() {
+  function buildDefaultGraph(sizes = new Map()) {
     clearGraph();
-    const note = spawnNode('note', 40, 40);
-    const env = spawnNode('variable', 40, 425);
-    const sim = spawnNode('sim', 460, 40);
-    const reference = spawnNode('simtoreal', 460, 520);
-    const graph = spawnNode('graph', 960, 40);
-    const table = spawnNode('table', 960, 460);
-    const prompt = spawnNode('prompt', 1540, 40);
+    const starterNode = type => {
+      const { width, height, scale } = sizes.get(type) ?? {};
+      return spawnNode(type, 40, 40, {}, width, height, scale);
+    };
+    const note = starterNode('note');
+    const env = starterNode('variable');
+    const sim = starterNode('sim');
+    const reference = starterNode('simtoreal');
+    const graph = starterNode('graph');
+    const table = starterNode('table');
+    const prompt = starterNode('prompt');
 
     for (const [source, target] of [[note, env], [env, sim], [sim, reference], [reference, graph], [reference, table], [reference, prompt]]) {
       addWire(source.id, 'out', target.id, 'in');
     }
     env.evaluate();
-    fitView(28);
+    autoLayoutGraph();
   }
 
   function loadTradeOffDemo() {
     clearGraph();
-    const diff = spawnNode('aidiff', 1370, 40);
-    const brief = spawnNode('brief', 1850, 40, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' });
+    const diff = spawnNode('aidiff', 40, 40);
+    const brief = spawnNode('brief', 40, 40, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' });
     addWire(diff.id, 'out', brief.id, 'in');
 
     const configs = [
-      { scenario: SCENARIOS.iss_nominal, color: 'cyan', y: 40, pin: 'in_a' },
-      { scenario: SCENARIOS.saffire_v, color: 'amber', y: 520, pin: 'in_b' }
+      { scenario: SCENARIOS.iss_nominal, color: 'cyan', pin: 'in_a' },
+      { scenario: SCENARIOS.saffire_v, color: 'amber', pin: 'in_b' }
     ];
-    for (const { scenario, color, y, pin } of configs) {
-      const env = spawnNode('variable', 40, y, { ...scenario.params, scenarioLabel: scenario.name }, null, null, 1, color);
-      const sim = spawnNode('sim', 460, y, {}, null, null, 1, color);
-      const reference = spawnNode('simtoreal', 960, y, {}, null, null, 1, color);
+    const branches = configs.map(({ scenario, color, pin }) => {
+      const env = spawnNode('variable', 40, 40, { ...scenario.params, scenarioLabel: scenario.name }, null, null, 1, color);
+      const sim = spawnNode('sim', 40, 40, {}, null, null, 1, color);
+      const reference = spawnNode('simtoreal', 40, 40, {}, null, null, 1, color);
       addWire(env.id, 'out', sim.id, 'in');
       addWire(sim.id, 'out', reference.id, 'in');
       addWire(reference.id, 'out', diff.id, pin);
       env.evaluate();
-    }
+      return [env, sim, reference];
+    });
     diff.executeComparison();
-    fitView(28);
+    const secondRowY = 68 + Math.max(...branches[0].map(node => node.element.offsetHeight));
+    layoutNodeColumns([...branches[0].map((node, i) => [node, branches[1][i]]), [diff], [brief]], [40, secondRowY]);
     showToast('Two-network demo loaded');
   }
 
@@ -4912,14 +4920,17 @@
 
   function restoreGraphNodes(data) {
     const idMap = new Map();
+    let upgradedWidth = false;
     for (const saved of data.nodes) {
       const initial = saved.type === 'brief' ? { title: saved.title } : (saved.params || {});
       const scale = saved.nodeScale || 1.0;
       // Earlier exports recorded physical dimensions, including the node scale.
       const divisor = saved.title ? 1 : scale;
+      const oldDefault = saved.height == null && saved.width === NODE_TYPES[saved.type]?.previousWidth;
       const node = spawnNode(saved.type, saved.x, saved.y, initial,
-        saved.width / divisor, saved.height / divisor, scale, saved.accentColor);
+        oldDefault ? null : saved.width / divisor, saved.height / divisor, scale, saved.accentColor);
       if (!node) continue;
+      upgradedWidth ||= oldDefault;
       if (node.type === 'simtoreal' && saved.benchmark) Object.assign(node, {
         matchBy: saved.benchmark.matchBy ?? 'physics',
         filterMission: saved.benchmark.filterMission ?? 'all',
@@ -4938,6 +4949,17 @@
     }
     for (const node of state.nodes.values()) {
       if (node.type === 'aidiff' && findDownstreamNode(node.id, 'brief')) node.executeComparison();
+    }
+    if (upgradedWidth) {
+      const oldStarter = { note: [40, 40], variable: [40, 425], sim: [460, 40], simtoreal: [460, 520],
+        graph: [960, 40], table: [960, 460], prompt: [1540, 40] };
+      const oldDemo = { variable: [40, 40, 520], sim: [460, 40, 520], simtoreal: [960, 40, 520],
+        aidiff: [1370, 40], brief: [1850, 40] };
+      const oldLayout = data.nodes.length === 7 ? oldStarter : data.nodes.length === 8 ? oldDemo : null;
+      if (oldLayout && data.nodes.every(node => {
+        const position = oldLayout[node.type];
+        return position && node.x === position[0] && position.slice(1).includes(node.y);
+      })) autoLayoutGraph();
     }
   }
 

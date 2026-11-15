@@ -845,10 +845,6 @@ body {
   box-sizing: border-box;
 }
 
-.node-fit-content > .node-body {
-  max-height: calc(var(--node-body-limit) * var(--node-scale));
-}
-
 /* Ports / Pins */
 .node-ports-bar {
   display: flex;
@@ -1517,7 +1513,6 @@ select {
 /* AI Safety Brief Node */
 .node-type-brief {
   width: 440px;
-  max-width: 500px;
 }
 
 .brief-content {
@@ -3672,7 +3667,16 @@ body.theme-light .bp-node[data-accent-color="amber"] { border-color: var(--accen
 }
 .node-fit-content .graph-canvas-container { flex-shrink: 0; }
 .node-fit-content .table-node-sections { height: auto; }
-.node-fit-content .table-node-container { max-height: 190px; }
+.node-fit-content .psi-runs-section { min-height: 0; overflow: visible; }
+.node-fit-content :is(.table-node-container, .graph-table-container, .brief-content, .diff-output-box) {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.node-fit-content :is(.psi-matrix-table, .psi-table) :is(th, td) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .sim-hud-overlay { flex-wrap: wrap; gap: 4px; top: 5px; }
 
 body .cutaway-canvas-container .hud-pill,
