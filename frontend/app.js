@@ -196,7 +196,7 @@
       g.dataset.wireId = w.id;
       g.dataset.accentColor = accent;
 
-      // Base wire
+      // Base visible wire
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('class', `wire-path ${state.selectedWireId === w.id ? 'selected' : ''} wire-accent-${accent}`);
       path.setAttribute('d', d);
@@ -206,23 +206,69 @@
       flowPath.setAttribute('class', `wire-flow wire-flow-accent-${accent}`);
       flowPath.setAttribute('d', d);
 
+      // Invisible thick hitbox (18px) for effortless touch / mouse selection
+      const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hitbox.setAttribute('class', 'wire-hitbox');
+      hitbox.setAttribute('d', d);
+
       g.appendChild(path);
       g.appendChild(flowPath);
+      g.appendChild(hitbox);
 
-      // Click to select or Alt-click to delete
-      path.addEventListener('click', (e) => {
+      const handleWireSelect = (e) => {
         e.stopPropagation();
         if (e.altKey) {
           removeWire(w.id);
           showToast('Wire disconnected');
         } else {
-          state.selectedWireId = (state.selectedWireId === w.id) ? null : w.id;
-          renderAllWires();
+          if (state.selectedWireId === w.id) {
+            deselectWire();
+          } else {
+            selectWire(w.id);
+          }
         }
-      });
+      };
+
+      hitbox.addEventListener('click', handleWireSelect);
+      path.addEventListener('click', handleWireSelect);
 
       wiresLayer.appendChild(g);
     });
+  }
+
+  function selectWire(wireId) {
+    deselectNode();
+    state.selectedWireId = wireId;
+    renderAllWires();
+  }
+
+  function deselectWire() {
+    state.selectedWireId = null;
+    renderAllWires();
+  }
+
+  function selectNode(nodeId) {
+    deselectWire();
+    state.selectedNodeId = nodeId;
+    document.querySelectorAll('.bp-node').forEach(n => {
+      const isSel = (n.id === nodeId);
+      n.classList.toggle('selected', isSel);
+      n.classList.toggle('node-selected', isSel);
+    });
+  }
+
+  function deselectNode() {
+    state.selectedNodeId = null;
+    document.querySelectorAll('.bp-node').forEach(n => {
+      n.classList.remove('selected');
+      n.classList.remove('node-selected');
+    });
+  }
+
+  function deselectAll() {
+    deselectNode();
+    deselectWire();
+    deselectPin();
   }
 
   function isOutputPin(pin) {
@@ -313,10 +359,19 @@
   }
 
   function removeWire(wireId) {
+    const wire = state.wires.find(w => w.id === wireId);
     state.wires = state.wires.filter(w => w.id !== wireId);
     if (state.selectedWireId === wireId) state.selectedWireId = null;
     renderAllWires();
     saveGraphToLocalStorage();
+
+    if (wire) {
+      const receiver = state.nodes.get(wire.toNode);
+      if (receiver && typeof receiver.onReceiveData === 'function') {
+        const freshData = resolveUpstreamBranchData(wire.toNode, wire.toPin);
+        receiver.onReceiveData(freshData, wire.toPin);
+      }
+    }
   }
 
   function propagateDataFrom(nodeId, data) {
@@ -480,6 +535,9 @@
       `;
 
       this.element = el;
+      el.addEventListener('pointerdown', () => {
+        selectNode(this.id);
+      });
       this.bindDragEvents();
       this.bindResizeEvents();
 
@@ -4172,12 +4230,63 @@
     node.onDestroy();
     if (node.element) node.element.remove();
 
-    // Remove wires associated with this node
+    // Find all outgoing wires from this node to notify receivers
+    const connectedWires = state.wires.filter(w => w.fromNode === nodeId || w.toNode === nodeId);
     state.wires = state.wires.filter(w => w.fromNode !== nodeId && w.toNode !== nodeId);
     state.nodes.delete(nodeId);
+    if (state.selectedNodeId === nodeId) state.selectedNodeId = null;
+
+    connectedWires.forEach(w => {
+      if (w.fromNode === nodeId) {
+        const receiver = state.nodes.get(w.toNode);
+        if (receiver && typeof receiver.onReceiveData === 'function') {
+          const freshData = resolveUpstreamBranchData(w.toNode, w.toPin);
+          receiver.onReceiveData(freshData, w.toPin);
+        }
+      }
+    });
+
     renderAllWires();
     saveGraphToLocalStorage();
     showToast(`Deleted node ${node.title}`);
+  }
+
+  function duplicateNode(nodeId) {
+    const src = state.nodes.get(nodeId);
+    if (!src) return;
+    const newX = src.x + 40;
+    const newY = src.y + 40;
+    const newParams = src.params ? JSON.parse(JSON.stringify(src.params)) : {};
+    const newNode = spawnNode(src.type, newX, newY, newParams, src.baseWidth, src.baseHeight, src.nodeScale, src.accentColor);
+    if (newNode) {
+      selectNode(newNode.id);
+      showToast(`Duplicated ${src.title}`);
+    }
+  }
+
+  function resetNode(nodeId) {
+    const node = state.nodes.get(nodeId);
+    if (!node) return;
+
+    if (node.type === 'variable') {
+      node.params = {
+        o2_percent: 21.0,
+        pressure_atm: 1.0,
+        flow_velocity_cms: 10.0,
+        fuel: 'pmma',
+        h2_conc_pct: 0.0,
+        cabin_volume_m3: 28.0
+      };
+      if (typeof node.updateInputValues === 'function') node.updateInputValues();
+      node.queueEvaluate();
+    } else if (node.type === 'note') {
+      const textarea = node.element ? node.element.querySelector('textarea') : null;
+      if (textarea) textarea.value = '';
+    } else {
+      node.setNodeScale(1.0);
+      node.setAccentColor('default');
+    }
+    showToast(`Reset ${node.title}`);
   }
 
   // =========================================================================
@@ -4252,10 +4361,8 @@
 
       contextMenu.style.display = 'none';
 
-      // Cancel pin selection if user taps empty canvas
-      if (state.selectedPin) {
-        deselectPin();
-      }
+      // Deselect all on background tap
+      deselectAll();
 
       activeViewportPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       try { viewport.setPointerCapture(e.pointerId); } catch (_) {}
@@ -4341,50 +4448,215 @@
       saveGraphToLocalStorage();
     }, { passive: false });
 
-    // Context Menu (Right Click)
+    // Context Menu: Long-Press for Touch + Native ContextMenu for Mouse/Stylus
+    let longPressTimer = null;
+    let longPressStartX = 0;
+    let longPressStartY = 0;
+
+    function cancelLongPress() {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') {
+        longPressStartX = e.clientX;
+        longPressStartY = e.clientY;
+        cancelLongPress();
+        longPressTimer = setTimeout(() => {
+          openContextMenuAt(e.clientX, e.clientY, e.target);
+        }, 500);
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointermove', (e) => {
+      if (longPressTimer) {
+        if (Math.hypot(e.clientX - longPressStartX, e.clientY - longPressStartY) > 8) {
+          cancelLongPress();
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointerup', cancelLongPress, { passive: true });
+    window.addEventListener('pointercancel', cancelLongPress, { passive: true });
+
     viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      const worldPos = screenToWorld(e.clientX, e.clientY);
-      state.contextMenuPos = worldPos;
-
-      contextMenu.style.display = 'flex';
-      contextMenu.style.left = `${e.clientX}px`;
-      contextMenu.style.top = `${e.clientY}px`;
+      cancelLongPress();
+      openContextMenuAt(e.clientX, e.clientY, e.target);
     });
 
-    // Hide context menu on click outside
-    window.addEventListener('click', () => {
-      contextMenu.style.display = 'none';
+    // Hide context menu on click or pointerdown outside
+    window.addEventListener('click', (e) => {
+      if (contextMenu && !contextMenu.contains(e.target)) {
+        contextMenu.style.display = 'none';
+      }
     });
 
-    // Context menu actions
+    window.addEventListener('pointerdown', (e) => {
+      if (contextMenu && !contextMenu.contains(e.target)) {
+        contextMenu.style.display = 'none';
+      }
+    });
+
+    // Keyboard delete for selected wire OR selected node
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (document.activeElement && document.activeElement.isContentEditable)) {
+          return;
+        }
+
+        if (state.selectedWireId) {
+          const wireId = state.selectedWireId;
+          state.selectedWireId = null;
+          removeWire(wireId);
+          showToast('Wire deleted');
+          e.preventDefault();
+        } else if (state.selectedNodeId) {
+          const nodeId = state.selectedNodeId;
+          state.selectedNodeId = null;
+          deleteNode(nodeId);
+          e.preventDefault();
+        }
+      }
+    });
+  }
+
+  function openContextMenuAt(clientX, clientY, target) {
+    if (!contextMenu) return;
+    const worldPos = screenToWorld(clientX, clientY);
+    state.contextMenuPos = worldPos;
+
+    // Detect target element
+    const pinEl = target ? target.closest('.pin') : null;
+    const nodeEl = target ? target.closest('.bp-node') : null;
+
+    // Detect wire under target or under point
+    let wireId = null;
+    if (target) {
+      const wireEl = target.closest('.wire-path, .wire-hitbox') || (target.tagName === 'path' && target.parentElement && target.parentElement.dataset && target.parentElement.dataset.wireId ? target.parentElement : null);
+      if (wireEl) {
+        wireId = wireEl.dataset.wireId || (wireEl.parentElement && wireEl.parentElement.dataset.wireId);
+      }
+    }
+
+    if (!wireId && !pinEl && !nodeEl) {
+      const elementsAtPoint = document.elementsFromPoint ? document.elementsFromPoint(clientX, clientY) : [];
+      for (const el of elementsAtPoint) {
+        if (el.classList.contains('wire-path') || el.classList.contains('wire-hitbox')) {
+          wireId = el.parentElement ? el.parentElement.dataset.wireId : null;
+          if (wireId) break;
+        }
+      }
+    }
+
+    if (pinEl) {
+      const pinName = pinEl.dataset.pin;
+      const targetNodeId = nodeEl ? nodeEl.id : '';
+      contextMenu.innerHTML = `
+        <div class="context-header">PIN // ${pinName ? pinName.toUpperCase() : 'PORT'}</div>
+        <div class="context-item danger" data-action="disconnect_pin" data-node-id="${targetNodeId}" data-pin="${pinName}">
+          <span style="font-size: 14px;">✂</span>
+          <span>Disconnect Wire(s)</span>
+        </div>
+        <div class="context-item cancel-item" data-action="close_menu">
+          <span>✕ Cancel</span>
+        </div>
+      `;
+    } else if (wireId) {
+      selectWire(wireId);
+      contextMenu.innerHTML = `
+        <div class="context-header">TELEMETRY WIRE</div>
+        <div class="context-item danger" data-action="delete_wire" data-wire-id="${wireId}">
+          <span style="font-size: 14px;">✂</span>
+          <span>Disconnect Wire</span>
+        </div>
+        <div class="context-item cancel-item" data-action="close_menu">
+          <span>✕ Cancel</span>
+        </div>
+      `;
+    } else if (nodeEl && nodeEl.id && state.nodes.has(nodeEl.id)) {
+      const node = state.nodes.get(nodeEl.id);
+      selectNode(node.id);
+      contextMenu.innerHTML = `
+        <div class="context-header">${sanitize(node.title)}</div>
+        <div class="context-item" data-action="duplicate_node" data-node-id="${node.id}">
+          <span style="font-size: 14px;">⧉</span>
+          <span>Duplicate Node</span>
+        </div>
+        <div class="context-item" data-action="reset_node" data-node-id="${node.id}">
+          <span style="font-size: 14px;">↺</span>
+          <span>Reset Node</span>
+        </div>
+        <div class="context-item danger" data-action="delete_node" data-node-id="${node.id}">
+          <span style="font-size: 14px;">🗑</span>
+          <span>Delete Node</span>
+        </div>
+        <div class="context-item cancel-item" data-action="close_menu">
+          <span>✕ Cancel</span>
+        </div>
+      `;
+    } else {
+      // Empty Canvas Menu
+      contextMenu.innerHTML = `
+        <div class="context-header">ADD BLUEPRINT NODE</div>
+        <div class="context-item" data-action="spawn_variable"><div class="context-dot var"></div><span>+ ENV Variables</span></div>
+        <div class="context-item" data-action="spawn_sim"><div class="context-dot sim"></div><span>+ SIM 2D Solver</span></div>
+        <div class="context-item" data-action="spawn_simtoreal"><div class="context-dot simtoreal"></div><span>+ SIM-TO-REAL Grounding</span></div>
+        <div class="context-item" data-action="spawn_graph"><div class="context-dot graph"></div><span>+ GRAPH Curves</span></div>
+        <div class="context-item" data-action="spawn_table"><div class="context-dot table"></div><span>+ TABLE PSI Matrix</span></div>
+        <div class="context-item" data-action="spawn_aidiff"><div class="context-dot aidiff"></div><span>+ AI DIFF Comparator</span></div>
+        <div class="context-item" data-action="spawn_prompt"><div class="context-dot prompt"></div><span>+ PROMPT Safety Officer</span></div>
+        <div class="context-item" data-action="spawn_note"><div class="context-dot note"></div><span>+ NOTE AI Architect</span></div>
+        <div class="context-item cancel-item" data-action="close_menu"><span>✕ Cancel</span></div>
+      `;
+    }
+
+    contextMenu.style.display = 'flex';
+    const menuW = 240;
+    const menuH = contextMenu.offsetHeight || 300;
+    const posX = Math.min(clientX, window.innerWidth - menuW - 10);
+    const posY = Math.min(clientY, window.innerHeight - menuH - 10);
+    contextMenu.style.left = `${Math.max(10, posX)}px`;
+    contextMenu.style.top = `${Math.max(10, posY)}px`;
+
     contextMenu.querySelectorAll('.context-item').forEach(item => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const action = item.dataset.action;
-        const x = Math.round(state.contextMenuPos.x);
-        const y = Math.round(state.contextMenuPos.y);
+        const targetNodeId = item.dataset.nodeId;
+        const targetPin = item.dataset.pin;
+        const targetWireId = item.dataset.wireId;
 
-        if (action === 'spawn_note') spawnNode('note', x, y);
-        else if (action === 'spawn_variable') spawnNode('variable', x, y);
-        else if (action === 'spawn_simtoreal') spawnNode('simtoreal', x, y);
-        else if (action === 'spawn_table') spawnNode('table', x, y);
-        else if (action === 'spawn_aidiff') spawnNode('aidiff', x, y);
-        else if (action === 'spawn_sim') spawnNode('sim', x, y);
-        else if (action === 'spawn_graph') spawnNode('graph', x, y);
-        else if (action === 'spawn_prompt') spawnNode('prompt', x, y);
+        if (action === 'delete_wire' && targetWireId) {
+          removeWire(targetWireId);
+          showToast('Wire disconnected');
+        } else if (action === 'disconnect_pin' && targetNodeId && targetPin) {
+          const toRemove = state.wires.filter(w =>
+            (w.fromNode === targetNodeId && w.fromPin === targetPin) ||
+            (w.toNode === targetNodeId && w.toPin === targetPin)
+          );
+          toRemove.forEach(w => removeWire(w.id));
+          showToast(`Disconnected ${toRemove.length} wire(s)`);
+        } else if (action === 'duplicate_node' && targetNodeId) {
+          duplicateNode(targetNodeId);
+        } else if (action === 'reset_node' && targetNodeId) {
+          resetNode(targetNodeId);
+        } else if (action === 'delete_node' && targetNodeId) {
+          deleteNode(targetNodeId);
+        } else if (action && action.startsWith('spawn_')) {
+          const type = action.replace('spawn_', '');
+          const spawnX = Math.round(state.contextMenuPos.x);
+          const spawnY = Math.round(state.contextMenuPos.y);
+          const newNode = spawnNode(type, spawnX, spawnY);
+          if (newNode) showToast(`Added ${newNode.title}`);
+        }
 
         contextMenu.style.display = 'none';
       });
-    });
-
-    // Keyboard delete for selected wire
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (state.selectedWireId && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-          removeWire(state.selectedWireId);
-          showToast('Wire deleted');
-        }
-      }
     });
   }
 
@@ -4893,7 +5165,21 @@
 
     // Auto-fit nodes on initial screen load
     requestAnimationFrame(() => {
-      fitView(32);
+      const isMobile = window.innerWidth <= 1024;
+      fitView(isMobile ? 16 : 32);
+    });
+
+    window.addEventListener('resize', () => {
+      renderAllWires();
+      if (window.innerWidth <= 1024) {
+        fitView(16);
+      }
+    });
+
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        fitView(16);
+      }, 200);
     });
 
     try {
