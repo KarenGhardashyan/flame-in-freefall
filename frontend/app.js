@@ -11,14 +11,14 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v9';
+  const STORAGE_KEY = 'flame_blueprint_graph_v10';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
 
   const I18N = {
     en: {
-      add_node: '+ ADD NODE ▾',
+      add_node: 'ADD NODE ▾',
       autolayout: 'Auto-Layout',
       export: 'Export (.json)',
       import: 'Import (.json)',
@@ -409,9 +409,9 @@
           </div>
           <div class="node-header-tools">
             <div class="node-scale-selector" title="Node Scale (1×, 1.5×, 2×)">
-              <button class="btn-node-scale ${this.nodeScale === 1.0 ? 'active' : ''}" data-scale="1">1×</button>
-              <button class="btn-node-scale ${this.nodeScale === 1.5 ? 'active' : ''}" data-scale="1.5">1.5×</button>
-              <button class="btn-node-scale ${this.nodeScale === 2.0 ? 'active' : ''}" data-scale="2">2×</button>
+              <button class="btn-node-scale node-scale-btn ${this.nodeScale === 1.0 ? 'active' : ''}" data-scale="1">1×</button>
+              <button class="btn-node-scale node-scale-btn ${this.nodeScale === 1.5 ? 'active' : ''}" data-scale="1.5">1.5×</button>
+              <button class="btn-node-scale node-scale-btn ${this.nodeScale === 2.0 ? 'active' : ''}" data-scale="2">2×</button>
             </div>
             <div class="node-color-palette" title="Network Accent Color">
               <button class="node-color-dot color-default ${this.accentColor === 'default' ? 'active' : ''}" data-color="default" title="Default Accent"></button>
@@ -588,53 +588,64 @@
   }
 
   // =========================================================================
-  // UPSTREAM BRANCH DATA RESOLVER
+  // UPSTREAM BRANCH DATA RESOLVER & PHYSICS EVALUATOR
   // =========================================================================
+
+  function evaluateBranchPhysics(envParams) {
+    const params = Object.assign({
+      o2_percent: 21.0,
+      pressure_atm: 1.0,
+      flow_velocity_cms: 10.0,
+      fuel: 'pmma',
+      h2_conc_pct: 0.0,
+      cabin_volume_m3: 28.0
+    }, envParams || {});
+
+    const evalData = (window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function')
+      ? window.StandaloneAPI.evaluateFireSafety(params)
+      : null;
+    const s2rData = (window.StandaloneAPI && typeof window.StandaloneAPI.computeSimToReal === 'function' && evalData)
+      ? window.StandaloneAPI.computeSimToReal(params, evalData)
+      : null;
+
+    return {
+      params: params,
+      evaluation: evalData,
+      sim_to_real: s2rData,
+      nearest_benchmark: (s2rData && s2rData.best_match) ? s2rData.best_match : null
+    };
+  }
 
   function getOrComputeNodeBranchData(sourceNodeId) {
     const srcNode = state.nodes.get(sourceNodeId);
     if (!srcNode) return null;
 
-    if (srcNode.data && srcNode.data.evaluation && srcNode.data.params) {
-      return srcNode.data;
-    }
-
     if (srcNode.type === 'variable') {
-      const params = Object.assign({}, srcNode.params);
-      const evalData = (window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function')
-        ? window.StandaloneAPI.evaluateFireSafety(params)
-        : null;
-      const s2rData = (window.StandaloneAPI && typeof window.StandaloneAPI.computeSimToReal === 'function' && evalData)
-        ? window.StandaloneAPI.computeSimToReal(params, evalData)
-        : null;
-      const data = {
-        params: params,
-        evaluation: evalData,
-        sim_to_real: s2rData,
-        nearest_benchmark: (s2rData && s2rData.best_match) ? s2rData.best_match : null
-      };
-      srcNode.data = data;
-      return data;
+      const branchData = evaluateBranchPhysics(srcNode.params);
+      srcNode.data = branchData;
+      return branchData;
     }
 
     const upstreamVar = findUpstreamNode(sourceNodeId, 'variable');
     if (upstreamVar) {
-      const params = Object.assign({}, upstreamVar.params);
-      const evalData = (window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function')
-        ? window.StandaloneAPI.evaluateFireSafety(params)
-        : null;
-      const s2rData = (window.StandaloneAPI && typeof window.StandaloneAPI.computeSimToReal === 'function' && evalData)
-        ? window.StandaloneAPI.computeSimToReal(params, evalData)
-        : null;
-      return {
-        params: params,
-        evaluation: evalData,
-        sim_to_real: s2rData,
-        nearest_benchmark: (s2rData && s2rData.best_match) ? s2rData.best_match : null
-      };
+      if (srcNode.data && srcNode.data.evaluation && Number.isFinite(srcNode.data.evaluation.fire_risk_pct) &&
+          srcNode.data.params && srcNode.data.params.o2_percent === upstreamVar.params.o2_percent &&
+          srcNode.data.params.pressure_atm === upstreamVar.params.pressure_atm &&
+          srcNode.data.params.flow_velocity_cms === upstreamVar.params.flow_velocity_cms &&
+          srcNode.data.params.fuel === upstreamVar.params.fuel) {
+        return srcNode.data;
+      }
+      return evaluateBranchPhysics(upstreamVar.params);
     }
 
-    return srcNode.data || null;
+    if (srcNode.data && srcNode.data.params) {
+      if (!srcNode.data.evaluation || !Number.isFinite(srcNode.data.evaluation.fire_risk_pct)) {
+        return evaluateBranchPhysics(srcNode.data.params);
+      }
+      return srcNode.data;
+    }
+
+    return null;
   }
 
   function resolveUpstreamBranchData(nodeId, inPin = 'in') {
@@ -645,6 +656,92 @@
       return getOrComputeNodeBranchData(anyWire.fromNode);
     }
     return getOrComputeNodeBranchData(wire.fromNode);
+  }
+
+  // =========================================================================
+  // AI MARKDOWN & TABLE FORMATTER
+  // =========================================================================
+
+  function formatMarkdownResponse(rawText) {
+    if (!rawText) return '<div style="color: var(--text-muted); font-style: italic;">No response generated.</div>';
+
+    let text = sanitize(rawText);
+
+    // Parse Markdown tables before inline block styling
+    const lines = text.split('\n');
+    const processedLines = [];
+    let inTable = false;
+    let tableHeader = null;
+    let tableRows = [];
+
+    const flushTable = () => {
+      if (tableHeader && tableRows.length > 0) {
+        const thCells = tableHeader.map(c => `<th>${c.trim()}</th>`).join('');
+        const trRows = tableRows.map(row => {
+          const tdCells = row.map(c => `<td>${c.trim()}</td>`).join('');
+          return `<tr>${tdCells}</tr>`;
+        }).join('');
+        processedLines.push(`<table class="ai-diff-table"><thead><tr>${thCells}</tr></thead><tbody>${trRows}</tbody></table>`);
+      }
+      inTable = false;
+      tableHeader = null;
+      tableRows = [];
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('|') && line.endsWith('|')) {
+        const cells = line.slice(1, -1).split('|');
+        const isSeparator = cells.every(c => /^[\s\-:]+$/.test(c));
+
+        if (!inTable) {
+          inTable = true;
+          tableHeader = cells;
+        } else if (isSeparator) {
+          continue;
+        } else {
+          tableRows.push(cells);
+        }
+      } else {
+        if (inTable) flushTable();
+        processedLines.push(lines[i]);
+      }
+    }
+    if (inTable) flushTable();
+
+    text = processedLines.join('\n');
+
+    // NASA tags & links
+    text = text.replace(/\[VERIFIED NASA PSI DATA\]\s*(https?:\/\/[^\s<]+)/g, (match, url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa" onclick="event.stopPropagation();">✓ [VERIFIED NASA PSI DATA] ↗</a>`;
+    });
+    text = text.replace(/\[VERIFIED NASA PSI DATA\]/g, () => {
+      return `<span class="badge-nasa">✓ [VERIFIED NASA PSI DATA]</span>`;
+    });
+    text = text.replace(/\[THEORETICAL EXTRAPOLATION[^\]]*\]/g, (match) => {
+      return `<span class="badge-theory">⚛ ${match}</span>`;
+    });
+
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, '<code class="diff-code">$1</code>');
+
+    // Headings
+    text = text.replace(/^###\s+(.+)$/gm, '<h4 class="ai-response-heading">$1</h4>');
+
+    // Bold text
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+
+    // Lists
+    text = text.replace(/^[-*]\s+(.+)$/gm, '<li class="ai-response-li">$1</li>');
+    text = text.replace(/((?:<li class="ai-response-li">.*?<\/li>\s*)+)/gs, '<ul class="ai-response-ul">$1</ul>');
+
+    // Paragraph cleanups
+    text = text.replace(/(<\/(?:table|ul|h4)>)\s*\n+/g, '$1');
+    text = text.replace(/\n+\s*(<(?:table|ul|h4))/g, '$1');
+    text = text.replace(/\n\n+/g, '<br><br>');
+    text = text.replace(/(?<!>)\n(?!<)/g, '<br>');
+
+    return text;
   }
 
   // -------------------------------------------------------------------------
@@ -1681,14 +1778,17 @@
       const dp = `+${dpVal.toFixed(2)} kPa`;
 
       const isH2 = params && ['h2', 'hydrogen'].includes(String(params.fuel || '').toLowerCase());
+      let co600 = 0.0;
       let coVal = '0.0 ppm';
       if (isH2) {
         coVal = '0.0 (H₂ Fuel)';
       } else if (evalData.time_series && Array.isArray(evalData.time_series.co_ppm) && evalData.time_series.co_ppm.length > 0) {
         const lastCO = evalData.time_series.co_ppm[evalData.time_series.co_ppm.length - 1];
-        coVal = `${Number(lastCO).toFixed(1)} ppm`;
+        co600 = Number(lastCO);
+        coVal = `${co600.toFixed(1)} ppm`;
       } else if (evalData.toxic_co_ppm_600s !== undefined) {
-        coVal = `${Number(evalData.toxic_co_ppm_600s).toFixed(1)} ppm`;
+        co600 = Number(evalData.toxic_co_ppm_600s);
+        coVal = `${co600.toFixed(1)} ppm`;
       } else {
         coVal = '24.5 ppm';
       }
@@ -1698,11 +1798,34 @@
       if (isH2) {
         smacStr = 'N/A (Carbon-free)';
       } else {
-        const tSmac = evalData.time_to_smac_sec !== undefined ? evalData.time_to_smac_sec
-                    : (simTel.time_to_smac_sec !== undefined ? simTel.time_to_smac_sec : 99999);
-        if (tSmac < 600) {
+        let tSmac = null;
+        if (evalData.time_to_smac_sec !== undefined && evalData.time_to_smac_sec < 600) {
+          tSmac = Number(evalData.time_to_smac_sec);
+        } else if (evalData.time_series && Array.isArray(evalData.time_series.co_ppm) && Array.isArray(evalData.time_series.t_sec)) {
+          const tArr = evalData.time_series.t_sec;
+          const coArr = evalData.time_series.co_ppm;
+          for (let i = 0; i < coArr.length; i++) {
+            if (coArr[i] >= 55.0) {
+              if (i === 0) {
+                tSmac = tArr[0];
+              } else {
+                const fraction = (55.0 - coArr[i - 1]) / Math.max(1e-5, (coArr[i] - coArr[i - 1]));
+                tSmac = tArr[i - 1] + fraction * (tArr[i] - tArr[i - 1]);
+              }
+              break;
+            }
+          }
+        } else if (co600 > 55.0) {
+          const coRate = evalData.co_rate_ppm_s || (co600 / 600.0);
+          tSmac = Math.max(1, Math.round(55.0 / Math.max(1e-4, coRate)));
+        }
+
+        if (tSmac !== null && tSmac < 600) {
           smacStr = `${Math.round(tSmac)} s (CRITICAL SMAC)`;
           isSmacCritical = true;
+        } else {
+          smacStr = '> 600 s (SAFE)';
+          isSmacCritical = false;
         }
       }
 
@@ -1981,6 +2104,14 @@
       if (!this.dataA) this.dataA = resolveUpstreamBranchData(this.id, 'in_a');
       if (!this.dataB) this.dataB = resolveUpstreamBranchData(this.id, 'in_b');
 
+      // Ensure dataA and dataB have complete physical evaluations with valid risk numbers
+      if (this.dataA && (!this.dataA.evaluation || !Number.isFinite(this.dataA.evaluation.fire_risk_pct))) {
+        this.dataA = evaluateBranchPhysics(this.dataA.params || this.dataA);
+      }
+      if (this.dataB && (!this.dataB.evaluation || !Number.isFinite(this.dataB.evaluation.fire_risk_pct))) {
+        this.dataB = evaluateBranchPhysics(this.dataB.params || this.dataB);
+      }
+
       const pA = this.dataA ? (this.dataA.params || {}) : null;
       const pB = this.dataB ? (this.dataB.params || {}) : null;
       const eA = this.dataA ? (this.dataA.evaluation || {}) : null;
@@ -1998,49 +2129,66 @@
         return;
       }
 
-      const o2A = pA ? Number(pA.o2_percent !== undefined ? pA.o2_percent : 21).toFixed(1) : '—';
-      const o2B = pB ? Number(pB.o2_percent !== undefined ? pB.o2_percent : 21).toFixed(1) : '—';
-      const deltaO2 = (pA && pB) ? (pB.o2_percent - pA.o2_percent).toFixed(1) : '—';
+      const o2A = (pA && Number.isFinite(Number(pA.o2_percent))) ? Number(pA.o2_percent).toFixed(1) : '—';
+      const o2B = (pB && Number.isFinite(Number(pB.o2_percent))) ? Number(pB.o2_percent).toFixed(1) : '—';
+      const deltaO2 = (pA && pB && Number.isFinite(Number(pA.o2_percent)) && Number.isFinite(Number(pB.o2_percent)))
+        ? (pB.o2_percent - pA.o2_percent).toFixed(1) : '—';
 
-      const pAtmA = pA ? Number(pA.pressure_atm !== undefined ? pA.pressure_atm : 1).toFixed(2) : '—';
-      const pAtmB = pB ? Number(pB.pressure_atm !== undefined ? pB.pressure_atm : 1).toFixed(2) : '—';
-      const deltaP = (pA && pB) ? (pB.pressure_atm - pA.pressure_atm).toFixed(2) : '—';
+      const pAtmA = (pA && Number.isFinite(Number(pA.pressure_atm))) ? Number(pA.pressure_atm).toFixed(2) : '—';
+      const pAtmB = (pB && Number.isFinite(Number(pB.pressure_atm))) ? Number(pB.pressure_atm).toFixed(2) : '—';
+      const deltaP = (pA && pB && Number.isFinite(Number(pA.pressure_atm)) && Number.isFinite(Number(pB.pressure_atm)))
+        ? (pB.pressure_atm - pA.pressure_atm).toFixed(2) : '—';
 
-      const vgA = pA ? Number(pA.flow_velocity_cms !== undefined ? pA.flow_velocity_cms : 10).toFixed(1) : '—';
-      const vgB = pB ? Number(pB.flow_velocity_cms !== undefined ? pB.flow_velocity_cms : 10).toFixed(1) : '—';
-      const deltaVg = (pA && pB) ? (pB.flow_velocity_cms - pA.flow_velocity_cms).toFixed(1) : '—';
+      const vgA = (pA && Number.isFinite(Number(pA.flow_velocity_cms))) ? Number(pA.flow_velocity_cms).toFixed(1) : '—';
+      const vgB = (pB && Number.isFinite(Number(pB.flow_velocity_cms))) ? Number(pB.flow_velocity_cms).toFixed(1) : '—';
+      const deltaVg = (pA && pB && Number.isFinite(Number(pA.flow_velocity_cms)) && Number.isFinite(Number(pB.flow_velocity_cms)))
+        ? (pB.flow_velocity_cms - pA.flow_velocity_cms).toFixed(1) : '—';
 
-      const tfA = eA ? Number(eA.t_flame_k || 1650).toFixed(0) : '—';
-      const tfB = eB ? Number(eB.t_flame_k || 1650).toFixed(0) : '—';
-      const deltaTf = (eA && eB) ? (eB.t_flame_k - eA.t_flame_k).toFixed(0) : '—';
+      const numTfA = eA ? (Number.isFinite(Number(eA.t_flame_k)) ? Number(eA.t_flame_k) : (Number.isFinite(Number(eA.flame_temp_k)) ? Number(eA.flame_temp_k) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.flame_temp_k))) ? Number(eA.sim_telemetry.flame_temp_k) : 1650))) : null;
+      const numTfB = eB ? (Number.isFinite(Number(eB.t_flame_k)) ? Number(eB.t_flame_k) : (Number.isFinite(Number(eB.flame_temp_k)) ? Number(eB.flame_temp_k) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.flame_temp_k))) ? Number(eB.sim_telemetry.flame_temp_k) : 1650))) : null;
+      const tfA = numTfA !== null ? numTfA.toFixed(0) : '—';
+      const tfB = numTfB !== null ? numTfB.toFixed(0) : '—';
+      const deltaTf = (numTfA !== null && numTfB !== null) ? (numTfB - numTfA).toFixed(0) : '—';
 
-      const vfA = eA ? Number(eA.flame_spread_rate_mm_s || 2).toFixed(2) : '—';
-      const vfB = eB ? Number(eB.flame_spread_rate_mm_s || 2).toFixed(2) : '—';
-      const deltaVf = (eA && eB) ? (eB.flame_spread_rate_mm_s - eA.flame_spread_rate_mm_s).toFixed(2) : '—';
+      const numVfA = eA ? (Number.isFinite(Number(eA.spread_rate_mm_s)) ? Number(eA.spread_rate_mm_s) : (Number.isFinite(Number(eA.flame_spread_rate_mm_s)) ? Number(eA.flame_spread_rate_mm_s) : 2.0)) : null;
+      const numVfB = eB ? (Number.isFinite(Number(eB.spread_rate_mm_s)) ? Number(eB.spread_rate_mm_s) : (Number.isFinite(Number(eB.flame_spread_rate_mm_s)) ? Number(eB.flame_spread_rate_mm_s) : 2.0)) : null;
+      const vfA = numVfA !== null ? numVfA.toFixed(2) : '—';
+      const vfB = numVfB !== null ? numVfB.toFixed(2) : '—';
+      const deltaVf = (numVfA !== null && numVfB !== null) ? (numVfB - numVfA).toFixed(2) : '—';
 
-      const fluxA = eA ? Number(eA.hull_heat_flux_kw_m2 || 5).toFixed(1) : '—';
-      const fluxB = eB ? Number(eB.hull_heat_flux_kw_m2 || 5).toFixed(1) : '—';
-      const deltaFlux = (eA && eB) ? (eB.hull_heat_flux_kw_m2 - eA.hull_heat_flux_kw_m2).toFixed(1) : '—';
+      const numFluxA = eA ? (Number.isFinite(Number(eA.hull_heat_flux_kw_m2)) ? Number(eA.hull_heat_flux_kw_m2) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eA.sim_telemetry.hull_heat_flux_kw_m2) : 5.0)) : null;
+      const numFluxB = eB ? (Number.isFinite(Number(eB.hull_heat_flux_kw_m2)) ? Number(eB.hull_heat_flux_kw_m2) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eB.sim_telemetry.hull_heat_flux_kw_m2) : 5.0)) : null;
+      const fluxA = numFluxA !== null ? numFluxA.toFixed(1) : '—';
+      const fluxB = numFluxB !== null ? numFluxB.toFixed(1) : '—';
+      const deltaFlux = (numFluxA !== null && numFluxB !== null) ? (numFluxB - numFluxA).toFixed(1) : '—';
 
-      const riskA = eA ? Number(eA.fire_risk_score || 0).toFixed(1) : '—';
-      const riskB = eB ? Number(eB.fire_risk_score || 0).toFixed(1) : '—';
-      const deltaRisk = (eA && eB) ? (eB.fire_risk_score - eA.fire_risk_score).toFixed(1) : '—';
+      const numRiskA = eA ? (Number.isFinite(Number(eA.fire_risk_pct)) ? Number(eA.fire_risk_pct) : (Number.isFinite(Number(eA.fire_risk_score)) ? Number(eA.fire_risk_score) : 4.0)) : null;
+      const numRiskB = eB ? (Number.isFinite(Number(eB.fire_risk_pct)) ? Number(eB.fire_risk_pct) : (Number.isFinite(Number(eB.fire_risk_score)) ? Number(eB.fire_risk_score) : 4.0)) : null;
+      const riskA = numRiskA !== null ? numRiskA.toFixed(1) : '—';
+      const riskB = numRiskB !== null ? numRiskB.toFixed(1) : '—';
+      const deltaRisk = (numRiskA !== null && numRiskB !== null) ? (numRiskB - numRiskA).toFixed(1) : '—';
 
-      const explA = eA ? Number(eA.explosion_risk_pct || 0).toFixed(1) : '—';
-      const explB = eB ? Number(eB.explosion_risk_pct || 0).toFixed(1) : '—';
-      const deltaExpl = (eA && eB) ? (eB.explosion_risk_pct - eA.explosion_risk_pct).toFixed(1) : '—';
+      const numExplA = eA ? (Number.isFinite(Number(eA.explosion_risk_pct)) ? Number(eA.explosion_risk_pct) : 0.0) : null;
+      const numExplB = eB ? (Number.isFinite(Number(eB.explosion_risk_pct)) ? Number(eB.explosion_risk_pct) : 0.0) : null;
+      const explA = numExplA !== null ? numExplA.toFixed(1) : '—';
+      const explB = numExplB !== null ? numExplB.toFixed(1) : '—';
+      const deltaExpl = (numExplA !== null && numExplB !== null) ? (numExplB - numExplA).toFixed(1) : '—';
+
+      const breachA = eA ? !!(eA.breach_outside_risk || eA.outside_breach || eA.hull_breach_predicted || (numFluxA && numFluxA >= 28.0)) : false;
+      const breachB = eB ? !!(eB.breach_outside_risk || eB.outside_breach || eB.hull_breach_predicted || (numFluxB && numFluxB >= 28.0)) : false;
 
       let riskDeltaClass = 'delta-neutral';
-      if (eA && eB) {
-        const dR = eB.fire_risk_score - eA.fire_risk_score;
+      if (numRiskA !== null && numRiskB !== null) {
+        const dR = numRiskB - numRiskA;
         if (dR < -0.5) riskDeltaClass = 'delta-safer';
         else if (dR > 0.5) riskDeltaClass = 'delta-danger';
       }
 
-      // Verdict
-      if (eA && eB) {
-        const scoreA = (eA.fire_risk_score || 0) + 2 * (eA.explosion_risk_pct || 0) + (eA.hull_breach_predicted ? 100 : 0);
-        const scoreB = (eB.fire_risk_score || 0) + 2 * (eB.explosion_risk_pct || 0) + (eB.hull_breach_predicted ? 100 : 0);
+      // Verdict calculation: lower cumulative hazard index indicates safer regime
+      if (numRiskA !== null && numRiskB !== null) {
+        const scoreA = numRiskA + 2.0 * (numExplA || 0) + (breachA ? 100 : 0) + (numFluxA && numFluxA >= 28.0 ? 50 : 0);
+        const scoreB = numRiskB + 2.0 * (numExplB || 0) + (breachB ? 100 : 0) + (numFluxB && numFluxB >= 28.0 ? 50 : 0);
+
         if (scoreA < scoreB - 1.0) {
           if (vText) vText.textContent = 'BRANCH A IS SAFER';
           if (vTag) { vTag.className = 'diff-verdict-tag safer-a'; vTag.textContent = 'BRANCH A SAFER'; }
@@ -2074,8 +2222,15 @@
       }
 
       try {
-        const branchDataA = resolveUpstreamBranchData(this.id, 'in_a') || this.dataA || {};
-        const branchDataB = resolveUpstreamBranchData(this.id, 'in_b') || this.dataB || {};
+        let branchDataA = resolveUpstreamBranchData(this.id, 'in_a') || this.dataA;
+        let branchDataB = resolveUpstreamBranchData(this.id, 'in_b') || this.dataB;
+
+        if (!branchDataA || !branchDataA.evaluation || !Number.isFinite(branchDataA.evaluation.fire_risk_pct)) {
+          branchDataA = evaluateBranchPhysics(branchDataA ? branchDataA.params || branchDataA : { o2_percent: 21.0 });
+        }
+        if (!branchDataB || !branchDataB.evaluation || !Number.isFinite(branchDataB.evaluation.fire_risk_pct)) {
+          branchDataB = evaluateBranchPhysics(branchDataB ? branchDataB.params || branchDataB : { o2_percent: 29.5 });
+        }
 
         const res = await fetch('/api/compare-blueprints', {
           method: 'POST',
@@ -2092,13 +2247,7 @@
         const result = await res.json();
 
         if (outBox) {
-          let html = sanitize(result.advisory_text || '');
-          html = html.replace(/###\s+(.+)/g, '<h4 style="color:#00E5FF; margin:6px 0;">$1</h4>');
-          html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
-          html = html.replace(/^- (.+)/gm, '<li>$1</li>');
-          html = html.replace(/(<li>.*<\/li>)/gs, '<ul style="margin-left: 14px;">$1</ul>');
-          html = html.replace(/\n\n/g, '<br>');
-          outBox.innerHTML = html;
+          outBox.innerHTML = formatMarkdownResponse(result.advisory_text || '');
         }
 
         this.data = result;
@@ -3844,35 +3993,7 @@
         `;
       }
 
-      let bodyHtml = sanitize(rawText);
-
-      // Replace tags
-      bodyHtml = bodyHtml.replace(/\[VERIFIED NASA PSI DATA\]\s*(https?:\/\/[^\s<]+)/g, (match, url) => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa">✓ [VERIFIED NASA PSI DATA] ↗</a>`;
-      });
-
-      bodyHtml = bodyHtml.replace(/\[VERIFIED NASA PSI DATA\]/g, () => {
-        return `<span class="badge-nasa">✓ [VERIFIED NASA PSI DATA]</span>`;
-      });
-
-      bodyHtml = bodyHtml.replace(/\[THEORETICAL EXTRAPOLATION[^\]]*\]/g, (match) => {
-        return `<span class="badge-theory">⚛ ${match}</span>`;
-      });
-
-      // Headers ###
-      bodyHtml = bodyHtml.replace(/###\s+(.+)/g, '<h3>$1</h3>');
-
-      // Bold **text**
-      bodyHtml = bodyHtml.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
-
-      // Bullets - text
-      bodyHtml = bodyHtml.replace(/^- (.+)/gm, '<li>$1</li>');
-      bodyHtml = bodyHtml.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-
-      // Line breaks
-      bodyHtml = bodyHtml.replace(/\n\n/g, '<br><br>');
-
-      html += `<div class="brief-body">${bodyHtml}</div>`;
+      html += `<div class="brief-body">${formatMarkdownResponse(rawText)}</div>`;
       container.innerHTML = html;
     }
   }
@@ -4413,7 +4534,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8', 'flame_blueprint_graph_v9'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);

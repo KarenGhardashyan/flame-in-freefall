@@ -421,9 +421,19 @@
     return {
       flight_status: flight_status,
       fire_risk_pct: Number(fire_risk_pct.toFixed(1)),
+      fire_risk_score: Number(fire_risk_pct.toFixed(1)),
       explosion_risk_pct: Number(explosion_risk_pct.toFixed(1)),
       breach_outside_risk: breach_outside_risk,
+      outside_breach: breach_outside_risk,
+      hull_breach_predicted: breach_outside_risk,
       damkohler_da: Number(da.toFixed(3)),
+      t_flame_k: Number(flame_temp_k.toFixed(1)),
+      flame_temp_k: Number(flame_temp_k.toFixed(1)),
+      hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2)),
+      time_to_smac_sec: Number(time_to_smac_sec.toFixed(1)),
+      time_to_smac_s: Number(time_to_smac_sec.toFixed(1)),
+      co_rate_ppm_s: Number(co_rate_ppm_s.toFixed(3)),
+      toxic_co_ppm_600s: Number(co_series_ppm[co_series_ppm.length - 1].toFixed(1)),
       spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
       flame_spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
       historical_analog: {
@@ -435,17 +445,23 @@
       sim_telemetry: {
         damkohler_da: Number(da.toFixed(3)),
         flame_temp_k: Number(flame_temp_k.toFixed(1)),
+        t_flame_k: Number(flame_temp_k.toFixed(1)),
         flame_color_mode: flame_color_mode,
         spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
+        flame_spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
         fingering_instability: fingering_instability,
         soot_density: soot_density,
         hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2)),
-        cabin_overpressure_kpa: Number(cabin_overpressure_kpa.toFixed(2))
+        cabin_overpressure_kpa: Number(cabin_overpressure_kpa.toFixed(2)),
+        time_to_smac_sec: Number(time_to_smac_sec.toFixed(1)),
+        toxic_co_ppm_600s: Number(co_series_ppm[co_series_ppm.length - 1].toFixed(1))
       },
       safety_metrics: {
         fire_risk_pct: Number(fire_risk_pct.toFixed(1)),
+        fire_risk_score: Number(fire_risk_pct.toFixed(1)),
         explosion_risk_pct: Number(explosion_risk_pct.toFixed(1)),
-        hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2))
+        hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2)),
+        breach_outside_risk: breach_outside_risk
       },
       time_series: {
         t_sec: t_series_sec,
@@ -974,8 +990,11 @@
     const pA = (branchA && branchA.params) ? branchA.params : (branchA || {});
     const pB = (branchB && branchB.params) ? branchB.params : (branchB || {});
 
-    const eA = (branchA && branchA.evaluation) ? branchA.evaluation : evaluateFireSafety(pA);
-    const eB = (branchB && branchB.evaluation) ? branchB.evaluation : evaluateFireSafety(pB);
+    // Ensure complete physical evaluation with fresh fallback
+    const eA = (branchA && branchA.evaluation && Number.isFinite(branchA.evaluation.fire_risk_pct))
+      ? branchA.evaluation : evaluateFireSafety(pA);
+    const eB = (branchB && branchB.evaluation && Number.isFinite(branchB.evaluation.fire_risk_pct))
+      ? branchB.evaluation : evaluateFireSafety(pB);
 
     const s2rA = (branchA && branchA.sim_to_real) ? branchA.sim_to_real : computeSimToReal(pA, eA);
     const s2rB = (branchB && branchB.sim_to_real) ? branchB.sim_to_real : computeSimToReal(pB, eB);
@@ -992,33 +1011,36 @@
     const v_b = Number(pB.flow_velocity_cms !== undefined ? pB.flow_velocity_cms : 10.0);
     const delta_v = v_b - v_a;
 
-    const tf_a = Number(eA.t_flame_k || 1650);
-    const tf_b = Number(eB.t_flame_k || 1650);
+    const tf_a = Number.isFinite(Number(eA.t_flame_k)) ? Number(eA.t_flame_k) : (Number.isFinite(Number(eA.flame_temp_k)) ? Number(eA.flame_temp_k) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.flame_temp_k))) ? Number(eA.sim_telemetry.flame_temp_k) : 1650));
+    const tf_b = Number.isFinite(Number(eB.t_flame_k)) ? Number(eB.t_flame_k) : (Number.isFinite(Number(eB.flame_temp_k)) ? Number(eB.flame_temp_k) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.flame_temp_k))) ? Number(eB.sim_telemetry.flame_temp_k) : 1650));
     const delta_tf = tf_b - tf_a;
 
-    const vf_a = Number(eA.flame_spread_rate_mm_s || 2.0);
-    const vf_b = Number(eB.flame_spread_rate_mm_s || 2.0);
+    const vf_a = Number.isFinite(Number(eA.spread_rate_mm_s)) ? Number(eA.spread_rate_mm_s) : (Number.isFinite(Number(eA.flame_spread_rate_mm_s)) ? Number(eA.flame_spread_rate_mm_s) : 2.0);
+    const vf_b = Number.isFinite(Number(eB.spread_rate_mm_s)) ? Number(eB.spread_rate_mm_s) : (Number.isFinite(Number(eB.flame_spread_rate_mm_s)) ? Number(eB.flame_spread_rate_mm_s) : 2.0);
     const delta_vf = vf_b - vf_a;
 
-    const flux_a = Number(eA.hull_heat_flux_kw_m2 || 5.0);
-    const flux_b = Number(eB.hull_heat_flux_kw_m2 || 5.0);
+    const flux_a = Number.isFinite(Number(eA.hull_heat_flux_kw_m2)) ? Number(eA.hull_heat_flux_kw_m2) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eA.sim_telemetry.hull_heat_flux_kw_m2) : 5.0);
+    const flux_b = Number.isFinite(Number(eB.hull_heat_flux_kw_m2)) ? Number(eB.hull_heat_flux_kw_m2) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eB.sim_telemetry.hull_heat_flux_kw_m2) : 5.0);
     const delta_flux = flux_b - flux_a;
 
-    const risk_a = Number(eA.fire_risk_score || 5.0);
-    const risk_b = Number(eB.fire_risk_score || 5.0);
+    const risk_a = Number.isFinite(Number(eA.fire_risk_pct)) ? Number(eA.fire_risk_pct) : (Number.isFinite(Number(eA.fire_risk_score)) ? Number(eA.fire_risk_score) : 4.0);
+    const risk_b = Number.isFinite(Number(eB.fire_risk_pct)) ? Number(eB.fire_risk_pct) : (Number.isFinite(Number(eB.fire_risk_score)) ? Number(eB.fire_risk_score) : 4.0);
     const delta_risk = risk_b - risk_a;
 
-    const expl_a = Number(eA.explosion_risk_pct || 0.0);
-    const expl_b = Number(eB.explosion_risk_pct || 0.0);
+    const expl_a = Number.isFinite(Number(eA.explosion_risk_pct)) ? Number(eA.explosion_risk_pct) : 0.0;
+    const expl_b = Number.isFinite(Number(eB.explosion_risk_pct)) ? Number(eB.explosion_risk_pct) : 0.0;
     const delta_expl = expl_b - expl_a;
+
+    const breach_a = !!(eA.breach_outside_risk || eA.outside_breach || eA.hull_breach_predicted || (flux_a >= 28.0));
+    const breach_b = !!(eB.breach_outside_risk || eB.outside_breach || eB.hull_breach_predicted || (flux_b >= 28.0));
 
     const match_a = Number((s2rA && s2rA.best_match && s2rA.best_match.match_pct) || (s2rA && s2rA.sim_to_real_confidence_pct) || 85.0);
     const match_b = Number((s2rB && s2rB.best_match && s2rB.best_match.match_pct) || (s2rB && s2rB.sim_to_real_confidence_pct) || 85.0);
     const delta_match = match_b - match_a;
 
     // Safety assessment: lower risk score indicates safer regime
-    const scoreA = risk_a + 2.0 * expl_a + (eA.hull_breach_predicted ? 100 : 0);
-    const scoreB = risk_b + 2.0 * expl_b + (eB.hull_breach_predicted ? 100 : 0);
+    const scoreA = risk_a + 2.0 * expl_a + (breach_a ? 100 : 0) + (flux_a >= 28.0 ? 50 : 0);
+    const scoreB = risk_b + 2.0 * expl_b + (breach_b ? 100 : 0) + (flux_b >= 28.0 ? 50 : 0);
 
     let saferBranch = 'EQUAL';
     let saferTextEn = 'Both configurations exhibit identical overall safety profiles.';
@@ -1035,7 +1057,7 @@
 - **Safer Configuration:** **BRANCH ${saferBranch}** (${saferTextEn})
 - **Delta Fire Risk (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Branch B more hazardous' : (delta_risk < 0 ? 'Branch B safer' : 'Identical')})
 - **Delta Explosion Risk (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
-- **Hull Breach Risk:** Branch A: **${eA.hull_breach_predicted ? 'YES ⚠️' : 'NO ✓'}** | Branch B: **${eB.hull_breach_predicted ? 'YES ⚠️' : 'NO ✓'}**
+- **Hull Breach Risk:** Branch A: **${breach_a ? 'YES ⚠️' : 'NO ✓'}** | Branch B: **${breach_b ? 'YES ⚠️' : 'NO ✓'}**
 
 ### 2. PHYSICAL DELTAS COMPARISON MATRIX
 | Metric | Branch A (Net 1) | Branch B (Net 2) | Delta (B - A) | Engineering Safety Impact |
