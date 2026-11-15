@@ -2152,6 +2152,13 @@
   // NODE 2: SIM (Spacecraft Cutaway & Verdict)
   // -------------------------------------------------------------------------
 
+  const SIM_CHAMBER_LENGTH_CM = 350;
+  const SIM_IGNITION_COLUMN = 13;
+  const SIM_IGNITION_ROW = 12;
+  const SIM_INITIAL_FRONT_CM = 6;
+  const SIM_HOT_PLUME_LIFETIME_S = 10;
+  const SIM_HULL_THERMAL_LIMIT = 28;
+
   class SimNode extends BaseNode {
     constructor(id, x, y, initialData = {}, width = 460, height = null, nodeScale = 1.0, accentColor = 'default') {
       super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, width, height, nodeScale, accentColor);
@@ -2385,10 +2392,10 @@
       const alpha_diff = 0.065;
       const d_diff = 0.075;
 
-      const fcX = 13;
-      const fcY = 12;
-      const frontRadius = this.frontRadius(evaluation.spread_rate_mm_s, time);
-      const sourceRadius = 2 + 7 * (frontRadius - 4) / 70;
+      const { frontCm } = this.flameFront(evaluation.spread_rate_mm_s, vg, time, mode);
+      const downstreamCells = Math.max(0.75, frontCm * (Nx - 1) / SIM_CHAMBER_LENGTH_CM);
+      const upstreamCells = Math.min(4, downstreamCells);
+      const sourceHalfHeight = Math.min(7, 1.8 + downstreamCells * 0.18);
 
       for (let i = 0; i < Nx; i++) {
         for (let j = 0; j < Ny; j++) {
@@ -2435,15 +2442,16 @@
           const lapT = this.fieldT[idxR] + this.fieldT[idxL] + this.fieldT[idxT] + this.fieldT[idxB] - 4.0 * T_c;
           const lapO2 = this.fieldO2[idxR] + this.fieldO2[idxL] + this.fieldO2[idxT] + this.fieldO2[idxB] - 4.0 * O2_c;
 
-          const dx = i - fcX;
-          const dy = j - fcY;
-          const r2 = (dx * dx) / 1.5 + dy * dy;
+          const dx = i - SIM_IGNITION_COLUMN;
+          const dy = j - SIM_IGNITION_ROW;
+          const r2 = (dx / (dx >= 0 ? downstreamCells : upstreamCells)) ** 2 +
+            (dy / sourceHalfHeight) ** 2;
 
           let Q_chem = 0;
           let S_O2 = 0;
 
-          if (!isExtinguished && O2_c > 0.02 && r2 < sourceRadius ** 2) {
-            const reaction = burn * Math.exp(-2 * r2 / sourceRadius ** 2) * (O2_c / Y_O2_inlet);
+          if (!isExtinguished && O2_c > 0.02 && r2 < 1) {
+            const reaction = burn * Math.exp(-2 * r2) * (O2_c / Y_O2_inlet);
             Q_chem = reaction * (T_flame_target - T_c) * 0.25;
             S_O2 = -reaction * O2_c * 0.16;
           }
@@ -2556,9 +2564,22 @@
       this.offscreenCtx.putImageData(this.offscreenImg, 0, 0);
     }
 
-    frontRadius(spreadRate, time) {
-      // Map a one-metre model extent into the cutaway with a smooth chamber boundary.
-      return 4 + 70 * Math.tanh(spreadRate * time / 1000);
+    flameFront(spreadRate, flowCms, time, mode) {
+      const wallDistanceCm = SIM_CHAMBER_LENGTH_CM * (1 - SIM_IGNITION_COLUMN / (this.gridNx - 1));
+      if (!mode || mode === 'extinguished') {
+        return { frontCm: 0, plumeCm: 0, touchesRightWall: false };
+      }
+      const spreadCms = spreadRate * 0.1;
+      const frontCm = SIM_INITIAL_FRONT_CM + spreadCms * time;
+      // A hot parcel emitted at t − age starts at the earlier flame front.
+      // The oldest parcel still hot leads the front only when airflow is faster.
+      const hotAge = mode === 'cool_blue' ? 0 : Math.min(time, SIM_HOT_PLUME_LIFETIME_S);
+      const plumeCm = frontCm + Math.max(0, flowCms - spreadCms) * hotAge;
+      return {
+        frontCm: Math.min(frontCm, wallDistanceCm),
+        plumeCm: Math.min(plumeCm, wallDistanceCm),
+        touchesRightWall: plumeCm >= wallDistanceCm
+      };
     }
 
     drawScene(ctx, w, h) {
@@ -2599,6 +2620,7 @@
       const Y_O2_inlet = Math.max(0.05, Math.min(1.0, o2_raw / 100.0));
       const mode = evaluation?.sim_telemetry.flame_color_mode;
       const explosive = mode === 'explosion_flash';
+      const front = this.flameFront(evaluation?.spread_rate_mm_s ?? 0, vg, time, mode);
       const warmup = time === 600 ? 1 : -Math.expm1(-time / 90) / -Math.expm1(-600 / 90);
       const heatFlux = (evaluation?.hull_heat_flux_kw_m2 ?? 0) * (explosive ? Math.exp(-time / 24) : warmup);
       const pressure = evaluation?.time_series.overpressure_kpa;
@@ -2618,8 +2640,8 @@
       }
       this.renderSolverToImageData(mode === 'cool_blue', Y_O2_inlet);
       let depletedO2 = Y_O2_inlet;
-      for (let i = 16; i < this.gridNx - 1; i++) {
-        depletedO2 = Math.min(depletedO2, this.fieldO2[i * this.gridNy + 12]);
+      for (let i = SIM_IGNITION_COLUMN + 3; i < this.gridNx - 1; i++) {
+        depletedO2 = Math.min(depletedO2, this.fieldO2[i * this.gridNy + SIM_IGNITION_ROW]);
       }
       this.hud.regime.textContent = ({
         extinguished: 'QUENCHED', cool_blue: 'COOL FLAME', sooty_yellow: 'HOT FLAME', explosion_flash: 'EXPLOSION FLASH'
@@ -2634,20 +2656,10 @@
       const cabinW = 266;
       const cabinH = 180;
       const radius = 24;
-
-      // Thermal hull wall radiation glow
-      if (heatFlux > 1.0) {
-        ctx.save();
-        const glowRad = Math.min(60, heatFlux * 0.35);
-        const hullGlow = ctx.createRadialGradient(cabinX + cabinW, cabinY + 90, 5, cabinX + cabinW, cabinY + 90, glowRad + 20);
-        hullGlow.addColorStop(0, `rgba(255, 60, 30, ${Math.min(0.85, heatFlux * 0.015)})`);
-        hullGlow.addColorStop(1, 'rgba(255, 40, 10, 0)');
-        ctx.fillStyle = hullGlow;
-        ctx.beginPath();
-        ctx.arc(cabinX + cabinW, cabinY + 90, glowRad + 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      const interior = { x: cabinX + 6, y: cabinY + 6, width: cabinW - 12, height: cabinH - 12 };
+      const pxPerCm = interior.width / SIM_CHAMBER_LENGTH_CM;
+      const flameX = interior.x + SIM_IGNITION_COLUMN / (this.gridNx - 1) * interior.width;
+      const flameY = interior.y + SIM_IGNITION_ROW / (this.gridNy - 1) * interior.height;
 
       // Outer Structural Shell
       ctx.save();
@@ -2668,21 +2680,20 @@
       // 2D Finite-Volume Solver Layer inside Cabin Interior
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12, radius - 4);
+      ctx.roundRect(interior.x, interior.y, interior.width, interior.height, radius - 4);
       ctx.clip();
 
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(this.offscreenCanvas, cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12);
-      const flameX = cabinX + 6 + (13 / this.gridNx) * (cabinW - 12);
-      const flameY = cabinY + cabinH / 2;
+      ctx.drawImage(this.offscreenCanvas, interior.x, interior.y, interior.width, interior.height);
       if (evaluation && this.simGridMode === 'flame_o2') {
-        this.drawFlameRegime(ctx, mode, time, flameX, flameY, evaluation, deltaP);
+        this.drawFlameRegime(ctx, mode, time, flameX, flameY, front.frontCm * pxPerCm, front.plumeCm * pxPerCm,
+          evaluation.sim_telemetry.soot_density);
       }
 
       // Flow Velocity Vectors V_g at Inlet (Forced ECLSS Ventilation Flow)
       ctx.save();
       const arrowLen = Math.min(26, Math.max(8, vg * 1.3));
-      const arrowYPositions = [cabinY + 45, cabinY + 75, cabinY + 105, cabinY + 135];
+      const arrowYPositions = [cabinY + 57, cabinY + 83, cabinY + 109, cabinY + 135];
       ctx.strokeStyle = '#00E5FF';
       ctx.fillStyle = '#00E5FF';
       ctx.lineWidth = 1.4;
@@ -2700,9 +2711,6 @@
         ctx.closePath();
         ctx.fill();
       });
-      ctx.font = '8px "JetBrains Mono"';
-      ctx.fillStyle = '#00E5FF';
-      ctx.fillText(`V_g = ${vg.toFixed(1)} cm/s`, cabinX + 16, cabinY + 34);
       ctx.restore();
 
 
@@ -2727,15 +2735,8 @@
       });
       ctx.globalAlpha = 1.0;
 
-      // Mode-specific labels inside solver viewport
+      // Thermal field scale
       if (this.simGridMode === 'thermal_hull') {
-        ctx.font = '8px "JetBrains Mono"';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'right';
-        ctx.fillText(`HULL FLUX: ${heatFlux.toFixed(2)} kW/m²`, cabinX + cabinW - 14, cabinY + 24);
-        ctx.fillStyle = heatFlux > 1.5 ? '#EF4444' : '#10B981';
-        ctx.fillText(`T_HULL: ${(25.0 + heatFlux * 14.5).toFixed(0)}°C`, cabinX + cabinW - 14, cabinY + 36);
-
         const barX = cabinX + cabinW - 10;
         const barY = cabinY + 44;
         const barH = 70;
@@ -2746,16 +2747,6 @@
         gradBar.addColorStop(1, '#06B6D4');
         ctx.fillStyle = gradBar;
         ctx.fillRect(barX - 4, barY, 4, barH);
-      } else {
-        ctx.font = '8px "JetBrains Mono"';
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
-        ctx.textAlign = 'left';
-        ctx.fillText(`INFLOW [${o2_raw.toFixed(1)}% O₂] →`, cabinX + 14, cabinY + 24);
-
-        if (Y_O2_inlet - depletedO2 > 0.002) {
-          ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
-          ctx.fillText(`[O₂ SHADOW WAKE]`, cabinX + 120, cabinY + 24);
-        }
       }
 
       ctx.restore();
@@ -2771,10 +2762,10 @@
         ctx.fillRect(gx, cabinY + cabinH - 14, 4, 6);
       }
 
-      // Localized Thermal Bulkhead Footprint on Right Wall
+      // Radiation can heat the right bulkhead before hot gas reaches it.
       ctx.save();
       const wallX = cabinX + cabinW - 5;
-      const wallY = cabinY + cabinH / 2;
+      const wallY = flameY;
       const fpRad = Math.min(50, Math.max(14, heatFlux * 1.8));
       const wallFootprint = ctx.createRadialGradient(wallX, wallY, 2, wallX, wallY, fpRad);
       wallFootprint.addColorStop(0, `rgba(255, 69, 0, ${Math.min(0.9, heatFlux * 0.04)})`);
@@ -2785,19 +2776,13 @@
       ctx.ellipse(wallX, wallY, 10, fpRad, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      if (heatFlux > 0.8) {
-        ctx.font = '8px "JetBrains Mono"';
-        ctx.fillStyle = heatFlux > 15.0 ? '#EF4444' : '#F59E0B';
-        ctx.textAlign = 'right';
-        ctx.fillText(`q″_w = ${heatFlux.toFixed(2)} kW/m²`, cabinX + cabinW - 14, cabinY + cabinH - 20);
-      }
       ctx.restore();
 
       // Exterior Spacecraft Hull Breach (Inside -> Outside Blowout into Vacuum)
-      if (heatFlux >= 28 || deltaP >= 45) {
+      if (front.touchesRightWall && heatFlux >= SIM_HULL_THERMAL_LIMIT) {
         ctx.save();
         const breachX = cabinX + cabinW;
-        const breachY = cabinY + 75;
+        const breachY = wallY;
 
         ctx.fillStyle = '#05070B';
         ctx.beginPath();
@@ -2835,8 +2820,8 @@
 
       // Module Observation Window
       ctx.save();
-      const winX = cabinX + 30;
-      const winY = cabinY + 35;
+      const winX = cabinX + 69;
+      const winY = cabinY + 62;
       ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 2;
@@ -2845,11 +2830,37 @@
       ctx.fill();
       ctx.stroke();
       ctx.restore();
+
+      const labelLeft = cabinX + 14;
+      const labelRight = cabinX + cabinW - 19;
+      this.drawSceneLabel(ctx, `INFLOW ${o2_raw.toFixed(1)}% O₂ →`, labelLeft, cabinY + 28, '#a5f3fc');
+      this.drawSceneLabel(ctx, `V_g = ${vg.toFixed(1)} cm/s`, labelLeft, cabinY + 42, '#a5f3fc');
+      if (this.simGridMode === 'thermal_hull') {
+        this.drawSceneLabel(ctx, `HULL FLUX ${heatFlux.toFixed(2)} kW/m²`, labelRight, cabinY + 28, '#ffffff', 'right');
+        this.drawSceneLabel(ctx, `T_HULL ${(25 + heatFlux * 14.5).toFixed(0)}°C`, labelRight, cabinY + 42, '#fda4af', 'right');
+      } else if (Y_O2_inlet - depletedO2 > 0.002) {
+        this.drawSceneLabel(ctx, 'O₂ DEPLETION WAKE', labelRight, cabinY + cabinH - 28, '#ddd6fe', 'right');
+      }
+      if (explosive) {
+        this.drawSceneLabel(ctx, `ΔP(t) ${deltaP.toFixed(2)} kPa`, labelRight, cabinY + cabinH - 43, '#ffe1e8', 'right');
+      }
     }
 
-    drawFlameRegime(ctx, mode, time, x, y, evaluation, deltaP) {
+    drawSceneLabel(ctx, text, x, y, color, align = 'left') {
       ctx.save();
-      const radius = this.frontRadius(evaluation.spread_rate_mm_s, time);
+      ctx.font = '9px monospace';
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      const width = ctx.measureText(text).width;
+      ctx.fillStyle = '#0b1523';
+      ctx.fillRect((align === 'right' ? x - width : x) - 3, y - 6, width + 6, 12);
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    drawFlameRegime(ctx, mode, time, x, y, frontLength, plumeLength, sootDensity) {
+      ctx.save();
       if (mode === 'extinguished') {
         ctx.strokeStyle = `rgba(200, 216, 232, ${0.30 * Math.exp(-time / 45)})`;
         for (let i = 0; i < 3; i++) {
@@ -2858,7 +2869,59 @@
           ctx.bezierCurveTo(x + 12, y - 9, x + 22, y + 16, x + 32 + time / 6, y - 4 * i);
           ctx.stroke();
         }
-      } else if (mode === 'explosion_flash') {
+        ctx.restore();
+        return;
+      }
+
+      const explosive = mode === 'explosion_flash';
+      const cool = mode === 'cool_blue';
+      const intensity = explosive ? Math.exp(-time / 24) : 1 - Math.exp(-time / 12);
+      const frontX = x + frontLength;
+      const plumeX = x + plumeLength;
+      const halfHeight = Math.min(43, 5 + frontLength * 0.22);
+      if (plumeX > frontX && intensity > 0) {
+        const plumeShoulder = x + plumeLength * 0.76;
+        const plume = ctx.createLinearGradient(x, y, plumeX, y);
+        plume.addColorStop(0, 'rgba(255, 89, 25, 0)');
+        plume.addColorStop(0.40, `rgba(255, 109, 35, ${0.50 * intensity})`);
+        plume.addColorStop(0.85, `rgba(255, 125, 54, ${0.76 * intensity})`);
+        plume.addColorStop(1, `rgba(255, 146, 72, ${0.42 * intensity})`);
+        ctx.fillStyle = plume;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.bezierCurveTo(x + plumeLength * 0.25, y - halfHeight, plumeShoulder, y - 18, plumeX, y);
+        ctx.bezierCurveTo(plumeShoulder, y + 18, x + plumeLength * 0.25, y + halfHeight, x, y);
+        ctx.fill();
+      }
+
+      if (time > 0) {
+        const left = x - Math.min(22, frontLength * 0.55);
+        const shoulder = x + frontLength * 0.60;
+        const glow = ctx.createLinearGradient(left, y, frontX, y);
+        if (cool) {
+          glow.addColorStop(0, 'rgba(53, 163, 249, 0)');
+          glow.addColorStop(0.62, `rgba(86, 186, 255, ${0.22 * intensity})`);
+          glow.addColorStop(1, `rgba(125, 237, 255, ${0.85 * intensity})`);
+        } else {
+          glow.addColorStop(0, 'rgba(255, 125, 40, 0)');
+          glow.addColorStop(0.26, `rgba(255, 251, 224, ${0.95 * intensity})`);
+          glow.addColorStop(0.68, `rgba(255, 187, 62, ${0.90 * intensity})`);
+          glow.addColorStop(1, `rgba(255, 105, 28, ${0.79 * intensity})`);
+        }
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.bezierCurveTo(x, y - halfHeight, shoulder, y - halfHeight * 0.75, frontX, y);
+        ctx.bezierCurveTo(shoulder, y + halfHeight * 0.75, x, y + halfHeight, left, y);
+        ctx.fill();
+        if (!cool && sootDensity > 0) {
+          ctx.strokeStyle = `rgba(59, 43, 46, ${sootDensity * intensity * 0.65})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      if (explosive) {
         const flash = Math.exp(-time / 30);
         const shockRadius = 8 + 112 * (1 - Math.exp(-time / 20));
         ctx.strokeStyle = `rgba(255, 109, 145, ${flash})`;
@@ -2866,26 +2929,6 @@
         ctx.beginPath();
         ctx.arc(x, y, shockRadius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = '#ffe1e8';
-        ctx.font = '10px monospace';
-        ctx.fillText(`ΔP(t) ${deltaP.toFixed(2)} kPa`, x + 36, y + 27);
-      } else if (time > 0) {
-        const cool = mode === 'cool_blue';
-        const r = radius + (cool ? 6 : 4) + Math.sin(time / 8) * 1.5;
-        const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-        glow.addColorStop(0, cool ? 'rgba(91, 175, 255, .04)' : 'rgba(255, 252, 225, .95)');
-        glow.addColorStop(0.48, cool ? 'rgba(118, 218, 255, .10)' : 'rgba(255, 196, 83, .84)');
-        glow.addColorStop(0.77, cool ? 'rgba(131, 225, 255, .65)' : 'rgba(245, 101, 26, .42)');
-        glow.addColorStop(1, cool ? 'rgba(63, 107, 245, 0)' : 'rgba(40, 27, 31, 0)');
-        ctx.fillStyle = glow;
-        ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
-        if (!cool && evaluation.sim_telemetry.soot_density > 0) {
-          ctx.strokeStyle = `rgba(59, 43, 46, ${evaluation.sim_telemetry.soot_density * 0.65})`;
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.ellipse(x, y, r * 0.9, r * 0.78, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        }
       }
       ctx.restore();
     }
