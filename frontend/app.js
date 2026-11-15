@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v8';
+  const STORAGE_KEY = 'flame_blueprint_graph_v9';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -25,15 +25,6 @@
       reset: 'Reset',
       cloud_online: 'CLOUD ENGINE // ONLINE',
       core_online: 'PORT 5000 // CORE ONLINE'
-    },
-    ru: {
-      add_node: '+ ДОБАВИТЬ НОДУ ▾',
-      autolayout: 'Авто-схема',
-      export: 'Экспорт (.json)',
-      import: 'Импорт (.json)',
-      reset: 'Сброс',
-      cloud_online: 'ОБЛАЧНЫЙ ДВИЖОК // ОНЛАЙН',
-      core_online: 'ПОРТ 5000 // ЯДРО ОНЛАЙН'
     }
   };
 
@@ -196,17 +187,21 @@
       const p2 = getPinWorldPos(w.toNode, w.toPin, false);
       const d = createBezierCurve(p1.x, p1.y, p2.x, p2.y);
 
+      const fromNodeObj = state.nodes.get(w.fromNode);
+      const accent = (fromNodeObj && fromNodeObj.accentColor) ? fromNodeObj.accentColor : 'default';
+
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.dataset.wireId = w.id;
+      g.dataset.accentColor = accent;
 
       // Base wire
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('class', `wire-path ${state.selectedWireId === w.id ? 'selected' : ''}`);
+      path.setAttribute('class', `wire-path ${state.selectedWireId === w.id ? 'selected' : ''} wire-accent-${accent}`);
       path.setAttribute('d', d);
 
       // Wire data flow animation
       const flowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      flowPath.setAttribute('class', 'wire-flow');
+      flowPath.setAttribute('class', `wire-flow wire-flow-accent-${accent}`);
       flowPath.setAttribute('d', d);
 
       g.appendChild(path);
@@ -267,25 +262,25 @@
 
     // Disallow IN -> IN connections
     if (isInputPin(fromPin) && isInputPin(toPin)) {
-      showToast(state.language === 'ru' ? 'Ошибка: нельзя соединять вход (IN) со входом (IN)' : 'Invalid: Cannot connect IN pin to IN pin');
+      showToast('Invalid: Cannot connect IN pin to IN pin');
       return;
     }
 
     // Disallow OUT -> OUT connections
     if (isOutputPin(fromPin) && isOutputPin(toPin)) {
-      showToast(state.language === 'ru' ? 'Ошибка: нельзя соединять выход (OUT) с выходом (OUT)' : 'Invalid: Cannot connect OUT pin to OUT pin');
+      showToast('Invalid: Cannot connect OUT pin to OUT pin');
       return;
     }
 
     // Must be OUT -> IN
     if (!isOutputPin(fromPin) || !isInputPin(toPin)) {
-      showToast(state.language === 'ru' ? 'Соединение должно быть строго OUT ➔ IN' : 'Connection must be directed OUT ➔ IN');
+      showToast('Connection must be directed OUT ➔ IN');
       return;
     }
 
     // Cycle check (strictly enforce DAG feed-forward flow)
     if (isReachable(toNode, fromNode)) {
-      showToast(state.language === 'ru' ? 'Обнаружен цикл: связи должны быть направленными (DAG)' : 'Cycle detected: connections must be feed-forward DAG');
+      showToast('Cycle detected: connections must be feed-forward DAG');
       return;
     }
 
@@ -337,22 +332,69 @@
   // =========================================================================
 
   class BaseNode {
-    constructor(id, type, title, x, y, width = 340, height = null) {
+    constructor(id, type, title, x, y, width = 340, height = null, nodeScale = 1.0, accentColor = 'default') {
       this.id = id;
       this.type = type;
       this.title = title;
       this.x = x;
       this.y = y;
-      this.width = width;
-      this.height = height;
+      this.baseWidth = width;
+      this.baseHeight = height;
+      this.nodeScale = Number(nodeScale) || 1.0;
+      this.width = Math.round(this.baseWidth * (this.nodeScale === 1.0 ? 1.0 : this.nodeScale));
+      this.height = this.baseHeight ? Math.round(this.baseHeight * (this.nodeScale === 1.0 ? 1.0 : this.nodeScale)) : null;
+      this.accentColor = accentColor || 'default';
       this.data = null;
       this.element = null;
+    }
+
+    setNodeScale(scale) {
+      this.nodeScale = Number(scale) || 1.0;
+      if (this.element) {
+        this.element.style.setProperty('--node-scale', this.nodeScale);
+        this.element.dataset.nodeScale = String(this.nodeScale);
+
+        this.width = Math.round(this.baseWidth * this.nodeScale);
+        this.element.style.width = `${this.width}px`;
+        if (this.baseHeight) {
+          this.height = Math.round(this.baseHeight * this.nodeScale);
+          this.element.style.height = `${this.height}px`;
+        } else {
+          this.element.style.minHeight = `${Math.round(220 * this.nodeScale)}px`;
+        }
+
+        this.element.querySelectorAll('.btn-node-scale').forEach(btn => {
+          btn.classList.toggle('active', parseFloat(btn.dataset.scale) === this.nodeScale);
+        });
+      }
+
+      if (typeof this.onResize === 'function') {
+        this.onResize(this.width, this.height);
+      }
+      renderAllWires();
+      saveGraphToLocalStorage();
+    }
+
+    setAccentColor(color) {
+      this.accentColor = color || 'default';
+      if (this.element) {
+        this.element.dataset.accentColor = this.accentColor;
+        this.element.querySelectorAll('.node-color-dot').forEach(dot => {
+          dot.classList.toggle('active', dot.dataset.color === this.accentColor);
+        });
+      }
+
+      renderAllWires();
+      saveGraphToLocalStorage();
     }
 
     createDOM(headerExtra = '', portsHtml = '', bodyHtml = '', portsExtraClass = '') {
       const el = document.createElement('div');
       el.id = this.id;
       el.className = `bp-node node node-type-${this.type}`;
+      el.dataset.nodeScale = String(this.nodeScale);
+      el.dataset.accentColor = this.accentColor;
+      el.style.setProperty('--node-scale', this.nodeScale);
       el.style.left = `${this.x}px`;
       el.style.top = `${this.y}px`;
       el.style.width = `${this.width}px`;
@@ -365,7 +407,22 @@
             <span class="node-type-badge">${this.type.toUpperCase()}</span>
             ${headerExtra}
           </div>
-          <button class="btn-node-close" title="Delete node">&times;</button>
+          <div class="node-header-tools">
+            <div class="node-scale-selector" title="Node Scale (1×, 1.5×, 2×)">
+              <button class="btn-node-scale ${this.nodeScale === 1.0 ? 'active' : ''}" data-scale="1">1×</button>
+              <button class="btn-node-scale ${this.nodeScale === 1.5 ? 'active' : ''}" data-scale="1.5">1.5×</button>
+              <button class="btn-node-scale ${this.nodeScale === 2.0 ? 'active' : ''}" data-scale="2">2×</button>
+            </div>
+            <div class="node-color-palette" title="Network Accent Color">
+              <button class="node-color-dot color-default ${this.accentColor === 'default' ? 'active' : ''}" data-color="default" title="Default Accent"></button>
+              <button class="node-color-dot color-cyan ${this.accentColor === 'cyan' ? 'active' : ''}" data-color="cyan" title="Cyan Accent (Branch 1)"></button>
+              <button class="node-color-dot color-amber ${this.accentColor === 'amber' ? 'active' : ''}" data-color="amber" title="Amber Accent (Branch 2)"></button>
+              <button class="node-color-dot color-emerald ${this.accentColor === 'emerald' ? 'active' : ''}" data-color="emerald" title="Emerald Accent (Safe)"></button>
+              <button class="node-color-dot color-rose ${this.accentColor === 'rose' ? 'active' : ''}" data-color="rose" title="Rose Accent (Critical)"></button>
+              <button class="node-color-dot color-violet ${this.accentColor === 'violet' ? 'active' : ''}" data-color="violet" title="Violet Accent (AI)"></button>
+            </div>
+            <button class="btn-node-close" title="Delete node">&times;</button>
+          </div>
         </div>
         ${portsHtml ? `<div class="node-ports-bar ${portsExtraClass}">${portsHtml}</div>` : ''}
         <div class="node-body">${bodyHtml}</div>
@@ -375,6 +432,24 @@
       this.element = el;
       this.bindDragEvents();
       this.bindResizeEvents();
+
+      // Scale selector clicks
+      el.querySelectorAll('.btn-node-scale').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const s = parseFloat(btn.dataset.scale);
+          if (s) this.setNodeScale(s);
+        });
+      });
+
+      // Color palette clicks
+      el.querySelectorAll('.node-color-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const c = dot.dataset.color;
+          if (c) this.setAccentColor(c);
+        });
+      });
 
       // Close button
       el.querySelector('.btn-node-close').addEventListener('click', (e) => {
@@ -512,17 +587,76 @@
     onDestroy() {}
   }
 
+  // =========================================================================
+  // UPSTREAM BRANCH DATA RESOLVER
+  // =========================================================================
+
+  function getOrComputeNodeBranchData(sourceNodeId) {
+    const srcNode = state.nodes.get(sourceNodeId);
+    if (!srcNode) return null;
+
+    if (srcNode.data && srcNode.data.evaluation && srcNode.data.params) {
+      return srcNode.data;
+    }
+
+    if (srcNode.type === 'variable') {
+      const params = Object.assign({}, srcNode.params);
+      const evalData = (window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function')
+        ? window.StandaloneAPI.evaluateFireSafety(params)
+        : null;
+      const s2rData = (window.StandaloneAPI && typeof window.StandaloneAPI.computeSimToReal === 'function' && evalData)
+        ? window.StandaloneAPI.computeSimToReal(params, evalData)
+        : null;
+      const data = {
+        params: params,
+        evaluation: evalData,
+        sim_to_real: s2rData,
+        nearest_benchmark: (s2rData && s2rData.best_match) ? s2rData.best_match : null
+      };
+      srcNode.data = data;
+      return data;
+    }
+
+    const upstreamVar = findUpstreamNode(sourceNodeId, 'variable');
+    if (upstreamVar) {
+      const params = Object.assign({}, upstreamVar.params);
+      const evalData = (window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function')
+        ? window.StandaloneAPI.evaluateFireSafety(params)
+        : null;
+      const s2rData = (window.StandaloneAPI && typeof window.StandaloneAPI.computeSimToReal === 'function' && evalData)
+        ? window.StandaloneAPI.computeSimToReal(params, evalData)
+        : null;
+      return {
+        params: params,
+        evaluation: evalData,
+        sim_to_real: s2rData,
+        nearest_benchmark: (s2rData && s2rData.best_match) ? s2rData.best_match : null
+      };
+    }
+
+    return srcNode.data || null;
+  }
+
+  function resolveUpstreamBranchData(nodeId, inPin = 'in') {
+    const wire = state.wires.find(w => w.toNode === nodeId && (w.toPin === inPin || !w.toPin || (inPin === 'in' && w.toPin.startsWith('in'))));
+    if (!wire) {
+      const anyWire = state.wires.find(w => w.toNode === nodeId);
+      if (!anyWire) return null;
+      return getOrComputeNodeBranchData(anyWire.fromNode);
+    }
+    return getOrComputeNodeBranchData(wire.fromNode);
+  }
+
   // -------------------------------------------------------------------------
   // NODE 0: NOTE AI (JARVIS Mission Architect)
   // -------------------------------------------------------------------------
 
   class NoteNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 380, height = null) {
-      super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 420, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, width, height, nodeScale, accentColor);
       this.noteText = 'Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s flow of PMMA in 28 m3. Check cabin pressure.';
       this.isRecording = false;
       this.recognition = null;
-      this.selectedLang = 'ru-RU';
       this.init();
     }
 
@@ -543,10 +677,6 @@
               <span class="voice-icon">🎙</span>
               <span class="voice-btn-text">VOICE INPUT</span>
             </button>
-            <div class="voice-lang-group">
-              <button class="btn-lang-toggle active" data-lang="ru-RU" id="${this.id}-lang-ru" title="Russian Language">RU</button>
-              <button class="btn-lang-toggle" data-lang="en-US" id="${this.id}-lang-en" title="English Language">EN</button>
-            </div>
             <button class="btn-compile-note" id="${this.id}-btn-compile" title="Compile note into Blueprint Architecture">
               <span>COMPILE TO BLUEPRINT</span>
             </button>
@@ -595,7 +725,7 @@
         const r = new SpeechRecognition();
         r.continuous = false;
         r.interimResults = false;
-        r.lang = this.selectedLang || 'ru-RU';
+        r.lang = 'en-US';
 
         r.onstart = () => {
           this.isRecording = true;
@@ -676,27 +806,6 @@
         this.noteText = textarea.value;
       });
 
-      const langRu = this.element.querySelector(`#${this.id}-lang-ru`);
-      const langEn = this.element.querySelector(`#${this.id}-lang-en`);
-      if (langRu && langEn) {
-        langRu.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.selectedLang = 'ru-RU';
-          langRu.classList.add('active');
-          langEn.classList.remove('active');
-          if (this.recognition) this.recognition.lang = 'ru-RU';
-          showToast('Voice language set to RU');
-        });
-        langEn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.selectedLang = 'en-US';
-          langEn.classList.add('active');
-          langRu.classList.remove('active');
-          if (this.recognition) this.recognition.lang = 'en-US';
-          showToast('Voice language set to EN');
-        });
-      }
-
       const voiceBtn = this.element.querySelector(`#${this.id}-btn-voice`);
       voiceBtn.addEventListener('click', () => {
         if (!this.recognition) {
@@ -709,7 +818,7 @@
           this.recognition.stop();
         } else {
           try {
-            this.recognition.lang = this.selectedLang || 'ru-RU';
+            this.recognition.lang = 'en-US';
             this.recognition.start();
           } catch (e) {
             console.warn('[SpeechRec] Start error:', e);
@@ -745,16 +854,15 @@
     async compile() {
       const compileBtn = this.element.querySelector(`#${this.id}-btn-compile`);
       compileBtn.disabled = true;
-      compileBtn.innerHTML = `<div class="spinner"></div> <span>${state.language === 'ru' ? 'КОМПИЛЯЦИЯ...' : 'COMPILING...'}</span>`;
+      compileBtn.innerHTML = `<div class="spinner"></div> <span>COMPILING...</span>`;
 
       try {
-        const lang = state.language || 'en';
         const res = await fetch(API_NOTE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             note_text: this.noteText,
-            language: lang
+            language: 'en'
           })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -796,7 +904,7 @@
         showToast('Compilation error: ' + err.message);
       } finally {
         compileBtn.disabled = false;
-        compileBtn.innerHTML = `<span>${state.language === 'ru' ? 'СКОМПИЛИРОВАТЬ В СХЕМУ' : 'COMPILE TO BLUEPRINT'}</span>`;
+        compileBtn.innerHTML = `<span>COMPILE TO BLUEPRINT</span>`;
       }
     }
 
@@ -820,15 +928,11 @@
       if (targetVars.length === 0) {
         if (card) {
           card.style.display = 'block';
-          const title = (state.language === 'ru') ? '✓ АРХИТЕКТУРА МИССИИ СКОМПИЛИРОВАНА' : '✓ MISSION ARCHITECTURE COMPILED';
-          const hint = (state.language === 'ru')
-            ? 'Скомпилировано (соедините пин OUT с ENV VARIABLES для применения)'
-            : 'Compiled (connect OUT pin to ENV VARIABLES to apply)';
           card.innerHTML = `
-            <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">${title}</div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">✓ MISSION ARCHITECTURE COMPILED</div>
             <div style="margin-top: 4px; color: var(--text-primary); font-size: 11px;">${sanitize(compiled.summary || '')}</div>
             <div style="margin-top: 6px; padding: 4px 8px; background: rgba(245, 158, 11, 0.12); border: 1px dashed #F59E0B; border-radius: 4px; color: #F59E0B; font-size: 9.5px; font-family: var(--font-mono);">
-              ℹ ${hint}
+              ℹ Compiled (connect OUT pin to ENV VARIABLES to apply)
             </div>
             ${compiled.suggested_query ? `<div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query)}</i></div>` : ''}
           `;
@@ -864,30 +968,11 @@
 
       if (card) {
         card.style.display = 'block';
-        const title = (state.language === 'ru') ? '✓ АРХИТЕКТУРА МИССИИ СКОМПИЛИРОВАНА' : '✓ MISSION ARCHITECTURE COMPILED';
         card.innerHTML = `
-          <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">${title}</div>
+          <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">✓ MISSION ARCHITECTURE COMPILED</div>
           <div style="margin-top: 4px; color: var(--text-primary); font-size: 11px;">${sanitize(compiled.summary || '')}</div>
           ${compiled.suggested_query ? `<div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query)}</i></div>` : ''}
         `;
-      }
-    }
-
-    onLanguageChange(lang) {
-      const compileBtn = this.element.querySelector(`#${this.id}-btn-compile span`);
-      if (compileBtn) {
-        compileBtn.textContent = lang === 'ru' ? 'СКОМПИЛИРОВАТЬ В СХЕМУ' : 'COMPILE TO BLUEPRINT';
-      }
-      const voiceText = this.element.querySelector(`#${this.id}-btn-voice .voice-btn-text`);
-      if (voiceText && !this.isRecording) {
-        voiceText.textContent = lang === 'ru' ? 'ГОЛОСОВОЙ ВВОД' : 'VOICE INPUT';
-      }
-      const statusEl = this.element.querySelector(`#${this.id}-voice-status`);
-      if (statusEl && !this.isRecording && !statusEl.classList.contains('listening')) {
-        statusEl.textContent = lang === 'ru' ? 'Готов к голосовому вводу или тексту' : 'Ready for voice input or typing';
-      }
-      if (this.data) {
-        this.applyCompiledPlan(this.data);
       }
     }
   }
@@ -907,8 +992,8 @@
   // -------------------------------------------------------------------------
 
   class VariableNode extends BaseNode {
-    constructor(id, x, y, initialParams = {}, width = 320, height = null) {
-      super(id, 'variable', 'ENV VARIABLES // FEED', x, y, width, height);
+    constructor(id, x, y, initialParams = {}, width = 320, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'variable', 'ENV VARIABLES // FEED', x, y, width, height, nodeScale, accentColor);
       this.params = Object.assign({
         o2_percent: 21.0,
         pressure_atm: 1.0,
@@ -1152,8 +1237,8 @@
   // -------------------------------------------------------------------------
 
   class SimToRealNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 440, height = null) {
-      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 440, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, width, height, nodeScale, accentColor);
       this.matchBy = 'physics';
       this.filterMission = 'all';
       this.filterFuel = 'all';
@@ -1450,8 +1535,8 @@
   // -------------------------------------------------------------------------
 
   class TableNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 490, height = 540) {
-      super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 490, height = 540, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height, nodeScale, accentColor);
       this.activeBenchmarkId = null;
       this.filterText = '';
       this.filterMode = 'relevant'; // 'relevant' (top 5) or 'all' (all 41)
@@ -1582,8 +1667,11 @@
       }
 
       const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
-      const vfVal = evalData.flame_spread_rate_mm_s !== undefined ? Number(evalData.flame_spread_rate_mm_s).toFixed(2)
-                  : (simTel.flame_spread_rate_mm_s !== undefined ? Number(simTel.flame_spread_rate_mm_s).toFixed(2) : '2.10');
+      const rawVf = (evalData.spread_rate_mm_s !== undefined && !isNaN(evalData.spread_rate_mm_s)) ? evalData.spread_rate_mm_s
+                  : ((evalData.flame_spread_rate_mm_s !== undefined && !isNaN(evalData.flame_spread_rate_mm_s)) ? evalData.flame_spread_rate_mm_s
+                  : ((simTel.spread_rate_mm_s !== undefined && !isNaN(simTel.spread_rate_mm_s)) ? simTel.spread_rate_mm_s
+                  : ((simTel.flame_spread_rate_mm_s !== undefined && !isNaN(simTel.flame_spread_rate_mm_s)) ? simTel.flame_spread_rate_mm_s : 2.10)));
+      const vfVal = Number(rawVf).toFixed(2);
 
       const fluxVal = evalData.hull_heat_flux_kw_m2 !== undefined ? Number(evalData.hull_heat_flux_kw_m2)
                     : (simTel.hull_heat_flux_kw_m2 !== undefined ? Number(simTel.hull_heat_flux_kw_m2) : 0.0);
@@ -1618,75 +1706,44 @@
         }
       }
 
-      const isRu = (state.language === 'ru');
       grid.innerHTML = `
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Режим горения:' : 'Combustion Regime:'}</span>
+          <span class="telemetry-summary-label">Combustion Regime:</span>
           <span class="telemetry-summary-value highlight-cyan">${sanitize(rawRegime)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Температура T_f:' : 'Flame Temp T_f:'}</span>
+          <span class="telemetry-summary-label">Flame Temp T_f:</span>
           <span class="telemetry-summary-value">${sanitize(tf)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Число Дамкёлера Da:' : 'Damköhler Da:'}</span>
+          <span class="telemetry-summary-label">Damköhler Da:</span>
           <span class="telemetry-summary-value">${sanitize(daVal)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Предел LOI_crit:' : 'Critical LOI_crit:'}</span>
+          <span class="telemetry-summary-label">Critical LOI_crit:</span>
           <span class="telemetry-summary-value">${sanitize(loiVal)}%</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Скорость фронта V_f:' : 'Spread Rate V_f:'}</span>
+          <span class="telemetry-summary-label">Spread Rate V_f:</span>
           <span class="telemetry-summary-value highlight-cyan">${sanitize(vfVal)} mm/s</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? "Тепловой поток q''_w:" : "Hull Heat Flux q''_w:"}</span>
+          <span class="telemetry-summary-label">Hull Heat Flux q''_w:</span>
           <span class="telemetry-summary-value ${fluxVal >= 28.0 ? 'highlight-danger' : (fluxVal > 15.0 ? 'highlight-cyan' : '')}">${sanitize(flux)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Пик избыточного ΔP:' : 'Peak ΔP Overpressure:'}</span>
+          <span class="telemetry-summary-label">Peak ΔP Overpressure:</span>
           <span class="telemetry-summary-value ${dpVal >= 45.0 ? 'highlight-danger' : ''}">${sanitize(dp)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">${isRu ? 'Токсичный CO @ 600с:' : 'Toxic CO @ 600s:'}</span>
+          <span class="telemetry-summary-label">Toxic CO @ 600s:</span>
           <span class="telemetry-summary-value">${sanitize(coVal)}</span>
         </div>
         <div class="telemetry-summary-item" style="grid-column: span 2;">
-          <span class="telemetry-summary-label">${isRu ? 'Время до SMAC 55 ppm:' : 'Time to SMAC 55 ppm:'}</span>
+          <span class="telemetry-summary-label">Time to SMAC 55 ppm:</span>
           <span class="telemetry-summary-value ${isSmacCritical ? 'highlight-danger' : 'highlight-safe'}">${sanitize(smacStr)}</span>
         </div>
       `;
-    }
-
-    onLanguageChange(lang) {
-      const isRu = (lang === 'ru');
-      const telTitle = this.element.querySelector('.telemetry-summary-section .table-section-title span:first-child');
-      if (telTitle) {
-        telTitle.textContent = isRu ? 'СВОДКА ТЕЛЕМЕТРИИ СИМУЛЯЦИИ' : 'SIMULATION TELEMETRY SUMMARY';
-      }
-      const expTitle = this.element.querySelector('.psi-runs-section .table-section-title span:first-child');
-      if (expTitle) {
-        expTitle.textContent = isRu ? 'СООТВЕТСТВУЮЩИЕ ПРОГОНЫ NASA PSI' : 'MATCHING NASA PSI EXPERIMENTAL RUNS';
-      }
-      const calibHint = this.element.querySelector('.psi-runs-section .table-section-title span:last-child');
-      if (calibHint) {
-        calibHint.textContent = isRu ? 'КЛИК ПО СТРОКЕ ДЛЯ КАЛИБРОВКИ' : 'CLICK ROW TO CALIBRATE';
-      }
-      const btnRel = this.element.querySelector(`.btn-table-filter[data-mode="relevant"]`);
-      if (btnRel) {
-        btnRel.textContent = isRu ? 'РЕЛЕВАНТНЫЕ (ТОП 5)' : 'RELEVANT (TOP 5)';
-      }
-      const btnAll = this.element.querySelector(`.btn-table-filter[data-mode="all"]`);
-      if (btnAll) {
-        btnAll.textContent = isRu ? 'ВСЕ 41 ПРОГОН' : 'ALL 41 RUNS';
-      }
-      const search = this.element.querySelector(`#${this.id}-search`);
-      if (search) {
-        search.placeholder = isRu ? 'Фильтр по прогонам (PMMA, Saffire, 21%, BASS)...' : 'Filter runs (PMMA, Saffire, 21%, BASS)...';
-      }
-      this.renderTelemetrySummary();
-      this.renderMatrix();
     }
 
     renderMatrix() {
@@ -1823,8 +1880,8 @@
   // -------------------------------------------------------------------------
 
   class AiDiffNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 520, height = null) {
-      super(id, 'aidiff', 'AI DIFF // COMPARATOR', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 520, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'aidiff', 'AI DIFF // COMPARATOR', x, y, width, height, nodeScale, accentColor);
       this.dataA = null;
       this.dataB = null;
       this.diffQuery = 'Compare Branch A and Branch B microgravity fire risks';
@@ -1921,6 +1978,9 @@
     }
 
     updateDiffView() {
+      if (!this.dataA) this.dataA = resolveUpstreamBranchData(this.id, 'in_a');
+      if (!this.dataB) this.dataB = resolveUpstreamBranchData(this.id, 'in_b');
+
       const pA = this.dataA ? (this.dataA.params || {}) : null;
       const pB = this.dataB ? (this.dataB.params || {}) : null;
       const eA = this.dataA ? (this.dataA.evaluation || {}) : null;
@@ -2014,15 +2074,17 @@
       }
 
       try {
-        const lang = state.language || 'en';
+        const branchDataA = resolveUpstreamBranchData(this.id, 'in_a') || this.dataA || {};
+        const branchDataB = resolveUpstreamBranchData(this.id, 'in_b') || this.dataB || {};
+
         const res = await fetch('/api/compare-blueprints', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            branch_a: this.dataA || {},
-            branch_b: this.dataB || {},
+            branch_a: branchDataA,
+            branch_b: branchDataB,
             query: this.diffQuery,
-            language: lang
+            language: 'en'
           })
         });
 
@@ -2043,8 +2105,7 @@
         propagateDataFrom(this.id, result);
 
         // Spawn a new connected AI BRIEF node to the right
-        const title = lang === 'ru' ? 'AI BRIEF // ДИФФЕРЕНЦИАЛЬНЫЙ АНАЛИЗ' : 'AI BRIEF // DIFFERENTIAL SAFETY';
-        const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title });
+        const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' }, null, null, this.nodeScale, this.accentColor);
         addWire(this.id, 'out', briefNode.id, 'in');
         briefNode.setBriefContent(result, this.diffQuery);
         saveGraphToLocalStorage();
@@ -2067,8 +2128,8 @@
   // -------------------------------------------------------------------------
 
   class SimNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 460, height = null) {
-      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 460, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, width, height, nodeScale, accentColor);
       this.animFrameId = null;
       this.simGridMode = 'flame_o2'; // 'flame_o2' or 'thermal_hull'
       this.gridNx = 48;
@@ -2777,13 +2838,7 @@
             `Ventilation Dynamics: Forced ECLSS flow V_g = ${vgVal.toFixed(1)} cm/s at 0g microgravity (LOI_crit = ${loiVal}%).`,
             `Atmospheric Composition: ${o2Val.toFixed(1)}% O₂ in compartment (CO accumulation monitored vs NASA SMAC 55 ppm).`
           ];
-          const reasonsRu = [
-            `Режим горения: ${rMode} (Число Дамкёлера Da ≈ ${daVal} против критического Da_ext = 0.45).`,
-            `Тепловая и конструкционная нагрузка: локальный тепловой поток = ${qVal} кВт/м² (предел: 28 кВт/м²), Delta P = ${dpVal} кПа.`,
-            `Динамика вентиляции: принудительный обдув СЖО V_g = ${vgVal.toFixed(1)} см/с при 0g (LOI_crit = ${loiVal}%).`,
-            `Атмосферный состав: ${o2Val.toFixed(1)}% O₂ в отсеке (накопление CO контролируется по норме NASA SMAC 55 ppm).`
-          ];
-          reasonsList.innerHTML = (isRu ? reasonsRu : reasonsEn).map(r => `<li>${sanitize(r)}</li>`).join('');
+          reasonsList.innerHTML = reasonsEn.map(r => `<li>${sanitize(r)}</li>`).join('');
         }
       }
 
@@ -2809,6 +2864,12 @@
       const container = this.element.querySelector('.cutaway-canvas-container');
       const canvas = this.element.querySelector(`#${this.id}-canvas`);
       if (container && canvas) {
+        if (this.nodeScale && this.nodeScale > 1.0) {
+          const scaledH = Math.round(180 * this.nodeScale);
+          container.style.height = `${scaledH}px`;
+        } else {
+          container.style.height = '';
+        }
         const cw = container.clientWidth;
         const ch = container.clientHeight;
         if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
@@ -2829,8 +2890,8 @@
   // -------------------------------------------------------------------------
 
   class GraphNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 460, height = null) {
-      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 460, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, width, height, nodeScale, accentColor);
       this.selectedChannel = 'spread'; // 'spread', 'temp', 'pressure', 'co'
       this.viewMode = 'curves'; // 'curves' or 'table'
       this.init();
@@ -3591,6 +3652,12 @@
       const container = this.element.querySelector('.graph-canvas-container');
       const canvas = this.element.querySelector(`#${this.id}-graph-canvas`);
       if (container && canvas) {
+        if (this.nodeScale && this.nodeScale > 1.0) {
+          const scaledH = Math.round(205 * this.nodeScale);
+          container.style.height = `${scaledH}px`;
+        } else {
+          container.style.height = '';
+        }
         const cw = container.clientWidth;
         const ch = container.clientHeight;
         if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
@@ -3611,9 +3678,9 @@
   // -------------------------------------------------------------------------
 
   class PromptNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 380, height = null) {
-      super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, width, height);
-      this.query = (initialData && initialData.query) || 'Оценить риск взрыва и пробоя гермооболочки';
+    constructor(id, x, y, initialData = {}, width = 380, height = null, nodeScale = 1.0, accentColor = 'default') {
+      super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, width, height, nodeScale, accentColor);
+      this.query = (initialData && initialData.query) || 'Evaluate hull breach and explosion risk';
       this.init();
     }
 
@@ -3642,9 +3709,9 @@
 
         <div class="quick-prompts-group">
           <div class="quick-prompts-title">Quick Action Blueprints</div>
-          <button class="btn-quick-prompt" data-q="Оценить риск взрыва и пробоя">⚡ Оценить риск взрыва и пробоя</button>
-          <button class="btn-quick-prompt" data-q="Сравнить с тестами NASA PSI">🔬 Сравнить с тестами NASA PSI</button>
-          <button class="btn-quick-prompt" data-q="План действий для ECLSS">🚨 План действий для ECLSS</button>
+          <button class="btn-quick-prompt" data-q="Evaluate hull breach and explosion risk">⚡ Evaluate Breach & Explosion Risk</button>
+          <button class="btn-quick-prompt" data-q="Compare with NASA PSI flight tests">🔬 Compare with NASA PSI Tests</button>
+          <button class="btn-quick-prompt" data-q="ECLSS action plan for ventilation">🚨 ECLSS Action Plan</button>
         </div>
 
         <button class="btn-execute-prompt" id="${this.id}-btn-exec">
@@ -3684,13 +3751,21 @@
       execBtn.innerHTML = `<div class="spinner"></div> <span>ANALYZING PHYSICAL TELEMETRY...</span>`;
 
       try {
-        const lang = state.language || 'en';
+        const branchData = resolveUpstreamBranchData(this.id, 'in') || this.data || {};
+        const params = branchData.params || {};
+        let evaluation = branchData.evaluation || null;
+        let nearest_benchmark = branchData.nearest_benchmark || (branchData.sim_to_real ? branchData.sim_to_real.best_match : null);
+
+        if (!evaluation && window.StandaloneAPI && typeof window.StandaloneAPI.evaluateFireSafety === 'function') {
+          evaluation = window.StandaloneAPI.evaluateFireSafety(params);
+        }
+
         const payload = {
           user_query: this.query,
-          params: (this.data && this.data.params) ? this.data.params : {},
-          evaluation: (this.data && this.data.evaluation) ? this.data.evaluation : null,
-          nearest_benchmark: (this.data && this.data.nearest_benchmark) ? this.data.nearest_benchmark : null,
-          language: lang
+          params: params,
+          evaluation: evaluation,
+          nearest_benchmark: nearest_benchmark,
+          language: 'en'
         };
 
         const res = await fetch(API_PROMPT_URL, {
@@ -3714,41 +3789,11 @@
     }
 
     spawnBriefNode(result) {
-      const title = state.language === 'ru' ? 'AI BRIEF // СОВЕТНИК ECLSS' : 'AI BRIEF // ECLSS ADVISOR';
-      const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title });
+      const title = 'AI BRIEF // ECLSS ADVISOR';
+      const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title }, null, null, this.nodeScale, this.accentColor);
       addWire(this.id, 'out', briefNode.id, 'in');
       briefNode.setBriefContent(result, this.query);
       saveGraphToLocalStorage();
-    }
-
-    onLanguageChange(lang) {
-      const quickGroup = this.element.querySelector('.quick-prompts-group');
-      if (!quickGroup) return;
-
-      if (lang === 'ru') {
-        quickGroup.innerHTML = `
-          <div class="quick-prompts-title">Быстрые сценарии анализа</div>
-          <button class="btn-quick-prompt" data-q="Оценить риск взрыва и пробоя">⚡ Оценить риск взрыва и пробоя</button>
-          <button class="btn-quick-prompt" data-q="Сравнить с тестами NASA PSI">🔬 Сравнить с тестами NASA PSI</button>
-          <button class="btn-quick-prompt" data-q="План действий для ECLSS">🚨 План действий для ECLSS</button>
-        `;
-      } else {
-        quickGroup.innerHTML = `
-          <div class="quick-prompts-title">Quick Action Blueprints</div>
-          <button class="btn-quick-prompt" data-q="Evaluate hull breach and explosion risk">⚡ Evaluate Breach & Explosion Risk</button>
-          <button class="btn-quick-prompt" data-q="Compare with NASA PSI flight tests">🔬 Compare with NASA PSI Tests</button>
-          <button class="btn-quick-prompt" data-q="ECLSS action plan for ventilation">🚨 ECLSS Action Plan</button>
-        `;
-      }
-
-      quickGroup.querySelectorAll('.btn-quick-prompt').forEach(btn => {
-        btn.addEventListener('click', () => {
-          this.query = btn.dataset.q;
-          const textarea = this.element.querySelector(`#${this.id}-query-text`);
-          if (textarea) textarea.value = this.query;
-          this.execute();
-        });
-      });
     }
   }
 
@@ -3757,9 +3802,9 @@
   // -------------------------------------------------------------------------
 
   class BriefNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 440, height = null) {
-      const title = (initialData && initialData.title) || (state.language === 'ru' ? 'AI BRIEF // СОВЕТНИК ECLSS' : 'AI BRIEF // ECLSS ADVISOR');
-      super(id, 'brief', title, x, y, width, height);
+    constructor(id, x, y, initialData = {}, width = 440, height = null, nodeScale = 1.0, accentColor = 'default') {
+      const title = (initialData && initialData.title) || 'AI BRIEF // ECLSS ADVISOR';
+      super(id, 'brief', title, x, y, width, height, nodeScale, accentColor);
       this.init();
     }
 
@@ -3836,29 +3881,29 @@
   // NODE FACTORY & LIFECYCLE
   // =========================================================================
 
-  function spawnNode(type, x, y, initialData = {}, width = null, height = null) {
+  function spawnNode(type, x, y, initialData = {}, width = null, height = null, nodeScale = 1.0, accentColor = 'default') {
     state.nodeCounter++;
     const id = `node_${state.nodeCounter}`;
     let node = null;
 
     if (type === 'note') {
-      node = new NoteNode(id, x, y, initialData, width || 420, height);
+      node = new NoteNode(id, x, y, initialData, width || 420, height, nodeScale, accentColor);
     } else if (type === 'variable') {
-      node = new VariableNode(id, x, y, initialData, width || 380, height);
+      node = new VariableNode(id, x, y, initialData, width || 380, height, nodeScale, accentColor);
     } else if (type === 'simtoreal') {
-      node = new SimToRealNode(id, x, y, initialData, width || 430, height);
+      node = new SimToRealNode(id, x, y, initialData, width || 430, height, nodeScale, accentColor);
     } else if (type === 'table') {
-      node = new TableNode(id, x, y, initialData, width || 580, height || 440);
+      node = new TableNode(id, x, y, initialData, width || 580, height || 440, nodeScale, accentColor);
     } else if (type === 'aidiff') {
-      node = new AiDiffNode(id, x, y, initialData, width || 520, height);
+      node = new AiDiffNode(id, x, y, initialData, width || 520, height, nodeScale, accentColor);
     } else if (type === 'sim') {
-      node = new SimNode(id, x, y, initialData, width || 460, height);
+      node = new SimNode(id, x, y, initialData, width || 460, height, nodeScale, accentColor);
     } else if (type === 'graph') {
-      node = new GraphNode(id, x, y, initialData, width || 460, height);
+      node = new GraphNode(id, x, y, initialData, width || 460, height, nodeScale, accentColor);
     } else if (type === 'prompt') {
-      node = new PromptNode(id, x, y, initialData, width || 380, height);
+      node = new PromptNode(id, x, y, initialData, width || 380, height, nodeScale, accentColor);
     } else if (type === 'brief') {
-      node = new BriefNode(id, x, y, initialData, width || 440, height);
+      node = new BriefNode(id, x, y, initialData, width || 440, height, nodeScale, accentColor);
     }
 
     if (node) {
@@ -4044,14 +4089,14 @@
     });
   }
 
-  function applyLanguage(lang) {
-    state.language = lang;
-    window.currentAppLanguage = lang;
-    localStorage.setItem('flame_blueprint_lang', lang);
+  function applyLanguage(lang = 'en') {
+    state.language = 'en';
+    window.currentAppLanguage = 'en';
+    localStorage.setItem('flame_blueprint_lang', 'en');
     const langText = document.getElementById('lang-text');
-    if (langText) langText.textContent = lang.toUpperCase();
+    if (langText) langText.textContent = 'EN';
 
-    const dict = I18N[lang] || I18N.en;
+    const dict = I18N.en || {};
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.dataset.i18n;
       if (dict[key]) {
@@ -4061,7 +4106,7 @@
 
     state.nodes.forEach(n => {
       if (typeof n.onLanguageChange === 'function') {
-        n.onLanguageChange(lang);
+        n.onLanguageChange('en');
       }
     });
   }
@@ -4111,42 +4156,6 @@
         const nextTheme = state.theme === 'light' ? 'dark' : 'light';
         applyTheme(nextTheme);
         showToast(`Theme switched to ${nextTheme.toUpperCase()}`);
-      });
-    }
-
-    // Language toggle
-    const btnLang = document.getElementById('btn-lang-toggle');
-    if (btnLang) {
-      btnLang.addEventListener('click', () => {
-        const nextLang = state.language === 'en' ? 'ru' : 'en';
-        applyLanguage(nextLang);
-        showToast(`Language switched to ${nextLang.toUpperCase()}`);
-      });
-    }
-
-    // Scenario select dropdown (if present)
-    const scSelect = document.getElementById('scenario-select');
-    if (scSelect) {
-      scSelect.addEventListener('change', () => {
-        const scKey = scSelect.value;
-        const sc = SCENARIOS[scKey];
-        if (!sc) return;
-
-        let varNode = null;
-        for (const n of state.nodes.values()) {
-          if (n.type === 'variable') {
-            varNode = n;
-            break;
-          }
-        }
-
-        if (!varNode) {
-          varNode = spawnNode('variable', 40, 440, sc.params);
-        } else {
-          varNode.setParams(sc.params);
-        }
-
-        showToast(`Loaded scenario: ${sc.name}`);
       });
     }
 
@@ -4253,6 +4262,8 @@
         y: n.y,
         width: n.width,
         height: n.height || (n.element ? n.element.offsetHeight : null),
+        nodeScale: n.nodeScale || 1.0,
+        accentColor: n.accentColor || 'default',
         params: n.params || null
       })),
       wires: state.wires
@@ -4281,7 +4292,7 @@
         state.scale = data.scale || 0.95;
 
         data.nodes.forEach(n => {
-          spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height);
+          spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height, n.nodeScale || 1.0, n.accentColor || 'default');
         });
 
         data.wires.forEach(w => {
@@ -4388,6 +4399,8 @@
           y: n.y,
           width: n.width,
           height: n.height || (n.element ? n.element.offsetHeight : null),
+          nodeScale: n.nodeScale || 1.0,
+          accentColor: n.accentColor || 'default',
           params: n.params || null
         })),
         wires: state.wires
@@ -4400,7 +4413,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -4414,7 +4427,7 @@
       state.scale = data.scale || 0.92;
 
       data.nodes.forEach(n => {
-        spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height);
+        spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height, n.nodeScale || 1.0, n.accentColor || 'default');
       });
 
       if (Array.isArray(data.wires)) {

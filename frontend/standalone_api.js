@@ -424,6 +424,8 @@
       explosion_risk_pct: Number(explosion_risk_pct.toFixed(1)),
       breach_outside_risk: breach_outside_risk,
       damkohler_da: Number(da.toFixed(3)),
+      spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
+      flame_spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
       historical_analog: {
         name: analog_name,
         reason: analog_reason,
@@ -846,35 +848,27 @@
     }
 
     const fuel_labels = {
-      'pmma': 'PMMA Solid (Оргстекло)',
+      'pmma': 'PMMA Solid (Acrylic)',
       'sibal': 'SIBAL Cotton Fabric (Saffire)',
       'heptane': 'n-Heptane Droplet (FLEX)',
       'hydrogen': `Hydrogen H₂ Leak (${h2_conc_pct}%)`,
       'methane': `Methane CH₄ Leak (${h2_conc_pct}%)`
     };
 
-    let summary, suggested_query, followup;
-    if (lang === 'ru') {
-      summary = `Скомпилирована миссия: O₂=${o2_pct.toFixed(1)}%, P=${pressure_atm.toFixed(2)} атм, обдув=${flow_velocity_cms.toFixed(1)} см/с, топливо=${fuel_labels[fuel] || fuel}, V=${cabin_volume_m3.toFixed(0)} м³` +
-        (active_benchmark_id ? `, эталон=${active_benchmark_id}` : '') +
-        `, критерий=${match_by.toUpperCase()}.`;
-      if (graph_metric === 'pressure') {
-        suggested_query = `Оценить динамику нарастания избыточного давления в отсеке V=${cabin_volume_m3.toFixed(0)} м³ и риск гидродинамического пробоя гермооболочки.`;
-      } else if (graph_metric === 'co') {
-        suggested_query = `Оценить темп выделения токсичного угарного газа CO и время до превышения предела NASA SMAC 55 ppm.`;
-      } else if (graph_metric === 'spread') {
-        suggested_query = `Рассчитать скорость распространения фронта пламени по U-кривой обдува при V_g=${flow_velocity_cms.toFixed(1)} см/с.`;
-      } else {
-        suggested_query = `Оценить пожарный риск, тепловую нагрузку на корпус и статус безопасности при O₂=${o2_pct.toFixed(1)}% и P=${pressure_atm.toFixed(2)} атм.`;
-      }
-      followup = `Калибровка Sim-to-Real настроена по критерию ${match_by.toUpperCase()}` + (active_benchmark_id ? ` с эталоном ${active_benchmark_id}` : '.');
+    const summary = `Mission architecture compiled: O₂=${o2_pct.toFixed(1)}%, P=${pressure_atm.toFixed(2)} atm, flow=${flow_velocity_cms.toFixed(1)} cm/s, fuel=${fuel_labels[fuel] || fuel}, cabin volume=${cabin_volume_m3.toFixed(0)} m³` +
+      (active_benchmark_id ? `, benchmark=${active_benchmark_id}` : '') +
+      `, match_by=${match_by.toUpperCase()}.`;
+    let suggested_query = `Evaluate spacecraft fire safety margins and ${graph_metric} telemetry under current ECLSS flow conditions.`;
+    if (graph_metric === 'pressure') {
+      suggested_query = `Evaluate cabin overpressure accumulation in volume V=${cabin_volume_m3.toFixed(0)} m³ and hull breach risk.`;
+    } else if (graph_metric === 'co') {
+      suggested_query = `Assess toxic carbon monoxide (CO) emission rate and time to reach NASA SMAC 55 ppm limit.`;
+    } else if (graph_metric === 'spread') {
+      suggested_query = `Calculate flame front spread rate along U-curve at flow velocity V_g=${flow_velocity_cms.toFixed(1)} cm/s.`;
     } else {
-      summary = `Mission compiled: O₂=${o2_pct.toFixed(1)}%, P=${pressure_atm.toFixed(2)} atm, drift=${flow_velocity_cms.toFixed(1)} cm/s, fuel=${fuel}, volume=${cabin_volume_m3.toFixed(0)} m³` +
-        (active_benchmark_id ? `, benchmark=${active_benchmark_id}` : '') +
-        `, match_by=${match_by.toUpperCase()}.`;
-      suggested_query = `Evaluate spacecraft fire safety margins and ${graph_metric} telemetry under current ECLSS flow conditions.`;
-      followup = `Sim-to-Real calibration configured by ${match_by.toUpperCase()}.`;
+      suggested_query = `Evaluate fire risk, thermal hull heat flux load, and overall safety status at O₂=${o2_pct.toFixed(1)}% and P=${pressure_atm.toFixed(2)} atm.`;
     }
+    const followup = `Sim-to-Real calibration configured by ${match_by.toUpperCase()}` + (active_benchmark_id ? ` with benchmark ${active_benchmark_id}.` : '.');
 
     return {
       source: 'standalone-jarvis-compiler',
@@ -942,44 +936,11 @@
     const lang = String(language || 'ru').toLowerCase();
     let text;
 
-    let da_desc_ru = 'диффузионно-контролируемое устойчивое горение';
-    if (color_mode === 'extinguished') da_desc_ru = 'радиационное гашение (Da < 0.45)';
-    else if (color_mode === 'cool_blue') da_desc_ru = 'низкотемпературная NTC кинетика холодного пламени (600–800 K)';
-
-    let u_curve_ru = 'поддерживается ламинарный приток окислителя';
-    if (vg_cms < 1.5) u_curve_ru = 'наблюдается радиационное самозатухание в покое';
-    else if (vg_cms >= 15.0 && vg_cms <= 30.0) u_curve_ru = 'режим находится в зоне критического сквозняка 15–30 см/с с максимальным притоком окислителя';
-    else if (vg_cms >= 55.0) u_curve_ru = 'действует аэродинамический срыв пламени';
-
     let da_desc_en = 'vigorous diffusion burning';
     if (color_mode === 'extinguished') da_desc_en = 'radiative extinction';
     else if (color_mode === 'cool_blue') da_desc_en = 'cool flame NTC branch';
 
-    if (lang === 'ru') {
-      text = `### 1. ВЕРДИКТ (FLIGHT SAFETY VERDICT)
-- **Операционное решение:** \`${status}\`
-- **Пожарный риск (Fire Risk):** **${fire_risk.toFixed(1)}%** | **Взрывной риск (Explosion Risk):** **${expl_risk.toFixed(1)}%**
-- **Угроза прорыва гермооболочки (Hull Breach):** **${breach ? 'ДА (КРИТИЧНО // НАРУШЕНИЕ ПРЕДЕЛА 45 кПа / 28 кВт/м²)' : 'НЕТ (В ПРЕДЕЛАХ НОРМЫ)'}**
-- **Режим горения:** **${color_mode.toUpperCase()}** (Т зоны реакции: **${t_flame.toFixed(0)} K**, скорость фронта: **${spread_rate.toFixed(2)} мм/с**, тепловой поток на обшивку: **${heat_flux.toFixed(1)} кВт/м²**)
-
-### 2. ФИЗИЧЕСКОЕ ОБОСНОВАНИЕ (CHUNG K. LAW & SAFFIRE MODEL)
-[THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL]
-- **Критерий негорючести Chung K. Law (Section 0.1):** При O₂ = ${o2_pct.toFixed(1)}% и P = ${p_atm.toFixed(2)} атм мольная доля окислителя X_O2 = ${x_o2.toFixed(3)} (порог самозатухания LOI_crit = ${loi_crit.toFixed(3)}). При X_O2 < 0.15 радиационное охлаждение сажевой оболочки подавляет химическую реакцию.
-- **S-кривая Дамкёлера (Chung K. Law Chapter 8):** Отношение времени диффузии к времени аррениусовской кинетики Da определяет ветвь: ${da_desc_ru}.
-- **U-кривая обдува NASA BASS-II (TM-20210011385):** При V_g = ${vg_cms.toFixed(1)} см/с ${u_curve_ru}.
-- **Тепловой баланс гермомодуля (Saffire V ICES-2024-310):** Интегральное избыточное давление Delta P = ${overpressure.toFixed(1)} кПа (предел герметичности 45.0 кПа).
-
-### 3. ЭТАЛОН NASA И ПЛАН ДЕЙСТВИЙ ECLSS
-[VERIFIED NASA PSI DATA] ${bench_url}
-- **Ближайший полётный тест:** \`${bench_id}\` (${bench_name}), совпадение параметров: **${bench_match.toFixed(1)}%**.
-- **Исторический космический аналог:** **${analog.name || 'NASA Spaceflight Analog'}** (сходство: **${(analog.similarity_pct || 95.0).toFixed(1)}%**).
-  - *Инженерный вывод:* ${analog.reason || 'В невесомости отсутствие конвекции маскирует горение, требуя контроля теплового потока и перекрытия вентиляции.'}
-- **Пошаговый протокол системы жизнеобеспечения (ECLSS Action Plan):**
-  1. Немедленно отключить принудительную циркуляцию воздуха (снизить V_g < 1.5 см/с для вызова радиационного затухания).
-  2. Изолировать аварийный отсек и выполнить стравливание наддува (снижение давления до 0.4 атм и O₂ < 14%).
-  3. Активировать пожаротушение мелкодисперсным CO₂/Halon 1301 с контролем токсичности по шкале NASA SMAC.`;
-    } else {
-      text = `### 1. VERDICT (FLIGHT SAFETY VERDICT)
+    text = `### 1. VERDICT (FLIGHT SAFETY VERDICT)
 - **Operational Verdict:** \`${status}\`
 - **Fire Risk Score:** **${fire_risk.toFixed(1)}%** | **Explosion Risk:** **${expl_risk.toFixed(1)}%**
 - **Hull Breach Risk:** **${breach ? 'CRITICAL (YES // EXCEEDS 45 kPa / 28 kW/m²)' : 'NOMINAL (NO)'}**
@@ -996,7 +957,6 @@
 - **Closest Flight Experiment:** \`${bench_id}\` (${bench_name}), parameter correlation: **${bench_match.toFixed(1)}%**.
 - **Historical Spacecraft Analog:** **${analog.name || 'NASA Historical Analog'}** (match: **${(analog.similarity_pct || 95.0).toFixed(1)}%**).
 - **Emergency ECLSS Protocol:** 1) Isolate cabin airflow loop (drop V_g < 1.5 cm/s); 2) Depressurize cabin to suppress gas reaction; 3) Flood compartment with inert gas.`;
-    }
 
     return {
       source: 'standalone-safety-officer',
@@ -1061,45 +1021,17 @@
     const scoreB = risk_b + 2.0 * expl_b + (eB.hull_breach_predicted ? 100 : 0);
 
     let saferBranch = 'EQUAL';
-    let saferTextRu = 'Оба режима обладают эквивалентным уровнем риска.';
     let saferTextEn = 'Both configurations exhibit identical overall safety profiles.';
 
     if (scoreA < scoreB - 1.0) {
       saferBranch = 'A';
-      saferTextRu = `Ветка A (Сеть 1) существенно безопаснее: интегральный риск на ${Math.abs(scoreB - scoreA).toFixed(1)}% ниже.`;
       saferTextEn = `Branch A (Network 1) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreB - scoreA).toFixed(1)}% lower.`;
     } else if (scoreB < scoreA - 1.0) {
       saferBranch = 'B';
-      saferTextRu = `Ветка B (Сеть 2) существенно безопаснее: интегральный риск на ${Math.abs(scoreA - scoreB).toFixed(1)}% ниже.`;
       saferTextEn = `Branch B (Network 2) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreA - scoreB).toFixed(1)}% lower.`;
     }
 
-    const isRu = (String(language || 'ru').toLowerCase() === 'ru');
-    let advisoryText = '';
-
-    if (isRu) {
-      advisoryText = `### 1. ДИФФЕРЕНЦИАЛЬНЫЙ ВЕРДИКТ БЕЗОПАСНОСТИ (DIFF VERDICT)
-- **Рекомендуемая конфигурация:** **ВЕТКА ${saferBranch}** (${saferTextRu})
-- **Дельта пожарного риска (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Ветка B опаснее' : (delta_risk < 0 ? 'Ветка B безопаснее' : 'Идентично')})
-- **Дельта взрывного риска (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
-- **Угроза пробоя гермооболочки:** Ветка A: **${eA.hull_breach_predicted ? 'ДА ⚠️' : 'НЕТ ✓'}** | Ветка B: **${eB.hull_breach_predicted ? 'ДА ⚠️' : 'НЕТ ✓'}**
-
-### 2. СРАВНИТЕЛЬНАЯ ТАБЛИЦА ФИЗИЧЕСКИХ ДЕЛЬТ
-| Параметр | Ветка A (Сеть 1) | Ветка B (Сеть 2) | Дельта (B - A) | Оценка влияния на безопасность |
-| :--- | :---: | :---: | :---: | :--- |
-| **Кислород [O₂]** | ${o2_a.toFixed(1)}% | ${o2_b.toFixed(1)}% | ${delta_o2 >= 0 ? '+' : ''}${delta_o2.toFixed(1)}% | ${delta_o2 > 0 ? 'Увеличение скорости горения и температуры' : (delta_o2 < 0 ? 'Снижение окислительного потенциала (безопаснее)' : 'Без изменений')} |
-| **Давление [P]** | ${p_a.toFixed(2)} атм | ${p_b.toFixed(2)} атм | ${delta_p >= 0 ? '+' : ''}${delta_p.toFixed(2)} атм | ${delta_p > 0 ? 'Повышение парциального давления O₂' : (delta_p < 0 ? 'Снижение плотности смеси' : 'Без изменений')} |
-| **Поток обдува [V_g]** | ${v_a.toFixed(1)} см/с | ${v_b.toFixed(1)} см/с | ${delta_v >= 0 ? '+' : ''}${delta_v.toFixed(1)} см/с | ${delta_v > 0 ? 'Увеличение конвективного притока O₂' : (delta_v < 0 ? 'Приближение к радиационному затуханию' : 'Без изменений')} |
-| **Температура пламени [T_f]** | ${tf_a.toFixed(0)} K | ${tf_b.toFixed(0)} K | ${delta_tf >= 0 ? '+' : ''}${delta_tf.toFixed(0)} K | ${delta_tf > 0 ? 'Рост термической нагрузки на ECLSS' : 'Снижение лучистого теплового потока'} |
-| **Скорость фронта [V_f]** | ${vf_a.toFixed(2)} мм/с | ${vf_b.toFixed(2)} мм/с | ${delta_vf >= 0 ? '+' : ''}${delta_vf.toFixed(2)} мм/с | ${delta_vf > 0 ? 'Ускорение распространения пожара' : 'Замедление пламени'} |
-| **Тепловой поток [q''_hull]** | ${flux_a.toFixed(1)} кВт/м² | ${flux_b.toFixed(1)} кВт/м² | ${delta_flux >= 0 ? '+' : ''}${delta_flux.toFixed(1)} кВт/м² | Предел стойкости гермооболочки: 28.0 кВт/м² |
-
-### 3. РЕКОМЕНДАЦИЯ АВИАЦИОННОГО ИНЖЕНЕРА (FLIGHT SAFETY RECOMMENDATION)
-- **Топливо / Источник:** Ветка A использует \`${pA.fuel || 'pmma'}\`, Ветка B использует \`${pB.fuel || 'pmma'}\`.
-- **Аналог NASA PSI:** Ветка A опирается на \`${(s2rA && s2rA.best_match && s2rA.best_match.id) || 'SAFFIRE-V-01'}\` (${match_a.toFixed(1)}%), Ветка B опирается на \`${(s2rB && s2rB.best_match && s2rB.best_match.id) || 'SAFFIRE-VI-01'}\` (${match_b.toFixed(1)}%).
-- **Итоговый вывод:** Перевод параметров гермоотсека на **ВЕТКУ ${saferBranch}** минимизирует вероятность структурного повреждения гермооболочки космического корабля.`;
-    } else {
-      advisoryText = `### 1. DIFFERENTIAL FLIGHT SAFETY VERDICT (DIFF VERDICT)
+    const advisoryText = `### 1. DIFFERENTIAL FLIGHT SAFETY VERDICT (DIFF VERDICT)
 - **Safer Configuration:** **BRANCH ${saferBranch}** (${saferTextEn})
 - **Delta Fire Risk (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Branch B more hazardous' : (delta_risk < 0 ? 'Branch B safer' : 'Identical')})
 - **Delta Explosion Risk (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
@@ -1118,7 +1050,6 @@
 ### 3. SAFETY OFFICER RECOMMENDATION
 - **NASA PSI Grounding:** Branch A calibrated against \`${(s2rA && s2rA.best_match && s2rA.best_match.id) || 'SAFFIRE-V-01'}\` (${match_a.toFixed(1)}%), Branch B calibrated against \`${(s2rB && s2rB.best_match && s2rB.best_match.id) || 'SAFFIRE-VI-01'}\` (${match_b.toFixed(1)}%).
 - **Engineering Directive:** Adopt **BRANCH ${saferBranch}** parameters to maximize spacecraft hull structural margins and suppress microgravity flame progression.`;
-    }
 
     return {
       status: 'success',

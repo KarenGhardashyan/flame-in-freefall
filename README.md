@@ -79,7 +79,7 @@ $$Da = \frac{\tau_{flow}}{\tau_{chem}} = \frac{L / V_g}{A^{-1} \exp\left(\frac{E
 ---
 
 ### 5. NASA Sim-to-Real Multi-Criteria Correlation
-Simulated state vectors are mapped to the empirical NASA flight library (35+ runs from BASS-II, Saffire-I–VI, FLEX, ACME, and historical missions):
+Simulated state vectors are mapped to the empirical NASA flight library (41 documented runs from BASS-II, Saffire-I–VI, FLEX / PSI-117, PSI-10, PSI-60, PSI-179, Apollo, and Mir):
 $$\mathcal{D} = \sqrt{\sum_{k} w_k \cdot \left(\frac{p_{sim,k} - p_{nasa,k}}{\sigma_k}\right)^2}$$
 
 The confidence percentage is computed via an exponential metric:
@@ -96,22 +96,25 @@ Supported matching criteria:
 
 ```mermaid
 flowchart LR
-    A["ENV VARIABLES<br/>(O₂, P, V_g, Fuel, g-level)"] -->|Eval Stream| B["SIMULATION CORE<br/>(Law d²-Law & Saffire ODE)"]
-    B -->|Raw State Vector| C["SIM-TO-REAL BRIDGE<br/>(BASS-II & Saffire Telemetry)"]
-    B -->|Physics Stream| E["GRAPH MONITOR<br/>(Dual Curves + NASA Error Bars)"]
-    C -->|Calibrated Stream| E
-    B -->|Telemetry Context| D["AI SAFETY ADVISOR<br/>(Gemini 2.5 Flash + Flight Rules)"]
-    F["RESOURCES RETRIEVER<br/>(BM25 Search over NASA PSI)"] -.->|Scientific DOIs| D
-    G["JARVIS NOTE<br/>(Natural Language Commands)"] -->|Graph Mutation| A
+    A["ENV VARIABLES<br/>(O₂, P, V_g, Fuel, g-level)"] -->|Eval Stream| B["SIMULATION CORE<br/>(2D Finite-Volume Solver)"]
+    A -->|Eval Stream| C["SIM-TO-REAL BRIDGE<br/>(41 NASA PSI Benchmarks)"]
+    C -->|Calibrated Stream| D["TABLE MATRIX<br/>(Telemetry & NASA Catalog)"]
+    C -->|Calibrated Stream| E["GRAPH MONITOR<br/>(Time Telemetry 0–600s)"]
+    C -->|Calibrated Stream| F["AI SAFETY ADVISOR<br/>(Gemini Copilot)"]
+    F -->|Advisory Stream| G["AI BRIEF<br/>(NASA Flight Rules)"]
+    H["NOTE AI ARCHITECT<br/>(JARVIS Voice / Text)"] -->|Mission Plan| A
 ```
 
 ### Dashboard Core Nodes:
-1. **ENV VARIABLES:** Interactive controls for oxygen ($10 - 40\%$), pressure ($0.2 - 2.0\text{ atm}$), ventilation flow ($0 - 40\text{ cm/s}$), fuel selection (PMMA, Sibal, Heptane, Methane, Hydrogen), and flight presets (Apollo 1, Apollo 13, ISS Saffire-V, BASS-II, Lunar Habitat).
-2. **SIMULATION CORE:** 2D canvas showing spherical microgravity flame vs buoyant plume, temperature gradient, and real-time numerical solvers.
-3. **SIM-TO-REAL BRIDGE:** Multi-criteria weighted distance matcher against 35+ real NASA spaceflight runs with selectable active benchmark.
-4. **AI ADVISOR:** Gemini-powered flight safety officer that delivers structured emergency protocols according to NASA Flight Rules (Caution & Warning, Depressurization, Halon/CO₂ flooding).
-5. **GRAPH MONITOR:** Canvas renderer displaying dual curves (`SIM RAW` dashed line, `SIM CALIBRATED` solid cyan line) with empirical NASA scatter points and $\pm \sigma$ error bars.
-6. **RESOURCES RETRIEVER:** Fast local BM25 indexing over Cambridge monographs, NASA TM reports, and PSI repository DOIs.
+1. **NOTE AI // JARVIS ARCHITECT:** Voice and natural language parser that compiles freeform mission notes into active blueprint architectures.
+2. **ENV VARIABLES // FEED:** Dynamic controls for oxygen concentration ($10 - 100\%$), cabin pressure ($0.3 - 2.0\text{ atm}$), ECLSS ventilation ($0 - 70\text{ cm/s}$), fuel selection (PMMA, Sibal, n-Heptane, $H_2$, $CH_4$), and compartment volume.
+3. **SIM-TO-REAL // NASA GROUNDING:** Calibration engine matching live simulations against 41 NASA PSI flight runs (Saffire I–VI, BASS-II, PSI-117, Apollo 13) with selectable active benchmark.
+4. **SIM // 2D FINITE-VOLUME SOLVER:** Real-time 2D finite-volume combustion simulation showing spherical flame structure, soot radiation, hull heat flux, and automated engineering verdict.
+5. **GRAPH // TIME TELEMETRY:** Multi-channel time-series curves ($0 - 600\text{ s}$) monitoring flame spread $L(t)$, cabin temperature $T(t)$, overpressure $\Delta P(t)$, and toxic $CO$ levels with SMAC threshold warnings.
+6. **TABLE // NASA PSI MATRIX:** Interactive telemetry summary and complete catalog of all 41 NASA spaceflight runs with direct links to verified NASA PSI repositories.
+7. **AI DIFF // COMPARATOR:** 2-pin differential safety evaluator that compares two separate networks/branches and computes parameter deltas and risk differentials.
+8. **PROMPT // AI SAFETY OFFICER & AI BRIEF:** AI Copilot executing structured safety inquiries with verified NASA PSI citations and actionable emergency protocols.
+9. **Interactive Customization:** Every node supports independent $1\times / 1.5\times / 2\times$ zoom scaling, 6-color accent grouping, and free 2D resizing. Single-language English interface with seamless standalone client-side fallback.
 
 ---
 
