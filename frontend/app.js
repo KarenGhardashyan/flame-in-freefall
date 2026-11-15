@@ -41,7 +41,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v12';
+  const STORAGE_KEY = 'flame_blueprint_graph_v13';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
 
@@ -842,6 +842,12 @@
   // AI MARKDOWN & TABLE FORMATTER
   // =========================================================================
 
+  function renderAdvisoryTable(headers, rows) {
+    const columns = headers.map(cell => `<th>${cell.trim()}</th>`).join('');
+    const body = rows.map(row => `<tr>${row.map(cell => `<td>${cell.trim()}</td>`).join('')}</tr>`).join('');
+    return `<table class="ai-diff-table"><thead><tr>${columns}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
   function formatMarkdownResponse(rawText) {
     if (!rawText) return '<div style="color: var(--text-muted); font-style: italic;">No response generated.</div>';
 
@@ -856,12 +862,7 @@
 
     const flushTable = () => {
       if (tableHeader && tableRows.length > 0) {
-        const thCells = tableHeader.map(c => `<th>${c.trim()}</th>`).join('');
-        const trRows = tableRows.map(row => {
-          const tdCells = row.map(c => `<td>${c.trim()}</td>`).join('');
-          return `<tr>${tdCells}</tr>`;
-        }).join('');
-        processedLines.push(`<table class="ai-diff-table"><thead><tr>${thCells}</tr></thead><tbody>${trRows}</tbody></table>`);
+        processedLines.push(renderAdvisoryTable(tableHeader, tableRows));
       }
       inTable = false;
       tableHeader = null;
@@ -892,6 +893,8 @@
     text = processedLines.join('\n');
 
     // NASA tags & links
+    text = text.replace(/\[([^\]\n]+)\]\((https:\/\/[^\s<>"'()]+)\)/g,
+      '<a class="ai-source-link" href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     text = text.replace(/\[VERIFIED NASA PSI DATA\]\s*(https?:\/\/[^\s<]+)/g, (match, url) => {
       return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa" onclick="event.stopPropagation();">✓ [VERIFIED NASA PSI DATA] ↗</a>`;
     });
@@ -907,6 +910,7 @@
 
     // Headings
     text = text.replace(/^###\s+(.+)$/gm, '<h4 class="ai-response-heading">$1</h4>');
+    text = text.replace(/^####\s+(.+)$/gm, '<h5 class="ai-response-heading">$1</h5>');
 
     // Bold text
     text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
@@ -916,8 +920,8 @@
     text = text.replace(/((?:<li class="ai-response-li">.*?<\/li>\s*)+)/gs, '<ul class="ai-response-ul">$1</ul>');
 
     // Paragraph cleanups
-    text = text.replace(/(<\/(?:table|ul|h4)>)\s*\n+/g, '$1');
-    text = text.replace(/\n+\s*(<(?:table|ul|h4))/g, '$1');
+    text = text.replace(/(<\/(?:table|ul|h4|h5)>)\s*\n+/g, '$1');
+    text = text.replace(/\n+\s*(<(?:table|ul|h4|h5))/g, '$1');
     text = text.replace(/\n\n+/g, '<br><br>');
     text = text.replace(/(?<!>)\n(?!<)/g, '<br>');
 
@@ -1555,7 +1559,7 @@
               <span class="s2r-metric-val" id="${this.id}-gap-val">24.0%</span>
               <span class="gap-badge gap-moderate" id="${this.id}-gap-badge">CALIBRATED</span>
             </div>
-            <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-muted);">Against 41 Flight Runs</div>
+            <div class="s2r-subtitle" style="font-family: var(--font-mono); font-size: 9px;">Against 41 Flight Runs</div>
           </div>
         </div>
 
@@ -1592,10 +1596,10 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-          <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">
+          <div class="s2r-subtitle" style="font-size: 10px; font-family: var(--font-mono); text-transform: uppercase;">
             Top-3 Flight Benchmarks:
           </div>
-          <div style="font-size: 9px; font-family: var(--font-mono); color: #06B6D4;">
+          <div class="s2r-subtitle" style="font-size: 9px; font-family: var(--font-mono);">
             (Click to set Active Benchmark)
           </div>
         </div>
@@ -1740,7 +1744,7 @@
               <a href="${m.url || 'https://psi.nasa.gov'}" target="_blank" rel="noopener noreferrer" class="s2r-link" onclick="event.stopPropagation()">
                 Open NASA investigation ↗
               </a>
-              <span style="font-family: var(--font-mono); font-size: 9px; color: ${isActive ? '#06B6D4' : 'var(--text-muted)'}; font-weight: ${isActive ? '700' : '400'};">
+              <span class="benchmark-meta" style="font-family: var(--font-mono); font-size: 9px; font-weight: ${isActive ? '700' : '400'};">
                 ${isActive ? '● Active Calibration Reference' : 'Click to select as reference'}
               </span>
             </div>
@@ -1764,7 +1768,7 @@
       // Explanation
       const explCard = this.element.querySelector(`#${this.id}-explanation-card`);
       if (explCard && s2r.gap_explanation) {
-        explCard.innerHTML = `<span style="font-family: var(--font-mono); font-size: 10px; color: #06B6D4; font-weight: 700;">PHYSICAL GROUNDING ANALYSIS:</span><br>${sanitize(s2r.gap_explanation)}`;
+        explCard.innerHTML = `<span class="s2r-explanation-title" style="font-family: var(--font-mono); font-size: 10px; font-weight: 700;">PHYSICAL GROUNDING ANALYSIS:</span><br>${sanitize(s2r.gap_explanation)}`;
       }
 
       // Check if a TABLE node is already connected
@@ -2099,7 +2103,7 @@
             </tbody>
           </table>
 
-          <div class="diff-output-box" id="${this.id}-output-box">
+          <div class="diff-output-box ai-diff-body" id="${this.id}-output-box">
             <div style="color: var(--text-muted); font-style: italic;">
               Differential flight safety advisory will appear here once compared.
             </div>
@@ -4040,7 +4044,10 @@
         `;
       }
 
-      html += `<div class="brief-body">${formatMarkdownResponse(rawText)}</div>`;
+      const matrix = Array.isArray(result.rows)
+        ? renderAdvisoryTable(['Metric', 'Branch A', 'Branch B', 'Δ (B − A)'], result.rows.map(row => row.map(sanitize)))
+        : '';
+      html += `<div class="brief-body ai-brief-body">${matrix}${formatMarkdownResponse(rawText)}</div>`;
       container.innerHTML = html;
     }
   }
@@ -4702,7 +4709,7 @@
   }
 
   function setupMissionBrief() {
-    const { telemetryRows, mitigationSteps, benchmarkLabel } = window.StandaloneAPI;
+    const { telemetryRows, governingPhysics, mitigationSteps, diagnosticReferences, benchmarkLabel } = window.StandaloneAPI;
     const body = document.getElementById('mission-brief-body');
     const status = document.getElementById('mission-copy-status');
     const copy = document.getElementById('btn-copy-report');
@@ -4724,7 +4731,9 @@
         const rows = telemetryRows(evaluation);
         const verdict = `${evaluation.flight_status} · ${evaluation.combustion_regime.replaceAll('_', ' ')} · fire risk ${evaluation.fire_risk_pct.toFixed(1)}% · explosion risk ${evaluation.explosion_risk_pct.toFixed(1)}%`;
         const url = benchmark?.url && /^https:\/\/[^\s]+/.test(benchmark.url) ? benchmark.url : '';
+        const mechanism = governingPhysics(evaluation);
         const steps = mitigationSteps(evaluation);
+        const references = diagnosticReferences([evaluation]);
         sections.push(`<section class="mission-network" data-accent="${sanitize(env.accentColor)}">
           <h3>${sanitize(name)}</h3>
           <p>${sanitize(environment)}</p>
@@ -4732,12 +4741,17 @@
           <dl>${rows.map(row => `<div><dt>${sanitize(row.label)}</dt><dd>${sanitize(row.text)}</dd></div>`).join('')}</dl>
           <h4>NASA benchmark</h4>
           <p>${sanitize(benchmarkLabel(benchmark))}${url ? ` · <a href="${sanitize(url)}" target="_blank" rel="noopener noreferrer">Open investigation ↗</a>` : ''}</p>
-          <h4>ECLSS mitigation</h4>
+          <h4>Governing physics</h4>
+          <p>${sanitize(mechanism)}</p>
+          <h4>ECLSS response priorities</h4>
           <ol>${steps.map(step => `<li>${sanitize(step)}</li>`).join('')}</ol>
+          <h4>NASA sources</h4>
+          <ul class="ai-response-ul">${references.map(ref => `<li><a href="${sanitize(ref.url)}" target="_blank" rel="noopener noreferrer">${sanitize(ref.label)}</a></li>`).join('')}</ul>
         </section>`);
         reports.push([name, environment, verdict, '', ...rows.map(row => `${row.label} — ${row.text}`),
-          '', `NASA benchmark — ${benchmarkLabel(benchmark)}${url ? '\n' + url : ''}`, '', 'ECLSS mitigation',
-          ...steps.map((step, i) => `${i + 1}. ${step}`)].join('\n'));
+          '', `NASA benchmark — ${benchmarkLabel(benchmark)}${url ? '\n' + url : ''}`, '', 'Governing physics', mechanism,
+          '', 'ECLSS response priorities', ...steps.map((step, i) => `${i + 1}. ${step}`), '',
+          ...references.map(ref => `${ref.label} — ${ref.url}`)].join('\n'));
       }
       body.innerHTML = `<p class="mission-scope">${scope}</p>${sections.join('') || '<p>Add an ENV node to generate a report.</p>'}`;
       reportText = [title, scope, ...reports].join('\n\n');
@@ -4783,7 +4797,8 @@
       let y = 40;
       for (const [index, node] of column.entries()) {
         node.moveTo(x, Math.max(y, rowStarts[index] ?? 40));
-        y = node.y + node.element.offsetHeight + 28;
+        const extraGap = (node.type === 'graph') ? 168 : 28;
+        y = node.y + Math.max(node.element.offsetHeight || 0, node.type === 'graph' ? 380 : 200) + extraGap;
       }
       x += Math.max(...column.map(node => node.element.offsetWidth)) + 42;
     }
@@ -5020,7 +5035,7 @@
   function loadGraphFromLocalStorage() {
     try {
       localStorage.removeItem('flame_blueprint_graph');
-      for (let version = 1; version < 12; version++) {
+      for (let version = 1; version <= 12; version++) {
         localStorage.removeItem(`flame_blueprint_graph_v${version}`);
       }
       const raw = localStorage.getItem(STORAGE_KEY);

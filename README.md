@@ -66,17 +66,19 @@ Simulations are validated and dynamically calibrated against **41 documented NAS
 
 ### 4. 2-Pin `AI DIFF // COMPARATOR` & Mission Brief Synthesis
 * **Side-by-Side Differential Telemetry:** Connects two independent branches (`IN A` and `IN B`) to compute quantitative differences across flame dynamics, thermal loading, overpressure, and toxic emissions:
-  ```math
-  \begin{aligned}
-  \Delta V_f &= V_{f,B} - V_{f,A} && [\text{mm/s}] \\
-  \Delta T_f &= T_{f,B} - T_{f,A} && [\text{K}] \\
-  \Delta q''_w &= q''_{w,B} - q''_{w,A} && [\text{kW/m}^2] \\
-  \Delta(\Delta P) &= \Delta P_B - \Delta P_A && [\text{kPa}] \\
-  \Delta [CO] &= [CO]_B - [CO]_A && [\text{ppm}]
-  \end{aligned}
-  ```
+
+$$
+\begin{aligned}
+\Delta V_f &= V_{f,B} - V_{f,A} && [\text{mm/s}] \\
+\Delta T_f &= T_{f,B} - T_{f,A} && [\text{K}] \\
+\Delta q''_w &= q''_{w,B} - q''_{w,A} && [\text{kW/m}^2] \\
+\Delta(\Delta P) &= \Delta P_B - \Delta P_A && [\text{kPa}] \\
+\Delta [CO] &= [CO]_B - [CO]_A && [\text{ppm}]
+\end{aligned}
+$$
+
 * **Automated Risk Scoring & Verdict:** Calculates weighted relative safety differentials to award deterministic flight verdicts: `BRANCH_A_SAFER`, `BRANCH_B_SAFER`, or `EQUAL_RISK`.
-* **NASA Flight Readiness Brief:** Generates mission flight briefs formatted per NASA Flight Rules and emergency mitigation checklists (ECLSS airflow cutoff, depressurization vent, $CO_2$ fire extinguisher deployment).
+* **NASA Flight Readiness Brief:** Reports each branch’s combustion mechanism, model thresholds, and relevant ECLSS priorities from the public ISS Fire Safety Strategy. [NASA OCHMO-TB-008](https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-008-fire-protection.pdf#page=3)
 
 ---
 
@@ -111,9 +113,11 @@ Where:
   Flame cannot sustain chemical reaction; temperature cools to ambient $T_\infty = 298.15\text{ K}$.
 * **COOL FLAME ($Da < Da_{ext}$ with $n$-Heptane, $14.8\% \le X_{O_2} \le 22.0\%$, $V_g \le 1.2\text{ cm/s}$):**
   Low-temperature quasi-steady chemical oxidation without soot formation ($T_f \approx 650 - 780\text{ K}$), validated against **NASA PSI-117 / FLEX**:
-  ```math
-  T_{cool} = 650.0 + 130.0 \cdot \tanh\left(50.0 \cdot (X_{O_2} - 0.15)\right) \quad [\text{K}]
-  ```
+
+$$
+T_{cool} = 650.0 + 130.0 \cdot \tanh\left(50.0 \cdot (X_{O_2} - 0.15)\right) \quad [\text{K}]
+$$
+
 * **HOT FLAME ($Da \ge Da_{ext}$):**
   Vigorous hydrocarbon combustion with adiabatic flame temperature $T_{ad}$ tempered by radiative heat loss $\eta_{rad}$:
   ```math
@@ -152,15 +156,16 @@ f(V_g) = \left(\frac{V_g + 1.0}{21.0}\right)^{0.42}
 
 ### 4. Structural Hull Radiative & Convective Heat Flux ($q''_w$)
 Heat transfer from the microgravity flame to the spacecraft pressure boundary combines Stefan-Boltzmann radiative transfer and turbulent boundary layer convection:
-```math
+
+$$
 \begin{aligned}
 q''_w(t) &= q''_{rad}(t) + q''_{conv}(t) && [\text{kW/m}^2] \\
 q''_{rad} &= \varepsilon \cdot \sigma \cdot \left(T_f^4 - T_\infty^4\right) \cdot \mathcal{F}_{view} \cdot \left(\frac{X_{O_2}}{0.21}\right)^{1.25} \\
 q''_{conv} &= h_c \cdot (T_f - T_\infty) \cdot \sqrt{\frac{V_g + 1.0}{20.0}} \cdot \sqrt{\frac{X_{O_2}}{0.21}} \cdot \mathcal{F}_{view}
 \end{aligned}
-```
+$$
 
-* **Structural Integrity Threshold:** When $q''_w(t) \ge 28.0\text{ kW/m}^2$, localized yield strength of aerospace aluminum (Al 2219 / Al-Li 2195) drops by $>60\%$, signaling immediate hull penetration risk.
+* **Model thermal threshold:** The simulator flags hull risk when $q''_w(t) \ge 28.0\text{ kW/m}^2$.
 
 ---
 
@@ -173,7 +178,7 @@ Cabin thermal response is integrated over sub-steps ($\Delta t_{sub} = 0.25\text
 \Delta P(t) = P(t) - P(0) = \frac{n_{air} \cdot R \cdot T_{cabin}(t)}{V_{cabin}} - P_0 + \Delta P_{blast}
 ```
 
-* **Structural Pressure Limit:** Spacecraft habitable pressure hulls are proof-tested to $\Delta P \le 45.0\text{ kPa}$ ($0.44\text{ atm}$). Exceeding this triggers automated structural rupture warnings.
+* **Model overpressure threshold:** The simulator flags hull risk when modeled peak $\Delta P \ge 45.0\text{ kPa}$ ($0.44\text{ atm}$).
 
 ---
 
@@ -183,11 +188,13 @@ Toxic carbon monoxide accumulation is calculated dynamically from the fuel mass 
 \frac{d[CO]}{dt} = \left(\frac{\dot{m}_f \cdot Y_{CO}}{M_{air}}\right) \cdot \left(\frac{W_{air}}{W_{CO}}\right) \cdot 10^6 \quad [\text{ppm/s}]
 ```
 
-* **Spacecraft Maximum Allowable Concentration (SMAC):** Evaluated against **NASA JSC 20584 Rev D** (7-day emergency threshold = $55\text{ ppm}$).
+* **Spacecraft Maximum Allowable Concentration (SMAC):** The simulator uses the $55\text{ ppm}$ seven-day nominal CO exposure limit as a concentration screen for its 600-second run. [NASA JSC 20584 Rev D, p. 10](https://www.nasa.gov/wp-content/uploads/2026/02/jsc-20584-smacs-rev-d.pdf#page=10)
 * **Time-to-SMAC Calculation:**
-  ```math
-  t_{SMAC} = \frac{55.0 - [CO]_0}{\frac{d[CO]}{dt}} \quad [\text{seconds}]
-  ```
+
+$$
+t_{SMAC} = \frac{55.0 - [CO]_0}{\frac{d[CO]}{dt}} \quad [\text{seconds}]
+$$
+
 * Pure Hydrogen fuel ($H_2$) combustion emits strictly water vapor ($H_2O$), resulting in $0\text{ ppm}$ CO yield.
 
 ---

@@ -1775,6 +1775,18 @@ select {
   letter-spacing: 0.06em;
 }
 
+.s2r-subtitle,
+.benchmark-meta,
+.benchmark-sub {
+  color: var(--text-muted);
+}
+
+.s2r-explanation-title,
+.active-benchmark .benchmark-meta,
+.ai-source-link {
+  color: var(--accent-cyan);
+}
+
 .s2r-metric-val-row {
   display: flex;
   align-items: baseline;
@@ -3124,8 +3136,8 @@ body.theme-light .btn-table-filter:hover {
 
 body.theme-light .btn-s2r-filter.active,
 body.theme-light .btn-table-filter.active {
-  background: #0284C7;
-  border-color: #0284C7;
+  background: #006581;
+  border-color: #006581;
   color: #FFFFFF;
   font-weight: 700;
 }
@@ -3137,13 +3149,13 @@ body.theme-light .s2r-match-item {
 }
 
 body.theme-light .s2r-match-item:hover {
-  background: #F8FAFC;
+  background: #F1F5F9;
   border-color: #0284C7;
 }
 
 body.theme-light .s2r-match-item.active-benchmark {
-  background: rgba(2, 132, 199, 0.08) !important;
-  border-color: #0284C7 !important;
+  background: #F1F5F9 !important;
+  border-color: #006581 !important;
   box-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
 }
 
@@ -3706,40 +3718,94 @@ body.theme-light .cutaway-canvas-container .hud-pill {
 .brief-content, .diff-output-box { overflow-wrap: anywhere; }
 #canvas-world :is(input, textarea, select, summary) { scroll-margin: 8px; }
 
-body.theme-light :is(.verdict-box, .objective-reasons-list, .benchmark-card, .s2r-metric-box,
-.s2r-match-item, .s2r-info-card, .s2r-explanation-card, .telemetry-summary-item, .brief-content,
-.diff-verdict-banner, .ai-diff-table td, .diff-matrix-table td, .psi-table td, .graph-telemetry,
+body.theme-light :is(.verdict-box, .objective-reasons-list, .graph-telemetry,
 #context-menu, .bp-context-menu, .add-nodes-dropdown-menu) {
   background: var(--surface-sub);
   border-color: var(--node-border);
   color: #152238;
 }
 
-body.theme-light :is(.bench-header, .s2r-metric-title, .s2r-match-details, .s2r-match-mission, .context-header,
-.telemetry-summary-label, .metric-label, .brief-meta-time, .ai-response-li, .table-section-title) {
+body.theme-light :is(.context-header, .metric-label) {
   color: var(--console-muted);
 }
 
-body.theme-light :is(.note-preset-chip, .preset-chip, .note-preset-btn, .btn-s2r-filter,
-.s2r-link, .bench-link, .highlight-cyan, .s2r-metric-val, .s2r-match-pct, .s2r-match-name,
-.context-item:hover, .ai-response-heading, .diff-code, .btn-mission-brief, .btn-tradeoff) {
+body.theme-light :is(.highlight-cyan, .context-item:hover, .btn-mission-brief, .btn-tradeoff) {
   color: var(--accent-cyan);
 }
 
-body.theme-light :is(.ai-diff-table th, .diff-matrix-table th, .psi-table th, .note-preset-chip,
-.preset-chip, .note-preset-btn, .btn-s2r-filter) {
-  color: #183b5b;
-  background: var(--surface-raised);
-  border-color: var(--node-border);
-}
-
 body.theme-light :is(.highlight-danger, .status-nogo, .confidence-low, .delta-danger) { color: var(--console-danger); }
-body.theme-light :is(.confidence-medium, .status-caution, .brief-meta-query) { color: var(--accent-amber); }
+body.theme-light :is(.confidence-medium, .status-caution) { color: var(--accent-amber); }
 body.theme-light .wire-path.wire-accent-cyan { stroke: #087590; }
 body.theme-light .wire-path.wire-accent-amber { stroke: #a8610c; }
 body.theme-light .wire-path.selected { stroke: #006581 !important; }
 body.theme-light [style*="#06B6D4"] { color: var(--accent-cyan) !important; }
 body.theme-light [style*="#F59E0B"] { color: var(--accent-amber) !important; }
+
+/* Light-theme benchmark, telemetry and diagnostic content */
+body.theme-light :is(.s2r-card, .benchmark-card, .benchmark-item, .s2r-metric-box,
+.s2r-match-item, .s2r-info-card, .table-node, .table-node-container, .telemetry-summary-grid,
+.diff-matrix-table, .ai-diff-table, .brief-content, .diff-output-box, .diff-query-input,
+.ai-diff-body, .ai-brief-body) {
+  --text-muted: #334155;
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+body.theme-light :is(.s2r-filter-panel, .s2r-explanation-card, .note-preset-chip,
+.diff-verdict-banner, .brief-meta-bar, .ai-diff-table th, .diff-matrix-table th,
+.psi-matrix-table th, .psi-table th, .diff-code) {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+body.theme-light :is(.node-type-simtoreal, .node-type-note, .node-type-table, .node-type-aidiff, .node-type-brief) > .node-body {
+  --text-muted: #334155;
+}
+
+body.theme-light :is(.s2r-metric-title, .s2r-metric-val, .s2r-match-title, .s2r-match-name,
+.s2r-match-score, .s2r-match-pct, .s2r-explanation-title, .table-section-title,
+.telemetry-summary-value, .ai-response-heading, .brief-meta-query, .note-preset-chip,
+.ai-response-li b, .diff-code, .ai-diff-table th, .diff-matrix-table th, .psi-matrix-table th, .psi-table th,
+[id$="-bench-match"]) {
+  color: #0F172A !important;
+}
+
+body.theme-light :is(.bench-header, .s2r-subtitle, .benchmark-meta, .benchmark-sub,
+.s2r-match-details, .s2r-match-details span, .s2r-match-mission, .s2r-filter-label, .s2r-explanation-card,
+.telemetry-summary-label, .brief-meta-time, .ai-response-li, .delta-neutral,
+.diff-output-box, .ai-diff-body, .ai-brief-body) {
+  color: #334155 !important;
+}
+
+body.theme-light :is(.ai-diff-table, .diff-matrix-table, .psi-matrix-table, .psi-table) td {
+  border-bottom-color: #CBD5E1;
+  color: #0F172A;
+}
+
+/* Run IDs still have inline emphasis in both telemetry table renderers. */
+body.theme-light :is(.psi-matrix-table, .psi-table) tr[data-run-id] td:first-child {
+  color: #0F172A !important;
+}
+
+body.theme-light .table-section-title > span:nth-child(2) {
+  color: #334155 !important;
+}
+
+body.theme-light :is(.table-node-search, .diff-query-input)::placeholder { color: #334155; }
+body.theme-light .note-preset-chip:hover { color: #0F172A; }
+body.theme-light :is(.s2r-link, .bench-link, .ai-source-link, .badge-nasa, .s2r-rank-tag,
+.outcome-cool, .outcome-cool-flame, .diff-verdict-tag.safer-a) { color: #006581; }
+body.theme-light :is(.confidence-high, .gap-low, .outcome-extinction, .outcome-safe,
+.delta-safer, .telemetry-summary-value.highlight-safe) { color: #166534; }
+body.theme-light :is(.confidence-med, .gap-moderate, .outcome-flame, .outcome-nominal,
+.outcome-steady, .badge-theory) { color: var(--accent-amber); }
+body.theme-light :is(.gap-high, .outcome-blast, .outcome-breach, .outcome-critical) {
+  color: var(--console-danger);
+}
+body.theme-light .diff-verdict-tag.safer-b { color: #86198F; }
+body.theme-light .diff-verdict-tag.equal { color: #334155; }
+body.theme-light .btn-diff-compare { background: #6D28D9; }
 
 .mission-brief {
   position: fixed;
