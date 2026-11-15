@@ -435,7 +435,7 @@
   // =========================================================================
 
   class BaseNode {
-    constructor(id, type, title, x, y, width = 340, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, type, title, x, y, width, height, nodeScale, accentColor) {
       this.id = id;
       this.type = type;
       this.title = title;
@@ -444,11 +444,24 @@
       this.baseWidth = width;
       this.baseHeight = height;
       this.nodeScale = Number(nodeScale) || 1.0;
-      this.width = Math.round(this.baseWidth * (this.nodeScale === 1.0 ? 1.0 : this.nodeScale));
-      this.height = this.baseHeight ? Math.round(this.baseHeight * (this.nodeScale === 1.0 ? 1.0 : this.nodeScale)) : null;
       this.accentColor = accentColor || 'default';
       this.data = null;
       this.element = null;
+    }
+
+    applyNodeSize() {
+      this.width = Math.round(this.baseWidth * this.nodeScale);
+      this.height = this.baseHeight === null ? null : Math.round(this.baseHeight * this.nodeScale);
+      this.element.style.width = `${this.width}px`;
+      this.element.style.height = this.height === null ? '' : `${this.height}px`;
+      this.element.classList.toggle('node-fit-content', this.height === null);
+    }
+
+    moveTo(x, y) {
+      this.x = x;
+      this.y = y;
+      this.element.style.left = `${x}px`;
+      this.element.style.top = `${y}px`;
     }
 
     setNodeScale(scale) {
@@ -457,14 +470,7 @@
         this.element.style.setProperty('--node-scale', this.nodeScale);
         this.element.dataset.nodeScale = String(this.nodeScale);
 
-        this.width = Math.round(this.baseWidth * this.nodeScale);
-        this.element.style.width = `${this.width}px`;
-        if (this.baseHeight) {
-          this.height = Math.round(this.baseHeight * this.nodeScale);
-          this.element.style.height = `${this.height}px`;
-        } else {
-          this.element.style.minHeight = `${Math.round(220 * this.nodeScale)}px`;
-        }
+        this.applyNodeSize();
 
         this.element.querySelectorAll('.btn-node-scale').forEach(btn => {
           btn.classList.toggle('active', parseFloat(btn.dataset.scale) === this.nodeScale);
@@ -491,24 +497,19 @@
       saveGraphToLocalStorage();
     }
 
-    createDOM(headerExtra = '', portsHtml = '', bodyHtml = '', portsExtraClass = '') {
+    createDOM(portsHtml, bodyHtml, portsExtraClass = '') {
       const el = document.createElement('div');
       el.id = this.id;
       el.className = `bp-node node node-type-${this.type}`;
       el.dataset.nodeScale = String(this.nodeScale);
       el.dataset.accentColor = this.accentColor;
       el.style.setProperty('--node-scale', this.nodeScale);
-      el.style.left = `${this.x}px`;
-      el.style.top = `${this.y}px`;
-      el.style.width = `${this.width}px`;
-      if (this.height) el.style.height = `${this.height}px`;
+      el.style.setProperty('--node-body-limit', `${NODE_TYPES[this.type].bodyLimit}px`);
 
       el.innerHTML = `
         <div class="node-header">
           <div class="node-title-group">
             <span class="node-title">${sanitize(this.title)}</span>
-            <span class="node-type-badge">${this.type.toUpperCase()}</span>
-            ${headerExtra}
           </div>
           <div class="node-header-tools">
             <div class="node-scale-selector" title="Node Scale (1×, 1.5×, 2×)">
@@ -533,6 +534,9 @@
       `;
 
       this.element = el;
+      el.querySelector('.node-title').title = this.title;
+      this.moveTo(this.x, this.y);
+      this.applyNodeSize();
       el.addEventListener('pointerdown', () => {
         selectNode(this.id);
       });
@@ -625,6 +629,7 @@
       if (!resizer) return;
       let startX = 0, startY = 0;
       let startW = 0, startH = 0;
+      let startBaseHeight = null;
       let isResizing = false;
       let activeResizePointerId = null;
 
@@ -640,6 +645,7 @@
         startY = e.clientY;
         startW = this.element.offsetWidth;
         startH = this.element.offsetHeight;
+        startBaseHeight = this.baseHeight;
 
         const onPointerMove = (ev) => {
           if (!isResizing || ev.pointerId !== activeResizePointerId) return;
@@ -647,10 +653,9 @@
           ev.preventDefault();
           const dw = (ev.clientX - startX) / state.scale;
           const dh = (ev.clientY - startY) / state.scale;
-          this.width = Math.max(280, Math.round(startW + dw));
-          this.height = Math.max(200, Math.round(startH + dh));
-          this.element.style.width = `${this.width}px`;
-          this.element.style.height = `${this.height}px`;
+          this.baseWidth = Math.max(280, Math.round(startW + dw)) / this.nodeScale;
+          this.baseHeight = Math.round(dh) === 0 ? startBaseHeight : Math.max(96, Math.round(startH + dh)) / this.nodeScale;
+          this.applyNodeSize();
           renderAllWires();
           if (typeof this.onResize === 'function') {
             this.onResize(this.width, this.height);
@@ -715,10 +720,7 @@
           ev.preventDefault();
           const dx = (ev.clientX - startX) / state.scale;
           const dy = (ev.clientY - startY) / state.scale;
-          this.x = Math.round(initialNodeX + dx);
-          this.y = Math.round(initialNodeY + dy);
-          this.element.style.left = `${this.x}px`;
-          this.element.style.top = `${this.y}px`;
+          this.moveTo(Math.round(initialNodeX + dx), Math.round(initialNodeY + dy));
           renderAllWires();
         };
 
@@ -889,7 +891,7 @@
   // -------------------------------------------------------------------------
 
   class NoteNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 420, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'note', 'NOTE AI // JARVIS ARCHITECT', x, y, width, height, nodeScale, accentColor);
       this.noteText = 'Saffire V: Cygnus 29.5% O2, 0.71 atm, 20 cm/s flow of PMMA in 28 m3. Check cabin pressure.';
       this.isRecording = false;
@@ -943,7 +945,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindNoteEvents();
       this.initSpeechRecognition();
     }
@@ -1229,7 +1231,7 @@
   // -------------------------------------------------------------------------
 
   class VariableNode extends BaseNode {
-    constructor(id, x, y, initialParams = {}, width = 320, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialParams = {}, width, height, nodeScale, accentColor) {
       super(id, 'variable', initialParams.scenarioLabel ? `ENV // ${initialParams.scenarioLabel}` : 'ENV VARIABLES // FEED', x, y, width, height, nodeScale, accentColor);
       this.params = Object.assign({
         o2_percent: 21.0,
@@ -1330,7 +1332,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindInputs();
       this.evaluate();
     }
@@ -1468,7 +1470,7 @@
   // -------------------------------------------------------------------------
 
   class SimToRealNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 440, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'simtoreal', 'SIM-TO-REAL // NASA GROUNDING', x, y, width, height, nodeScale, accentColor);
       this.matchBy = 'physics';
       this.filterMission = 'all';
@@ -1568,7 +1570,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindCriteriaEvents();
 
       this.updateSimToRealDisplay();
@@ -1765,7 +1767,7 @@
   // -------------------------------------------------------------------------
 
   class TableNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 540, height = 560, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height, nodeScale, accentColor);
       this.activeBenchmarkId = null;
       this.filterText = '';
@@ -1813,7 +1815,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindTableEvents();
       this.renderTelemetrySummary();
       this.renderMatrix();
@@ -2002,7 +2004,7 @@
   // -------------------------------------------------------------------------
 
   class AiDiffNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 520, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'aidiff', 'AI DIFF // COMPARATOR', x, y, width, height, nodeScale, accentColor);
       this.dataA = null;
       this.dataB = null;
@@ -2040,6 +2042,11 @@
             <div class="diff-verdict-tag equal" id="${this.id}-verdict-tag">CONNECT A & B</div>
           </div>
 
+          <div class="diff-query-box">
+            <input type="text" class="diff-query-input" id="${this.id}-query-input" value="${sanitize(this.diffQuery)}" placeholder="Ask AI Safety Officer differential comparison...">
+            <button class="btn-diff-compare" id="${this.id}-btn-compare">COMPARE BLUEPRINTS</button>
+          </div>
+
           <table class="diff-matrix-table" id="${this.id}-matrix-table">
             <thead>
               <tr>
@@ -2054,11 +2061,6 @@
             </tbody>
           </table>
 
-          <div class="diff-query-box">
-            <input type="text" class="diff-query-input" id="${this.id}-query-input" value="${sanitize(this.diffQuery)}" placeholder="Ask AI Safety Officer differential comparison...">
-            <button class="btn-diff-compare" id="${this.id}-btn-compare">COMPARE BLUEPRINTS</button>
-          </div>
-
           <div class="diff-output-box" id="${this.id}-output-box">
             <div style="color: var(--text-muted); font-style: italic;">
               Differential flight safety advisory will appear here once compared.
@@ -2067,7 +2069,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml, 'two-inputs');
+      this.createDOM(portsHtml, bodyHtml, 'two-inputs');
       this.bindDiffEvents();
       this.updateDiffView();
     }
@@ -2160,7 +2162,7 @@
   const SIM_HULL_THERMAL_LIMIT = 28;
 
   class SimNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 460, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'sim', 'SIM // 2D FINITE-VOLUME SOLVER', x, y, width, height, nodeScale, accentColor);
       this.animFrameId = null;
       this.simGridMode = 'flame_o2'; // 'flame_o2' or 'thermal_hull'
@@ -2206,14 +2208,11 @@
         </div>
       `;
 
-      const headerExtra = `
+      const bodyHtml = `
         <div class="sim-mode-toggle">
           <button class="btn-sim-mode active" id="${this.id}-btn-mode-flame" data-mode="flame_o2">FLAME + O₂ FIELD</button>
           <button class="btn-sim-mode" id="${this.id}-btn-mode-hull" data-mode="thermal_hull">THERMAL HULL MAP</button>
         </div>
-      `;
-
-      const bodyHtml = `
         <div class="cutaway-canvas-container">
           <canvas id="${this.id}-canvas" width="436" height="230"></canvas>
           <div class="sim-hud-overlay">
@@ -2271,9 +2270,10 @@
         </div>
       `;
 
-      this.createDOM(headerExtra, portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindTimeline();
       this.bindSimModeEvents();
+      this.updateHUDAndVerdict();
       this.initParticles();
       this.startCanvasAnimation();
 
@@ -3027,7 +3027,7 @@
   // -------------------------------------------------------------------------
 
   class GraphNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 460, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'graph', 'GRAPH // TIME TELEMETRY (0–600s)', x, y, width, height, nodeScale, accentColor);
       this.selectedChannel = 'spread'; // 'spread', 'temp', 'pressure', 'co'
       this.viewMode = 'curves'; // 'curves' or 'table'
@@ -3083,7 +3083,7 @@
         </details>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindGraphEvents();
       this.renderGraph();
       this.checkTableBanner();
@@ -3821,7 +3821,7 @@
   // -------------------------------------------------------------------------
 
   class PromptNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 380, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       super(id, 'prompt', 'PROMPT // AI SAFETY OFFICER', x, y, width, height, nodeScale, accentColor);
       this.query = (initialData && initialData.query) || 'Evaluate hull breach and explosion risk';
       this.init();
@@ -3862,7 +3862,7 @@
         </button>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
       this.bindPromptEvents();
     }
 
@@ -3945,7 +3945,7 @@
   // -------------------------------------------------------------------------
 
   class BriefNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 440, height = null, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width, height, nodeScale, accentColor) {
       const title = (initialData && initialData.title) || 'AI BRIEF // ECLSS ADVISOR';
       super(id, 'brief', title, x, y, width, height, nodeScale, accentColor);
       this.init();
@@ -3967,7 +3967,7 @@
         </div>
       `;
 
-      this.createDOM('', portsHtml, bodyHtml);
+      this.createDOM(portsHtml, bodyHtml);
     }
 
     onReceiveData(result) {
@@ -4005,37 +4005,37 @@
   // NODE FACTORY & LIFECYCLE
   // =========================================================================
 
+  const NODE_TYPES = {
+    note: { Node: NoteNode, width: 350, bodyLimit: 310 },
+    variable: { Node: VariableNode, width: 322, bodyLimit: 390 },
+    simtoreal: { Node: SimToRealNode, width: 374, bodyLimit: 350 },
+    table: { Node: TableNode, width: 476, bodyLimit: 376 },
+    aidiff: { Node: AiDiffNode, width: 440, bodyLimit: 460 },
+    sim: { Node: SimNode, width: 408, bodyLimit: 398 },
+    graph: { Node: GraphNode, width: 386, bodyLimit: 344 },
+    prompt: { Node: PromptNode, width: 312, bodyLimit: 275 },
+    brief: { Node: BriefNode, width: 410, bodyLimit: 390 }
+  };
+
   function spawnNode(type, x, y, initialData = {}, width = null, height = null, nodeScale = 1.0, accentColor = 'default') {
-    state.nodeCounter++;
-    const id = `node_${state.nodeCounter}`;
-    let node = null;
+    if (!Object.hasOwn(NODE_TYPES, type)) return null;
+    const { Node, width: initialWidth } = NODE_TYPES[type];
+    const id = `node_${++state.nodeCounter}`;
+    const node = new Node(id, x ?? 0, y ?? 0, initialData, width > 0 ? width : initialWidth,
+      height > 0 ? height : null, nodeScale, accentColor);
+    state.nodes.set(id, node);
+    nodesLayer.appendChild(node.element);
 
-    if (type === 'note') {
-      node = new NoteNode(id, x, y, initialData, width || 420, height, nodeScale, accentColor);
-    } else if (type === 'variable') {
-      node = new VariableNode(id, x, y, initialData, width || 380, height, nodeScale, accentColor);
-    } else if (type === 'simtoreal') {
-      node = new SimToRealNode(id, x, y, initialData, width || 430, height, nodeScale, accentColor);
-    } else if (type === 'table') {
-      node = new TableNode(id, x, y, initialData, width || 580, height || 440, nodeScale, accentColor);
-    } else if (type === 'aidiff') {
-      node = new AiDiffNode(id, x, y, initialData, width || 520, height, nodeScale, accentColor);
-    } else if (type === 'sim') {
-      node = new SimNode(id, x, y, initialData, width || 460, height, nodeScale, accentColor);
-    } else if (type === 'graph') {
-      node = new GraphNode(id, x, y, initialData, width || 460, height, nodeScale, accentColor);
-    } else if (type === 'prompt') {
-      node = new PromptNode(id, x, y, initialData, width || 380, height, nodeScale, accentColor);
-    } else if (type === 'brief') {
-      node = new BriefNode(id, x, y, initialData, width || 440, height, nodeScale, accentColor);
+    if (x === undefined && y === undefined) {
+      const viewportRect = viewport.getBoundingClientRect();
+      const center = screenToWorld(viewportRect.left + viewportRect.width / 2, viewportRect.top + viewportRect.height / 2);
+      const jitter = () => (Math.random() - 0.5) * 40;
+      node.moveTo(Math.round(center.x - node.element.offsetWidth / 2 + jitter()),
+        Math.round(center.y - node.element.offsetHeight / 2 + jitter()));
     }
 
-    if (node) {
-      state.nodes.set(id, node);
-      nodesLayer.appendChild(node.element);
-      renderAllWires();
-      saveGraphToLocalStorage();
-    }
+    renderAllWires();
+    saveGraphToLocalStorage();
     return node;
   }
 
@@ -4408,6 +4408,10 @@
           <span style="font-size: 14px;">⧉</span>
           <span>Duplicate Node</span>
         </div>
+        <div class="context-item" data-action="fit_node" data-node-id="${node.id}">
+          <span aria-hidden="true">⊡</span>
+          <span>Fit Node to Content</span>
+        </div>
         <div class="context-item" data-action="reset_node" data-node-id="${node.id}">
           <span style="font-size: 14px;">↺</span>
           <span>Reset Node</span>
@@ -4464,6 +4468,13 @@
           showToast(`Disconnected ${toRemove.length} wire(s)`);
         } else if (action === 'duplicate_node' && targetNodeId) {
           duplicateNode(targetNodeId);
+        } else if (action === 'fit_node' && targetNodeId) {
+          const node = state.nodes.get(targetNodeId);
+          if (node) {
+            node.baseWidth = NODE_TYPES[node.type].width;
+            node.baseHeight = null;
+            node.setNodeScale(node.nodeScale);
+          }
         } else if (action === 'reset_node' && targetNodeId) {
           resetNode(targetNodeId);
         } else if (action === 'delete_node' && targetNodeId) {
@@ -4573,14 +4584,7 @@
         addNodesMenu.classList.remove('open');
         addNodeToggle.setAttribute('aria-expanded', 'false');
 
-        const vpRect = viewport.getBoundingClientRect();
-        const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
-        const jitterX = Math.round((Math.random() - 0.5) * 60);
-        const jitterY = Math.round((Math.random() - 0.5) * 60);
-        const spawnX = Math.round(centerWorld.x - 200 + jitterX);
-        const spawnY = Math.round(centerWorld.y - 120 + jitterY);
-
-        const newNode = spawnNode(type, spawnX, spawnY);
+        const newNode = spawnNode(type);
         if (newNode) {
           showToast(`Added ${newNode.title}`);
         }
@@ -4718,8 +4722,8 @@
 
   function autoLayoutGraph() {
     const columns = [
-      { x: 40, types: ['note', 'variable'], minimumY: { variable: 390 } },
-      { x: 460, types: ['sim', 'simtoreal'], minimumY: { simtoreal: 490 } },
+      { x: 40, types: ['note', 'variable'], minimumY: { variable: 425 } },
+      { x: 460, types: ['sim', 'simtoreal'], minimumY: { simtoreal: 520 } },
       { x: 960, types: ['graph', 'table'], minimumY: { table: 460 } },
       { x: 1540, types: ['prompt', 'aidiff'] },
       { x: 2120, types: ['brief'] }
@@ -4731,10 +4735,7 @@
       const x = Math.max(column.x, rightEdge ? rightEdge + 36 : 0);
       let y = 40;
       for (const node of nodes) {
-        node.x = x;
-        node.y = Math.max(y, column.minimumY?.[node.type] ?? 40);
-        node.element.style.left = `${node.x}px`;
-        node.element.style.top = `${node.y}px`;
+        node.moveTo(x, Math.max(y, column.minimumY?.[node.type] ?? 40));
         y = node.y + node.element.offsetHeight + 26;
         rightEdge = Math.max(rightEdge, x + node.element.offsetWidth);
       }
@@ -4846,12 +4847,12 @@
 
   function buildDefaultGraph() {
     clearGraph();
-    const note = spawnNode('note', 40, 40, {}, 384, 320);
-    const env = spawnNode('variable', 40, 390);
-    const sim = spawnNode('sim', 460, 40, {}, 460, 424);
-    const reference = spawnNode('simtoreal', 460, 490, {}, 430, 378);
-    const graph = spawnNode('graph', 960, 40, {}, 460, 394);
-    const table = spawnNode('table', 960, 460, {}, 544);
+    const note = spawnNode('note', 40, 40);
+    const env = spawnNode('variable', 40, 425);
+    const sim = spawnNode('sim', 460, 40);
+    const reference = spawnNode('simtoreal', 460, 520);
+    const graph = spawnNode('graph', 960, 40);
+    const table = spawnNode('table', 960, 460);
     const prompt = spawnNode('prompt', 1540, 40);
 
     for (const [source, target] of [[note, env], [env, sim], [sim, reference], [reference, graph], [reference, table], [reference, prompt]]) {
@@ -4863,18 +4864,18 @@
 
   function loadTradeOffDemo() {
     clearGraph();
-    const diff = spawnNode('aidiff', 1450, 40, {}, 520, 660);
-    const brief = spawnNode('brief', 2010, 40, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' }, 460, 660);
+    const diff = spawnNode('aidiff', 1370, 40);
+    const brief = spawnNode('brief', 1850, 40, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' });
     addWire(diff.id, 'out', brief.id, 'in');
 
     const configs = [
       { scenario: SCENARIOS.iss_nominal, color: 'cyan', y: 40, pin: 'in_a' },
-      { scenario: SCENARIOS.saffire_v, color: 'amber', y: 512, pin: 'in_b' }
+      { scenario: SCENARIOS.saffire_v, color: 'amber', y: 520, pin: 'in_b' }
     ];
     for (const { scenario, color, y, pin } of configs) {
-      const env = spawnNode('variable', 40, y, { ...scenario.params, scenarioLabel: scenario.name }, 380, 424, 1, color);
-      const sim = spawnNode('sim', 460, y, {}, 460, 424, 1, color);
-      const reference = spawnNode('simtoreal', 960, y, {}, 450, 424, 1, color);
+      const env = spawnNode('variable', 40, y, { ...scenario.params, scenarioLabel: scenario.name }, null, null, 1, color);
+      const sim = spawnNode('sim', 460, y, {}, null, null, 1, color);
+      const reference = spawnNode('simtoreal', 960, y, {}, null, null, 1, color);
       addWire(env.id, 'out', sim.id, 'in');
       addWire(sim.id, 'out', reference.id, 'in');
       addWire(reference.id, 'out', diff.id, pin);
