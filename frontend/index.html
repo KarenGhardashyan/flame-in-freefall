@@ -7,7 +7,7 @@
   <title>Flame in Freefall // Blueprint Telemetry</title>
   <meta name="description"
     content="SpaceX Telemetry Style Node Graph Dashboard for Microgravity Combustion Physics & NASA Safety Engineering">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=12">
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 </head>
@@ -26,11 +26,12 @@
 
     <!-- ADD NODE DROPDOWN (COMPACT FOR ALL SCREENS) -->
     <div class="add-nodes-dropdown-wrap">
-      <button class="btn-bar btn-add-node-toggle" id="btn-add-node-toggle" title="Add blueprint node">
+      <button class="btn-bar btn-add-node-toggle" id="btn-add-node-toggle" title="Add blueprint node" aria-controls="add-nodes-menu" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         <span data-i18n="add_node">ADD NODE ▾</span>
       </button>
       <div class="add-nodes-dropdown-menu" id="add-nodes-menu">
+        <button class="btn-add-node-item btn-tradeoff" id="btn-tradeoff-demo" type="button"><span aria-hidden="true">⚡</span><b>Load 2-Network Trade-Off Demo</b></button>
         <button class="btn-add-node-item" data-type="variable"><span class="dot dot-var"></span><b>+ ENV</b> <span class="item-desc">(Environment & Inflow)</span></button>
         <button class="btn-add-node-item" data-type="sim"><span class="dot dot-sim"></span><b>+ SIM 2D</b> <span class="item-desc">(Finite-Volume Solver)</span></button>
         <button class="btn-add-node-item" data-type="simtoreal"><span class="dot dot-s2r"></span><b>+ SIM-TO-REAL</b> <span class="item-desc">(NASA Grounding)</span></button>
@@ -44,6 +45,10 @@
 
     <!-- TOP BAR ACTIONS -->
     <div class="actions-section">
+      <button class="btn-bar btn-mission-brief" id="btn-mission-brief" type="button" aria-haspopup="dialog">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 3h6v3h4v15H5V6h4V3zm2 2v3H7v11h10V8h-4V5h-2zm-2 6h6v2H9zm0 4h6v2H9z"/></svg>
+        <span>Mission Brief</span>
+      </button>
       <button class="btn-bar" id="btn-fit-view" title="Center and fit all nodes into screen">
         <svg viewBox="0 0 24 24">
           <path d="M5 5h5V3H3v7h2V5zm14-2h-7v2h5v5h2V3zm-2 16h-5v2h7v-7h-2v5zM5 14H3v7h7v-2H5v-5z" />
@@ -90,7 +95,7 @@
 
       <div class="connection-pill" id="connection-status-pill">
         <div class="connection-dot"></div>
-        <span id="connection-status-text">PORT 5000 // CORE ONLINE</span>
+        <span id="connection-status-text">BROWSER ENGINE // ONLINE</span>
       </div>
     </div>
   </header>
@@ -149,9 +154,21 @@
   <!-- TOAST NOTIFICATIONS -->
   <div id="toast-container"></div>
 
+  <dialog class="mission-brief" id="mission-brief" aria-labelledby="mission-brief-title">
+    <div class="mission-brief-header">
+      <h2 id="mission-brief-title">Flight Readiness Safety Report</h2>
+      <form method="dialog"><button class="btn-bar" aria-label="Close Mission Brief" autofocus>Close</button></form>
+    </div>
+    <div class="mission-brief-body" id="mission-brief-body"></div>
+    <div class="mission-brief-footer">
+      <span id="mission-copy-status" role="status"></span>
+      <button class="btn-bar btn-mission-brief" id="btn-copy-report" type="button">Copy Report</button>
+    </div>
+  </dialog>
+
   <!-- CORE LOGIC -->
-  <script src="standalone_api.js"></script>
-  <script src="app.js"></script>
+  <script src="standalone_api.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 
 </html>

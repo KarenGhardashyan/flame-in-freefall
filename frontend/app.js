@@ -11,8 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v11';
-  const API_EVAL_URL = '/api/blueprint-eval';
+  const STORAGE_KEY = 'flame_blueprint_graph_v12';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
 
@@ -24,7 +23,7 @@
       export: 'Export (.json)',
       import: 'Import (.json)',
       reset: 'Reset',
-      cloud_online: 'CLOUD ENGINE // ONLINE',
+      cloud_online: 'BROWSER ENGINE // ONLINE',
       core_online: 'PORT 5000 // CORE ONLINE'
     }
   };
@@ -70,7 +69,6 @@
     nodeCounter: 0,
     wireCounter: 0,
     contextMenuPos: { x: 0, y: 0 },
-    evalDebounceTimer: null,
     theme: localStorage.getItem('flame_blueprint_theme') || 'dark',
     language: localStorage.getItem('flame_blueprint_lang') || 'en'
   };
@@ -83,6 +81,7 @@
   const nodesLayer = document.getElementById('nodes-layer');
   const contextMenu = document.getElementById('context-menu');
   const toastContainer = document.getElementById('toast-container');
+  const missionBrief = document.getElementById('mission-brief');
 
   // =========================================================================
   // UTILITY HELPERS
@@ -203,7 +202,8 @@
 
       // Wire data flow animation
       const flowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      flowPath.setAttribute('class', `wire-flow wire-flow-accent-${accent}`);
+      flowPath.setAttribute('class', `wire-flow wire-flow-pulse wire-flow-accent-${accent}`);
+      flowPath.toggleAttribute('data-active', Boolean(fromNodeObj?.data));
       flowPath.setAttribute('d', d);
 
       // Invisible thick hitbox (18px) for effortless touch / mouse selection
@@ -333,10 +333,9 @@
     }
 
     // Prevent duplicate wires
-    const exists = state.wires.some(w =>
-      w.fromNode === fromNode && w.fromPin === fromPin && w.toNode === toNode && w.toPin === toPin
-    );
-    if (exists) return;
+    const existing = state.wires.find(w => w.toNode === toNode && w.toPin === toPin);
+    if (existing?.fromNode === fromNode && existing.fromPin === fromPin) return;
+    if (existing) state.wires = state.wires.filter(w => w !== existing);
 
     state.wireCounter++;
     const wire = {
@@ -353,9 +352,7 @@
     // Propagate data strictly forward from sender to receiver
     const sender = state.nodes.get(fromNode);
     const receiver = state.nodes.get(toNode);
-    if (sender && receiver && sender.data) {
-      receiver.onReceiveData(sender.data, toPin);
-    }
+    if (sender && receiver) receiver.onReceiveData(sender.data, toPin);
   }
 
   function removeWire(wireId) {
@@ -377,6 +374,7 @@
   function propagateDataFrom(nodeId, data) {
     const outgoing = state.wires.filter(w => w.fromNode === nodeId);
     outgoing.forEach(w => {
+      wiresLayer.querySelector(`[data-wire-id="${w.id}"] .wire-flow`)?.toggleAttribute('data-active', Boolean(data));
       const target = state.nodes.get(w.toNode);
       if (target) {
         target.onReceiveData(data, w.toPin);
@@ -508,7 +506,7 @@
       el.innerHTML = `
         <div class="node-header">
           <div class="node-title-group">
-            <span class="node-title">${this.title}</span>
+            <span class="node-title">${sanitize(this.title)}</span>
             <span class="node-type-badge">${this.type.toUpperCase()}</span>
             ${headerExtra}
           </div>
@@ -782,43 +780,22 @@
   function getOrComputeNodeBranchData(sourceNodeId) {
     const srcNode = state.nodes.get(sourceNodeId);
     if (!srcNode) return null;
-
-    if (srcNode.type === 'variable') {
-      const branchData = evaluateBranchPhysics(srcNode.params);
-      srcNode.data = branchData;
-      return branchData;
-    }
-
-    const upstreamVar = findUpstreamNode(sourceNodeId, 'variable');
-    if (upstreamVar) {
-      if (srcNode.data && srcNode.data.evaluation && Number.isFinite(srcNode.data.evaluation.fire_risk_pct) &&
-          srcNode.data.params && srcNode.data.params.o2_percent === upstreamVar.params.o2_percent &&
-          srcNode.data.params.pressure_atm === upstreamVar.params.pressure_atm &&
-          srcNode.data.params.flow_velocity_cms === upstreamVar.params.flow_velocity_cms &&
-          srcNode.data.params.fuel === upstreamVar.params.fuel) {
-        return srcNode.data;
-      }
-      return evaluateBranchPhysics(upstreamVar.params);
-    }
-
-    if (srcNode.data && srcNode.data.params) {
-      if (!srcNode.data.evaluation || !Number.isFinite(srcNode.data.evaluation.fire_risk_pct)) {
-        return evaluateBranchPhysics(srcNode.data.params);
-      }
-      return srcNode.data;
-    }
-
-    return null;
+    if (srcNode.type === 'variable') return srcNode.evaluate(false);
+    return srcNode.data?.evaluation ? srcNode.data : null;
   }
 
   function resolveUpstreamBranchData(nodeId, inPin = 'in') {
-    const wire = state.wires.find(w => w.toNode === nodeId && (w.toPin === inPin || !w.toPin || (inPin === 'in' && w.toPin.startsWith('in'))));
-    if (!wire) {
-      const anyWire = state.wires.find(w => w.toNode === nodeId);
-      if (!anyWire) return null;
-      return getOrComputeNodeBranchData(anyWire.fromNode);
-    }
-    return getOrComputeNodeBranchData(wire.fromNode);
+    const wire = state.wires.find(w => w.toNode === nodeId && w.toPin === inPin);
+    return wire ? getOrComputeNodeBranchData(wire.fromNode) : null;
+  }
+
+  function renderTelemetrySummary(evaluation) {
+    if (!evaluation) return 'Awaiting evaluation stream.';
+    return window.StandaloneAPI.telemetryRows(evaluation).map(({ label, text }) => `
+      <div class="telemetry-summary-item">
+        <span class="telemetry-summary-label">${sanitize(label)}</span>
+        <span class="telemetry-summary-value">${sanitize(text)}</span>
+      </div>`).join('');
   }
 
   // =========================================================================
@@ -1253,7 +1230,7 @@
 
   class VariableNode extends BaseNode {
     constructor(id, x, y, initialParams = {}, width = 320, height = null, nodeScale = 1.0, accentColor = 'default') {
-      super(id, 'variable', 'ENV VARIABLES // FEED', x, y, width, height, nodeScale, accentColor);
+      super(id, 'variable', initialParams.scenarioLabel ? `ENV // ${initialParams.scenarioLabel}` : 'ENV VARIABLES // FEED', x, y, width, height, nodeScale, accentColor);
       this.params = Object.assign({
         o2_percent: 21.0,
         pressure_atm: 1.0,
@@ -1262,6 +1239,12 @@
         h2_conc_pct: 0.0,
         cabin_volume_m3: 28.0
       }, initialParams);
+      this.params.fuel = ({ hydrogen: 'h2', heptane: 'n-heptane', ch4: 'methane' })[this.params.fuel] ?? this.params.fuel;
+      for (const [key, fallback] of Object.entries(SCENARIOS.iss_nominal.params)) {
+        if (typeof fallback === 'number') {
+          this.params[key] = this.params[key] == null || !Number.isFinite(Number(this.params[key])) ? fallback : Number(this.params[key]);
+        }
+      }
       this.init();
     }
 
@@ -1295,8 +1278,8 @@
             <span class="form-val-display" id="${this.id}-p-disp">${this.params.pressure_atm.toFixed(2)} atm</span>
           </div>
           <div class="input-slider-row">
-            <input type="range" id="${this.id}-p-range" min="0.3" max="2.0" step="0.05" value="${this.params.pressure_atm}">
-            <input type="number" id="${this.id}-p-num" class="input-num-sm" min="0.3" max="2.0" step="0.05" value="${this.params.pressure_atm}">
+            <input type="range" id="${this.id}-p-range" min="0.3" max="2.0" step="0.01" value="${this.params.pressure_atm}">
+            <input type="number" id="${this.id}-p-num" class="input-num-sm" min="0.3" max="2.0" step="0.01" value="${this.params.pressure_atm}">
           </div>
         </div>
 
@@ -1359,7 +1342,8 @@
         const dEl = this.element.querySelector(`#${dispId}`);
 
         const updateVal = (val) => {
-          const num = isFloat ? parseFloat(val) : parseInt(val, 10);
+          const parsed = isFloat ? parseFloat(val) : parseInt(val, 10);
+          const num = Number.isFinite(parsed) ? Math.max(Number(nEl.min), Math.min(Number(nEl.max), parsed)) : this.params[paramKey];
           this.params[paramKey] = num;
           rEl.value = num;
           nEl.value = num;
@@ -1412,6 +1396,7 @@
 
     setParams(newParams) {
       Object.assign(this.params, newParams);
+      this.params.fuel = ({ hydrogen: 'h2', heptane: 'n-heptane', ch4: 'methane' })[this.params.fuel] ?? this.params.fuel;
       const isGas = ['h2', 'methane'].includes(this.params.fuel);
       if (!isGas) {
         this.params.h2_conc_pct = 0.0;
@@ -1452,43 +1437,29 @@
     }
 
     queueEvaluate() {
-      if (state.evalDebounceTimer) clearTimeout(state.evalDebounceTimer);
-      state.evalDebounceTimer = setTimeout(() => {
-        this.evaluate();
-      }, 60);
+      clearTimeout(this.evalDebounceTimer);
+      this.evalDebounceTimer = setTimeout(() => this.evaluate(), 60);
     }
 
-    async evaluate() {
-      try {
-        const s2rNode = findDownstreamNode(this.id, 'simtoreal');
-        const payload = Object.assign({}, this.params, {
-          match_by: s2rNode ? s2rNode.matchBy : 'physics',
-          active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null,
-          filter_mission: s2rNode ? s2rNode.filterMission : 'all',
-          filter_fuel: s2rNode ? s2rNode.filterFuel : 'all'
-        });
-
-        const res = await fetch(API_EVAL_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        // Pack params + evaluation + benchmark + sim_to_real
-        this.data = {
-          params: Object.assign({}, this.params),
-          evaluation: data.evaluation,
-          nearest_benchmark: data.nearest_benchmark,
-          sim_to_real: data.sim_to_real
-        };
-
+    evaluate(propagate = true) {
+      const s2rNode = findDownstreamNode(this.id, 'simtoreal');
+      const params = {
+        ...this.params,
+        match_by: s2rNode?.matchBy ?? 'physics',
+        active_benchmark_id: s2rNode?.activeBenchmarkId ?? null,
+        filter_mission: s2rNode?.filterMission ?? 'all',
+        filter_fuel: s2rNode?.filterFuel ?? 'all'
+      };
+      this.data = evaluateBranchPhysics(params);
+      if (propagate) {
         propagateDataFrom(this.id, this.data);
         saveGraphToLocalStorage();
-      } catch (err) {
-        console.error('[VariableNode] Eval error:', err);
       }
+      return this.data;
+    }
+
+    onDestroy() {
+      clearTimeout(this.evalDebounceTimer);
     }
   }
 
@@ -1528,7 +1499,7 @@
       const bodyHtml = `
         <div class="s2r-header-metrics">
           <div class="s2r-metric-box">
-            <div class="s2r-metric-title">Sim-to-Real Confidence</div>
+            <div class="s2r-metric-title">Catalog similarity</div>
             <div class="s2r-metric-val-row">
               <span class="s2r-metric-val" id="${this.id}-conf-val">88.5%</span>
               <span class="confidence-badge confidence-high" id="${this.id}-conf-badge">HIGH</span>
@@ -1593,18 +1564,13 @@
         </div>
 
         <div class="s2r-explanation-card" id="${this.id}-explanation-card">
-          Grounded across 41 documented flight runs (Saffire I–VI, BASS-II, PSI-117, PSI-10, PSI-60, PSI-179, Apollo, Mir).
+          41 catalog references from NASA studies and spacecraft analogs. Curves are reconstructed.
         </div>
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
       this.bindCriteriaEvents();
 
-      // Ensure initial physics grounding even before external event
-      if (!this.data || !this.data.sim_to_real) {
-        const defaultEval = evaluateBranchPhysics({ o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 10.0, fuel: 'pmma' });
-        this.data = defaultEval;
-      }
       this.updateSimToRealDisplay();
     }
 
@@ -1650,29 +1616,14 @@
     }
 
     onReceiveData(data, toPin = 'in') {
-      let finalData = data;
-      // If data is raw ENV params (e.g. connected directly without intermediate SIM), automatically evaluate physics
-      if (!finalData || !finalData.sim_to_real || !Array.isArray(finalData.sim_to_real.top_matches)) {
-        const envParams = (finalData && finalData.params) ? finalData.params : (finalData || { o2_percent: 21.0 });
-        const evaluated = evaluateBranchPhysics(envParams);
-        if (evaluated && evaluated.sim_to_real) {
-          finalData = evaluated;
-        }
-      }
+      const finalData = data && (data.evaluation ? data : evaluateBranchPhysics(data.params || data));
       super.onReceiveData(finalData, toPin);
       this.updateSimToRealDisplay();
       propagateDataFrom(this.id, finalData);
     }
 
     updateSimToRealDisplay() {
-      if (!this.data || !this.data.sim_to_real) {
-        const upVar = findUpstreamNode(this.id, 'variable');
-        const envParams = (upVar && upVar.params) ? upVar.params : (this.data && this.data.params ? this.data.params : { o2_percent: 21.0 });
-        const evaluated = evaluateBranchPhysics(envParams);
-        if (evaluated && evaluated.sim_to_real) {
-          this.data = evaluated;
-        }
-      }
+      this.element.classList.toggle('stream-idle', !this.data?.sim_to_real);
       if (!this.data || !this.data.sim_to_real) return;
       const s2r = this.data.sim_to_real;
 
@@ -1684,12 +1635,8 @@
         });
       }
 
-      if (s2r.active_benchmark_id) {
-        this.activeBenchmarkId = s2r.active_benchmark_id;
-      }
-
-      const confVal = s2r.sim_to_real_confidence_pct || 85.0;
-      const gapVal = s2r.reality_gap_pct || 15.0;
+      const confVal = s2r.sim_to_real_confidence_pct ?? 0;
+      const gapVal = s2r.reality_gap_pct ?? 0;
 
       // Confidence
       const confEl = this.element.querySelector(`#${this.id}-conf-val`);
@@ -1751,7 +1698,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <a href="${m.url || 'https://psi.nasa.gov'}" target="_blank" rel="noopener noreferrer" class="s2r-link" onclick="event.stopPropagation()">
-                View Investigation Telemetry ↗
+                Open NASA investigation ↗
               </a>
               <span style="font-family: var(--font-mono); font-size: 9px; color: ${isActive ? '#06B6D4' : 'var(--text-muted)'}; font-weight: ${isActive ? '700' : '400'};">
                 ${isActive ? '● Active Calibration Reference' : 'Click to select as reference'}
@@ -1901,8 +1848,6 @@
       if (!grid) return;
 
       const evalData = this.data ? this.data.evaluation : null;
-      const params = this.data ? this.data.params : null;
-      const simTel = (evalData && evalData.sim_telemetry) ? evalData.sim_telemetry : {};
 
       if (!evalData) {
         grid.innerHTML = `
@@ -1920,139 +1865,7 @@
         statusEl.style.color = flightStatus === 'GO' ? 'var(--color-go)' : (flightStatus === 'NO-GO' ? 'var(--color-nogo)' : '#F59E0B');
       }
 
-      const rawRegime = (simTel.flame_color_mode || evalData.combustion_regime || 'nominal').toUpperCase();
-      const tfVal = evalData.t_flame_k !== undefined ? evalData.t_flame_k : (simTel.flame_temp_k || 1650);
-      const tf = `${Number(tfVal).toFixed(0)} K`;
-
-      const vgVal = params && params.flow_velocity_cms !== undefined ? Number(params.flow_velocity_cms) : 10.0;
-      let daVal = null;
-      if (evalData.damkohler_da !== undefined && !isNaN(evalData.damkohler_da)) {
-        daVal = Number(evalData.damkohler_da).toFixed(3);
-      } else if (simTel.damkohler_da !== undefined && !isNaN(simTel.damkohler_da)) {
-        daVal = Number(simTel.damkohler_da).toFixed(3);
-      } else if (Array.isArray(evalData.objective_reasons)) {
-        for (const r of evalData.objective_reasons) {
-          const m = r.match(/Damk[öo]hler\s+(?:number\s+)?Da\s*(?:=|≈)\s*([\d.]+)/i);
-          if (m && m[1]) {
-            daVal = Number(m[1]).toFixed(3);
-            break;
-          }
-        }
-      }
-      if (!daVal) {
-        const pBar = params && params.pressure_atm !== undefined ? Number(params.pressure_atm) : 1.0;
-        const xO2 = params && params.o2_percent !== undefined ? Number(params.o2_percent) / 100.0 : 0.21;
-        const vgMs = vgVal / 100.0;
-        const tauFlow = 0.008 / (vgMs + 0.005);
-        const rateFactor = 3.2e7 * Math.pow(pBar, 1.75) * xO2 * Math.exp(-14500.0 / 1500.0);
-        const tauChem = 1.0 / Math.max(rateFactor, 1.0e-5);
-        daVal = (tauFlow / tauChem).toFixed(3);
-      }
-
-      const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
-      const rawVf = (evalData.spread_rate_mm_s !== undefined && !isNaN(evalData.spread_rate_mm_s)) ? evalData.spread_rate_mm_s
-                  : ((evalData.flame_spread_rate_mm_s !== undefined && !isNaN(evalData.flame_spread_rate_mm_s)) ? evalData.flame_spread_rate_mm_s
-                  : ((simTel.spread_rate_mm_s !== undefined && !isNaN(simTel.spread_rate_mm_s)) ? simTel.spread_rate_mm_s
-                  : ((simTel.flame_spread_rate_mm_s !== undefined && !isNaN(simTel.flame_spread_rate_mm_s)) ? simTel.flame_spread_rate_mm_s : 2.10)));
-      const vfVal = Number(rawVf).toFixed(2);
-
-      const fluxVal = evalData.hull_heat_flux_kw_m2 !== undefined ? Number(evalData.hull_heat_flux_kw_m2)
-                    : (simTel.hull_heat_flux_kw_m2 !== undefined ? Number(simTel.hull_heat_flux_kw_m2) : 0.0);
-      const flux = `${fluxVal.toFixed(1)} kW/m²`;
-
-      const dpVal = simTel.cabin_overpressure_kpa !== undefined ? Number(simTel.cabin_overpressure_kpa) : 0.0;
-      const dp = `+${dpVal.toFixed(2)} kPa`;
-
-      const isH2 = params && ['h2', 'hydrogen'].includes(String(params.fuel || '').toLowerCase());
-      let co600 = 0.0;
-      let coVal = '0.0 ppm';
-      if (isH2) {
-        coVal = '0.0 (H₂ Fuel)';
-      } else if (evalData.time_series && Array.isArray(evalData.time_series.co_ppm) && evalData.time_series.co_ppm.length > 0) {
-        const lastCO = evalData.time_series.co_ppm[evalData.time_series.co_ppm.length - 1];
-        co600 = Number(lastCO);
-        coVal = `${co600.toFixed(1)} ppm`;
-      } else if (evalData.toxic_co_ppm_600s !== undefined) {
-        co600 = Number(evalData.toxic_co_ppm_600s);
-        coVal = `${co600.toFixed(1)} ppm`;
-      } else {
-        coVal = '24.5 ppm';
-      }
-
-      let smacStr = '> 600 s (SAFE)';
-      let isSmacCritical = false;
-      if (isH2) {
-        smacStr = 'N/A (Carbon-free)';
-      } else {
-        let tSmac = null;
-        if (evalData.time_to_smac_sec !== undefined && evalData.time_to_smac_sec < 600) {
-          tSmac = Number(evalData.time_to_smac_sec);
-        } else if (evalData.time_series && Array.isArray(evalData.time_series.co_ppm) && Array.isArray(evalData.time_series.t_sec)) {
-          const tArr = evalData.time_series.t_sec;
-          const coArr = evalData.time_series.co_ppm;
-          for (let i = 0; i < coArr.length; i++) {
-            if (coArr[i] >= 55.0) {
-              if (i === 0) {
-                tSmac = tArr[0];
-              } else {
-                const fraction = (55.0 - coArr[i - 1]) / Math.max(1e-5, (coArr[i] - coArr[i - 1]));
-                tSmac = tArr[i - 1] + fraction * (tArr[i] - tArr[i - 1]);
-              }
-              break;
-            }
-          }
-        } else if (co600 > 55.0) {
-          const coRate = evalData.co_rate_ppm_s || (co600 / 600.0);
-          tSmac = Math.max(1, Math.round(55.0 / Math.max(1e-4, coRate)));
-        }
-
-        if (tSmac !== null && tSmac < 600) {
-          smacStr = `${Math.round(tSmac)} s (CRITICAL SMAC)`;
-          isSmacCritical = true;
-        } else {
-          smacStr = '> 600 s (SAFE)';
-          isSmacCritical = false;
-        }
-      }
-
-      grid.innerHTML = `
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Combustion Regime:</span>
-          <span class="telemetry-summary-value highlight-cyan">${sanitize(rawRegime)}</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Flame Temp T_f:</span>
-          <span class="telemetry-summary-value">${sanitize(tf)}</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Damköhler Da:</span>
-          <span class="telemetry-summary-value">${sanitize(daVal)}</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Critical LOI_crit:</span>
-          <span class="telemetry-summary-value">${sanitize(loiVal)}%</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Spread Rate V_f:</span>
-          <span class="telemetry-summary-value highlight-cyan">${sanitize(vfVal)} mm/s</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Hull Heat Flux q''_w:</span>
-          <span class="telemetry-summary-value ${fluxVal >= 28.0 ? 'highlight-danger' : (fluxVal > 15.0 ? 'highlight-cyan' : '')}">${sanitize(flux)}</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Peak ΔP Overpressure:</span>
-          <span class="telemetry-summary-value ${dpVal >= 45.0 ? 'highlight-danger' : ''}">${sanitize(dp)}</span>
-        </div>
-        <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Toxic CO @ 600s:</span>
-          <span class="telemetry-summary-value">${sanitize(coVal)}</span>
-        </div>
-        <div class="telemetry-summary-item" style="grid-column: span 2;">
-          <span class="telemetry-summary-label">Time to SMAC 55 ppm:</span>
-          <span class="telemetry-summary-value ${isSmacCritical ? 'highlight-danger' : 'highlight-safe'}">${sanitize(smacStr)}</span>
-        </div>
-      `;
+      grid.innerHTML = renderTelemetrySummary(evalData);
     }
 
     renderMatrix() {
@@ -2256,6 +2069,7 @@
 
       this.createDOM('', portsHtml, bodyHtml, 'two-inputs');
       this.bindDiffEvents();
+      this.updateDiffView();
     }
 
     bindDiffEvents() {
@@ -2287,176 +2101,50 @@
     }
 
     updateDiffView() {
-      if (!this.dataA) this.dataA = resolveUpstreamBranchData(this.id, 'in_a');
-      if (!this.dataB) this.dataB = resolveUpstreamBranchData(this.id, 'in_b');
-
-      // Ensure dataA and dataB have complete physical evaluations with valid risk numbers
-      if (this.dataA && (!this.dataA.evaluation || !Number.isFinite(this.dataA.evaluation.fire_risk_pct))) {
-        this.dataA = evaluateBranchPhysics(this.dataA.params || this.dataA);
-      }
-      if (this.dataB && (!this.dataB.evaluation || !Number.isFinite(this.dataB.evaluation.fire_risk_pct))) {
-        this.dataB = evaluateBranchPhysics(this.dataB.params || this.dataB);
-      }
-
-      const pA = this.dataA ? (this.dataA.params || {}) : null;
-      const pB = this.dataB ? (this.dataB.params || {}) : null;
-      const eA = this.dataA ? (this.dataA.evaluation || {}) : null;
-      const eB = this.dataB ? (this.dataB.evaluation || {}) : null;
-
       const vText = this.element.querySelector(`#${this.id}-verdict-text`);
       const vTag = this.element.querySelector(`#${this.id}-verdict-tag`);
       const tbody = this.element.querySelector(`#${this.id}-matrix-tbody`);
-      if (!tbody) return;
-
-      if (!pA && !pB) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); text-align: center; padding: 12px;">Connect wires from two branches to IN A and IN B to compare deltas</td></tr>`;
-        if (vText) vText.textContent = 'Awaiting Dual Inputs...';
-        if (vTag) { vTag.className = 'diff-verdict-tag equal'; vTag.textContent = 'CONNECT A & B'; }
+      const outBox = this.element.querySelector(`#${this.id}-output-box`);
+      const cmpBtn = this.element.querySelector(`#${this.id}-btn-compare`);
+      const hasBoth = Boolean(this.dataA?.evaluation && this.dataB?.evaluation);
+      cmpBtn.disabled = !hasBoth;
+      if (!hasBoth) {
+        tbody.innerHTML = '<tr><td colspan="4">Connect two evaluation streams to IN A and IN B.</td></tr>';
+        vText.textContent = 'Awaiting both inputs';
+        vTag.className = 'diff-verdict-tag equal';
+        vTag.textContent = 'CONNECT A & B';
+        outBox.textContent = '';
+        this.data = null;
+        propagateDataFrom(this.id, null);
         return;
       }
 
-      const o2A = (pA && Number.isFinite(Number(pA.o2_percent))) ? Number(pA.o2_percent).toFixed(1) : '—';
-      const o2B = (pB && Number.isFinite(Number(pB.o2_percent))) ? Number(pB.o2_percent).toFixed(1) : '—';
-      const deltaO2 = (pA && pB && Number.isFinite(Number(pA.o2_percent)) && Number.isFinite(Number(pB.o2_percent)))
-        ? (pB.o2_percent - pA.o2_percent).toFixed(1) : '—';
-
-      const pAtmA = (pA && Number.isFinite(Number(pA.pressure_atm))) ? Number(pA.pressure_atm).toFixed(2) : '—';
-      const pAtmB = (pB && Number.isFinite(Number(pB.pressure_atm))) ? Number(pB.pressure_atm).toFixed(2) : '—';
-      const deltaP = (pA && pB && Number.isFinite(Number(pA.pressure_atm)) && Number.isFinite(Number(pB.pressure_atm)))
-        ? (pB.pressure_atm - pA.pressure_atm).toFixed(2) : '—';
-
-      const vgA = (pA && Number.isFinite(Number(pA.flow_velocity_cms))) ? Number(pA.flow_velocity_cms).toFixed(1) : '—';
-      const vgB = (pB && Number.isFinite(Number(pB.flow_velocity_cms))) ? Number(pB.flow_velocity_cms).toFixed(1) : '—';
-      const deltaVg = (pA && pB && Number.isFinite(Number(pA.flow_velocity_cms)) && Number.isFinite(Number(pB.flow_velocity_cms)))
-        ? (pB.flow_velocity_cms - pA.flow_velocity_cms).toFixed(1) : '—';
-
-      const numTfA = eA ? (Number.isFinite(Number(eA.t_flame_k)) ? Number(eA.t_flame_k) : (Number.isFinite(Number(eA.flame_temp_k)) ? Number(eA.flame_temp_k) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.flame_temp_k))) ? Number(eA.sim_telemetry.flame_temp_k) : 1650))) : null;
-      const numTfB = eB ? (Number.isFinite(Number(eB.t_flame_k)) ? Number(eB.t_flame_k) : (Number.isFinite(Number(eB.flame_temp_k)) ? Number(eB.flame_temp_k) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.flame_temp_k))) ? Number(eB.sim_telemetry.flame_temp_k) : 1650))) : null;
-      const tfA = numTfA !== null ? numTfA.toFixed(0) : '—';
-      const tfB = numTfB !== null ? numTfB.toFixed(0) : '—';
-      const deltaTf = (numTfA !== null && numTfB !== null) ? (numTfB - numTfA).toFixed(0) : '—';
-
-      const numVfA = eA ? (Number.isFinite(Number(eA.spread_rate_mm_s)) ? Number(eA.spread_rate_mm_s) : (Number.isFinite(Number(eA.flame_spread_rate_mm_s)) ? Number(eA.flame_spread_rate_mm_s) : 2.0)) : null;
-      const numVfB = eB ? (Number.isFinite(Number(eB.spread_rate_mm_s)) ? Number(eB.spread_rate_mm_s) : (Number.isFinite(Number(eB.flame_spread_rate_mm_s)) ? Number(eB.flame_spread_rate_mm_s) : 2.0)) : null;
-      const vfA = numVfA !== null ? numVfA.toFixed(2) : '—';
-      const vfB = numVfB !== null ? numVfB.toFixed(2) : '—';
-      const deltaVf = (numVfA !== null && numVfB !== null) ? (numVfB - numVfA).toFixed(2) : '—';
-
-      const numFluxA = eA ? (Number.isFinite(Number(eA.hull_heat_flux_kw_m2)) ? Number(eA.hull_heat_flux_kw_m2) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eA.sim_telemetry.hull_heat_flux_kw_m2) : 5.0)) : null;
-      const numFluxB = eB ? (Number.isFinite(Number(eB.hull_heat_flux_kw_m2)) ? Number(eB.hull_heat_flux_kw_m2) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eB.sim_telemetry.hull_heat_flux_kw_m2) : 5.0)) : null;
-      const fluxA = numFluxA !== null ? numFluxA.toFixed(1) : '—';
-      const fluxB = numFluxB !== null ? numFluxB.toFixed(1) : '—';
-      const deltaFlux = (numFluxA !== null && numFluxB !== null) ? (numFluxB - numFluxA).toFixed(1) : '—';
-
-      const numRiskA = eA ? (Number.isFinite(Number(eA.fire_risk_pct)) ? Number(eA.fire_risk_pct) : (Number.isFinite(Number(eA.fire_risk_score)) ? Number(eA.fire_risk_score) : 4.0)) : null;
-      const numRiskB = eB ? (Number.isFinite(Number(eB.fire_risk_pct)) ? Number(eB.fire_risk_pct) : (Number.isFinite(Number(eB.fire_risk_score)) ? Number(eB.fire_risk_score) : 4.0)) : null;
-      const riskA = numRiskA !== null ? numRiskA.toFixed(1) : '—';
-      const riskB = numRiskB !== null ? numRiskB.toFixed(1) : '—';
-      const deltaRisk = (numRiskA !== null && numRiskB !== null) ? (numRiskB - numRiskA).toFixed(1) : '—';
-
-      const numExplA = eA ? (Number.isFinite(Number(eA.explosion_risk_pct)) ? Number(eA.explosion_risk_pct) : 0.0) : null;
-      const numExplB = eB ? (Number.isFinite(Number(eB.explosion_risk_pct)) ? Number(eB.explosion_risk_pct) : 0.0) : null;
-      const explA = numExplA !== null ? numExplA.toFixed(1) : '—';
-      const explB = numExplB !== null ? numExplB.toFixed(1) : '—';
-      const deltaExpl = (numExplA !== null && numExplB !== null) ? (numExplB - numExplA).toFixed(1) : '—';
-
-      const breachA = eA ? !!(eA.breach_outside_risk || eA.outside_breach || eA.hull_breach_predicted || (numFluxA && numFluxA >= 28.0)) : false;
-      const breachB = eB ? !!(eB.breach_outside_risk || eB.outside_breach || eB.hull_breach_predicted || (numFluxB && numFluxB >= 28.0)) : false;
-
-      let riskDeltaClass = 'delta-neutral';
-      if (numRiskA !== null && numRiskB !== null) {
-        const dR = numRiskB - numRiskA;
-        if (dR < -0.5) riskDeltaClass = 'delta-safer';
-        else if (dR > 0.5) riskDeltaClass = 'delta-danger';
-      }
-
-      // Verdict calculation: lower cumulative hazard index indicates safer regime
-      if (numRiskA !== null && numRiskB !== null) {
-        const scoreA = numRiskA + 2.0 * (numExplA || 0) + (breachA ? 100 : 0) + (numFluxA && numFluxA >= 28.0 ? 50 : 0);
-        const scoreB = numRiskB + 2.0 * (numExplB || 0) + (breachB ? 100 : 0) + (numFluxB && numFluxB >= 28.0 ? 50 : 0);
-
-        if (scoreA < scoreB - 1.0) {
-          const deltaPts = (scoreB - scoreA).toFixed(1);
-          if (vText) vText.textContent = `BRANCH A IS SAFER (${deltaPts} pts lower)`;
-          if (vTag) { vTag.className = 'diff-verdict-tag safer-a'; vTag.textContent = 'BRANCH A SAFER'; }
-        } else if (scoreB < scoreA - 1.0) {
-          const deltaPts = (scoreA - scoreB).toFixed(1);
-          if (vText) vText.textContent = `BRANCH B IS SAFER (${deltaPts} pts lower)`;
-          if (vTag) { vTag.className = 'diff-verdict-tag safer-b'; vTag.textContent = 'BRANCH B SAFER'; }
-        } else {
-          if (vText) vText.textContent = 'EQUAL RISK PROFILES';
-          if (vTag) { vTag.className = 'diff-verdict-tag equal'; vTag.textContent = 'EQUAL RISK'; }
-        }
-      }
-
-      tbody.innerHTML = `
-        <tr><td><b>Oxygen [O₂]</b></td><td>${o2A}%</td><td>${o2B}%</td><td>${deltaO2 !== '—' && Number(deltaO2) > 0 ? '+' : ''}${deltaO2}%</td></tr>
-        <tr><td><b>Cabin Pressure [P]</b></td><td>${pAtmA} atm</td><td>${pAtmB} atm</td><td>${deltaP !== '—' && Number(deltaP) > 0 ? '+' : ''}${deltaP} atm</td></tr>
-        <tr><td><b>Flow Velocity [V_g]</b></td><td>${vgA} cm/s</td><td>${vgB} cm/s</td><td>${deltaVg !== '—' && Number(deltaVg) > 0 ? '+' : ''}${deltaVg} cm/s</td></tr>
-        <tr><td><b>Flame Temp [T_f]</b></td><td>${tfA} K</td><td>${tfB} K</td><td>${deltaTf !== '—' && Number(deltaTf) > 0 ? '+' : ''}${deltaTf} K</td></tr>
-        <tr><td><b>Spread Rate [V_f]</b></td><td>${vfA} mm/s</td><td>${vfB} mm/s</td><td>${deltaVf !== '—' && Number(deltaVf) > 0 ? '+' : ''}${deltaVf} mm/s</td></tr>
-        <tr><td><b>Heat Flux [q'']</b></td><td>${fluxA} kW/m²</td><td>${fluxB} kW/m²</td><td>${deltaFlux !== '—' && Number(deltaFlux) > 0 ? '+' : ''}${deltaFlux} kW/m²</td></tr>
-        <tr><td><b>Fire Risk Score</b></td><td>${riskA}%</td><td>${riskB}%</td><td class="${riskDeltaClass}">${deltaRisk !== '—' && Number(deltaRisk) > 0 ? '+' : ''}${deltaRisk}%</td></tr>
-        <tr><td><b>Explosion Risk</b></td><td>${explA}%</td><td>${explB}%</td><td>${deltaExpl !== '—' && Number(deltaExpl) > 0 ? '+' : ''}${deltaExpl}%</td></tr>
-      `;
+      const result = window.StandaloneAPI.compareBlueprints(this.dataA, this.dataB, this.diffQuery, 'en');
+      vText.textContent = result.verdict;
+      const branch = result.safer_branch;
+      vTag.className = `diff-verdict-tag ${branch === 'EQUAL' ? 'equal' : 'safer-' + branch.toLowerCase()}`;
+      vTag.textContent = branch === 'EQUAL' ? 'COMPARABLE' : `BRANCH ${branch} LOWER`;
+      tbody.innerHTML = result.rows.map(row =>
+        `<tr>${row.map(text => `<td>${sanitize(text)}</td>`).join('')}</tr>`
+      ).join('');
+      if (this.data) this.publishComparison(result);
     }
 
-    async executeComparison() {
-      const cmpBtn = this.element.querySelector(`#${this.id}-btn-compare`);
-      const outBox = this.element.querySelector(`#${this.id}-output-box`);
-      if (cmpBtn) {
-        cmpBtn.disabled = true;
-        cmpBtn.textContent = 'COMPARING...';
+    publishComparison(result) {
+      this.data = { ...result, query: this.diffQuery };
+      this.element.querySelector(`#${this.id}-output-box`).innerHTML = formatMarkdownResponse(result.advisory_text);
+      propagateDataFrom(this.id, this.data);
+    }
+
+    executeComparison() {
+      if (!this.dataA?.evaluation || !this.dataB?.evaluation) return;
+      if (!findDownstreamNode(this.id, 'brief')) {
+        const brief = spawnNode('brief', this.x + this.width + 36, this.y,
+          { title: 'AI BRIEF // DIFFERENTIAL SAFETY' }, null, null, this.nodeScale, this.accentColor);
+        addWire(this.id, 'out', brief.id, 'in');
       }
-
-      try {
-        let branchDataA = resolveUpstreamBranchData(this.id, 'in_a') || this.dataA;
-        let branchDataB = resolveUpstreamBranchData(this.id, 'in_b') || this.dataB;
-
-        if (!branchDataA || !branchDataA.evaluation || !Number.isFinite(branchDataA.evaluation.fire_risk_pct)) {
-          branchDataA = evaluateBranchPhysics(branchDataA ? branchDataA.params || branchDataA : { o2_percent: 21.0 });
-        }
-        if (!branchDataB || !branchDataB.evaluation || !Number.isFinite(branchDataB.evaluation.fire_risk_pct)) {
-          branchDataB = evaluateBranchPhysics(branchDataB ? branchDataB.params || branchDataB : { o2_percent: 29.5 });
-        }
-
-        const res = await fetch('/api/compare-blueprints', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            branch_a: branchDataA,
-            branch_b: branchDataB,
-            query: this.diffQuery,
-            language: 'en'
-          })
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const result = await res.json();
-
-        if (outBox) {
-          outBox.innerHTML = formatMarkdownResponse(result.advisory_text || '');
-        }
-
-        this.data = result;
-        propagateDataFrom(this.id, result);
-
-        // Spawn a new connected AI BRIEF node to the right
-        const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' }, null, null, this.nodeScale, this.accentColor);
-        addWire(this.id, 'out', briefNode.id, 'in');
-        briefNode.setBriefContent(result, this.diffQuery);
-        saveGraphToLocalStorage();
-
-        showToast('Differential comparison computed & Brief generated');
-      } catch (err) {
-        console.error('[AiDiffNode] Compare error:', err);
-        showToast('Comparison error: ' + err.message);
-      } finally {
-        if (cmpBtn) {
-          cmpBtn.disabled = false;
-          cmpBtn.textContent = 'COMPARE BLUEPRINTS';
-        }
-      }
+      this.publishComparison(window.StandaloneAPI.compareBlueprints(this.dataA, this.dataB, this.diffQuery, 'en'));
+      saveGraphToLocalStorage();
     }
   }
 
@@ -2482,9 +2170,10 @@
       this.offscreenImg = this.offscreenCtx.createImageData(this.gridNx, this.gridNy);
       this.initGridFields(25.0, 0.21);
       this.particles = [];
-      this.sootParticles = [];
-      this.flamePulse = 0;
-      this.blastWaveRadius = 0;
+      this.simTime = 120;
+      this.solverTime = 0;
+      this.playing = false;
+      this.needsRender = true;
       this.stars = [];
       this.init();
     }
@@ -2521,9 +2210,17 @@
         <div class="cutaway-canvas-container">
           <canvas id="${this.id}-canvas" width="436" height="230"></canvas>
           <div class="sim-hud-overlay">
-            <div class="hud-pill" id="${this.id}-hud-regime">REGIME: <b>INIT</b></div>
-            <div class="hud-pill" id="${this.id}-hud-flux">HEAT FLUX: <b>0.0 kW/m²</b></div>
+            <span class="hud-pill" data-hud="regime">AWAITING STREAM</span>
+            <span class="hud-pill" data-hud="temp">T_f —</span>
+            <span class="hud-pill" data-hud="flux">q″_w(t) —</span>
+            <span class="hud-pill" data-hud="wake">O₂ WAKE —</span>
           </div>
+        </div>
+
+        <div class="sim-time-bar">
+          <button type="button" class="btn-bar sim-play-btn" data-action="toggle-sim-play" aria-pressed="false">▶ Play</button>
+          <input type="range" class="sim-time-slider" min="0" max="600" step="5" value="120" aria-label="Simulation time in seconds">
+          <output class="sim-time-readout">120 / 600 s</output>
         </div>
 
         <div class="verdict-box">
@@ -2560,7 +2257,7 @@
             <div style="font-size: 11px; font-weight: 600; color: #FFFFFF;" id="${this.id}-bench-name">PSI-117 (FLEX Cool Flames CFD)</div>
             <div>
               <a href="#" target="_blank" rel="noopener noreferrer" class="bench-link" id="${this.id}-bench-link">
-                View Official Investigation Telemetry ↗
+                Open NASA investigation ↗
               </a>
             </div>
           </div>
@@ -2568,6 +2265,7 @@
       `;
 
       this.createDOM(headerExtra, portsHtml, bodyHtml);
+      this.bindTimeline();
       this.bindSimModeEvents();
       this.initParticles();
       this.startCanvasAnimation();
@@ -2578,6 +2276,31 @@
       }
     }
 
+    bindTimeline() {
+      this.timeSlider = this.element.querySelector('.sim-time-slider');
+      this.timeReadout = this.element.querySelector('.sim-time-readout');
+      this.playButton = this.element.querySelector('.sim-play-btn');
+      this.hud = Object.fromEntries(Array.from(this.element.querySelectorAll('[data-hud]'), el => [el.dataset.hud, el]));
+      this.timeSlider.disabled = this.playButton.disabled = true;
+      this.timeSlider.addEventListener('input', () => {
+        this.simTime = Number(this.timeSlider.value);
+        this.setPlaying(false);
+        this.needsRender = true;
+      });
+      this.playButton.addEventListener('click', () => {
+        if (this.simTime >= 600) this.simTime = 0;
+        this.setPlaying(!this.playing);
+        this.needsRender = true;
+      });
+    }
+
+    setPlaying(playing) {
+      this.playing = playing;
+      this.lastTick = null;
+      this.playButton.textContent = playing ? '⏸ Pause' : '▶ Play';
+      this.playButton.setAttribute('aria-pressed', String(playing));
+    }
+
     bindSimModeEvents() {
       const btnFlame = this.element.querySelector(`#${this.id}-btn-mode-flame`);
       const btnHull = this.element.querySelector(`#${this.id}-btn-mode-hull`);
@@ -2585,12 +2308,14 @@
         btnFlame.addEventListener('click', (e) => {
           e.stopPropagation();
           this.simGridMode = 'flame_o2';
+          this.needsRender = true;
           btnFlame.classList.add('active');
           btnHull.classList.remove('active');
         });
         btnHull.addEventListener('click', (e) => {
           e.stopPropagation();
           this.simGridMode = 'thermal_hull';
+          this.needsRender = true;
           btnHull.classList.add('active');
           btnFlame.classList.remove('active');
         });
@@ -2616,7 +2341,6 @@
           alpha: Math.random() * 0.5 + 0.2
         });
       }
-      this.sootParticles = [];
     }
 
     startCanvasAnimation() {
@@ -2624,38 +2348,47 @@
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
 
-      const render = () => {
-        this.drawScene(ctx, canvas.width, canvas.height);
+      const render = (timestamp) => {
+        if (this.playing) {
+          this.lastTick ??= timestamp;
+          const ticks = Math.floor((timestamp - this.lastTick) / 125);
+          if (ticks > 0) {
+            this.simTime = Math.min(600, this.simTime + ticks * 5);
+            this.lastTick += ticks * 125;
+            this.needsRender = true;
+            if (this.simTime === 600) this.setPlaying(false);
+          }
+        }
+        if (this.needsRender) {
+          this.needsRender = false;
+          this.timeSlider.value = this.simTime;
+          this.timeReadout.textContent = `${this.simTime} / 600 s`;
+          this.drawScene(ctx, canvas.width, canvas.height);
+        }
         this.animFrameId = requestAnimationFrame(render);
       };
       this.animFrameId = requestAnimationFrame(render);
     }
 
-    stepSolver(params, simTel) {
+    stepSolver(params, evaluation, time) {
       const Nx = this.gridNx;
       const Ny = this.gridNy;
-      const vg = Math.max(0.1, parseFloat(params.flow_velocity_cms || 10.0));
-      const o2_raw = parseFloat(params.o2_percent || 21.0);
+      const vg = params.flow_velocity_cms ?? 0;
+      const o2_raw = params.o2_percent ?? 21;
       const Y_O2_inlet = Math.max(0.05, Math.min(1.0, o2_raw / 100.0));
-      const mode = simTel.flame_color_mode || 'sooty_yellow';
-      const isExtinguished = (mode === 'extinguished');
-      const isCoolFlame = (mode === 'cool_flame');
-      const isExplosion = (mode === 'explosion_flash');
-
-      let T_flame_target = 1650.0;
-      if (isExtinguished) T_flame_target = 25.0;
-      else if (isCoolFlame) T_flame_target = 680.0;
-      else if (isExplosion) T_flame_target = 2300.0;
-      else T_flame_target = 1350.0 + (o2_raw - 21.0) * 22.0;
-
-      const u0 = Math.min(0.42, Math.max(0.04, vg * 0.016));
+      const mode = evaluation.sim_telemetry.flame_color_mode;
+      const isExtinguished = mode === 'extinguished';
+      const isExplosion = mode === 'explosion_flash';
+      const burn = isExplosion ? Math.exp(-time / 24) : 1 - Math.exp(-time / 12);
+      const T_flame_target = evaluation.flame_temp_k - 273.15;
+      const u0 = Math.min(0.42, vg * 0.016);
       const alpha_diff = 0.065;
       const d_diff = 0.075;
 
       const fcX = 13;
       const fcY = 12;
-      this.flamePulse += 0.05;
-      const pulseMod = Math.sin(this.flamePulse * 3.0) * 0.12;
+      const frontRadius = this.frontRadius(evaluation.spread_rate_mm_s, time);
+      const sourceRadius = 2 + 7 * (frontRadius - 4) / 70;
 
       for (let i = 0; i < Nx; i++) {
         for (let j = 0; j < Ny; j++) {
@@ -2709,18 +2442,10 @@
           let Q_chem = 0;
           let S_O2 = 0;
 
-          if (!isExtinguished && O2_c > 0.02) {
-            if (isExplosion) {
-              if (r2 < 48.0) {
-                const w = Math.exp(- r2 / 24.0) * (O2_c / Y_O2_inlet);
-                Q_chem = w * (T_flame_target - T_c) * 0.35;
-                S_O2 = - w * O2_c * 0.25;
-              }
-            } else if (r2 < 28.0) {
-              const w = Math.exp(- r2 / (10.0 + pulseMod * 2.0)) * (O2_c / Y_O2_inlet);
-              Q_chem = w * (T_flame_target - T_c) * 0.22;
-              S_O2 = - w * O2_c * 0.16; // Oxygen sink generates downstream depleted oxygen shadow
-            }
+          if (!isExtinguished && O2_c > 0.02 && r2 < sourceRadius ** 2) {
+            const reaction = burn * Math.exp(-2 * r2 / sourceRadius ** 2) * (O2_c / Y_O2_inlet);
+            Q_chem = reaction * (T_flame_target - T_c) * 0.25;
+            S_O2 = -reaction * O2_c * 0.16;
           }
 
           const Q_rad = 0.0035 * (T_c - 25.0);
@@ -2728,7 +2453,7 @@
           let nextT = T_c + advT + alpha_diff * lapT + Q_chem - Q_rad;
           let nextO2 = O2_c + advO2 + d_diff * lapO2 + S_O2;
 
-          this.fieldT_next[idx] = Math.max(25.0, Math.min(2400.0, nextT));
+          this.fieldT_next[idx] = Math.max(25.0, Math.min(2800.0, nextT));
           this.fieldO2_next[idx] = Math.max(0.008, Math.min(1.0, nextO2));
         }
       }
@@ -2831,8 +2556,22 @@
       this.offscreenCtx.putImageData(this.offscreenImg, 0, 0);
     }
 
+    frontRadius(spreadRate, time) {
+      // Map a one-metre model extent into the cutaway with a smooth chamber boundary.
+      return 4 + 70 * Math.tanh(spreadRate * time / 1000);
+    }
+
     drawScene(ctx, w, h) {
       ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      const scale = Math.min(w / 436, h / 230);
+      ctx.translate((w - 436 * scale) / 2, (h - 230 * scale) / 2);
+      ctx.scale(scale, scale);
+      this.renderSim2DCanvas(ctx, 436, 230);
+      ctx.restore();
+    }
+
+    renderSim2DCanvas(ctx, w, h) {
 
       // Deep Space Vacuum Background
       const spaceGrad = ctx.createLinearGradient(0, 0, 0, h);
@@ -2844,7 +2583,7 @@
       // Background stars
       ctx.fillStyle = '#FFFFFF';
       this.stars.forEach(st => {
-        ctx.globalAlpha = st.alpha * (0.8 + Math.sin(Date.now() * 0.003 + st.x) * 0.2);
+        ctx.globalAlpha = st.alpha;
         ctx.beginPath();
         ctx.arc(st.x, st.y, st.size, 0, Math.PI * 2);
         ctx.fill();
@@ -2852,21 +2591,42 @@
       ctx.globalAlpha = 1.0;
 
       // Telemetry
-      const evalData = this.data ? this.data.evaluation : null;
-      const params = this.data ? this.data.params : { flow_velocity_cms: 10, o2_percent: 21 };
-      const simTel = evalData ? (evalData.sim_telemetry || {}) : {};
-
-      const vg = parseFloat(params.flow_velocity_cms || 10.0);
-      const o2_raw = parseFloat(params.o2_percent || 21.0);
+      const evaluation = this.data?.evaluation;
+      const params = this.data?.params;
+      const time = this.simTime;
+      const vg = params?.flow_velocity_cms ?? 0;
+      const o2_raw = params?.o2_percent ?? 21;
       const Y_O2_inlet = Math.max(0.05, Math.min(1.0, o2_raw / 100.0));
-      const mode = simTel.flame_color_mode || 'sooty_yellow';
-      const isCoolFlame = (mode === 'cool_flame');
-      const breach = evalData ? evalData.breach_outside_risk : false;
-      const heatFlux = parseFloat(simTel.hull_heat_flux_kw_m2 || 0.5);
+      const mode = evaluation?.sim_telemetry.flame_color_mode;
+      const explosive = mode === 'explosion_flash';
+      const warmup = time === 600 ? 1 : -Math.expm1(-time / 90) / -Math.expm1(-600 / 90);
+      const heatFlux = (evaluation?.hull_heat_flux_kw_m2 ?? 0) * (explosive ? Math.exp(-time / 24) : warmup);
+      const pressure = evaluation?.time_series.overpressure_kpa;
+      const sample = Math.floor(time / 10);
+      const deltaP = pressure ? (pressure[sample] + (time % 10 ? (pressure[sample + 1] - pressure[sample]) / 2 : 0)) : 0;
 
-      // Execute 2D Finite-Volume Advection-Diffusion Solver Step
-      this.stepSolver(params, simTel);
-      this.renderSolverToImageData(isCoolFlame, Y_O2_inlet);
+      if (time < this.solverTime) {
+        this.initGridFields(25, Y_O2_inlet);
+        this.solverTime = 0;
+      }
+      if (evaluation) {
+        while (this.solverTime < time) {
+          this.solverTime += 5;
+          this.stepSolver(params, evaluation, this.solverTime);
+          this.stepSolver(params, evaluation, this.solverTime);
+        }
+      }
+      this.renderSolverToImageData(mode === 'cool_blue', Y_O2_inlet);
+      let depletedO2 = Y_O2_inlet;
+      for (let i = 16; i < this.gridNx - 1; i++) {
+        depletedO2 = Math.min(depletedO2, this.fieldO2[i * this.gridNy + 12]);
+      }
+      this.hud.regime.textContent = ({
+        extinguished: 'QUENCHED', cool_blue: 'COOL FLAME', sooty_yellow: 'HOT FLAME', explosion_flash: 'EXPLOSION FLASH'
+      })[mode] ?? 'AWAITING STREAM';
+      this.hud.temp.textContent = evaluation ? `T_f peak ${evaluation.flame_temp_k.toFixed(0)} K` : 'T_f —';
+      this.hud.flux.textContent = evaluation ? `q″_w(t) ${heatFlux.toFixed(2)} kW/m²` : 'q″_w(t) —';
+      this.hud.wake.textContent = evaluation ? `O₂ wake −${((Y_O2_inlet - depletedO2) * 100).toFixed(1)} pp` : 'O₂ wake —';
 
       // Spacecraft Hull Cutaway Geometry
       const cabinX = 85;
@@ -2913,6 +2673,11 @@
 
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.offscreenCanvas, cabinX + 6, cabinY + 6, cabinW - 12, cabinH - 12);
+      const flameX = cabinX + 6 + (13 / this.gridNx) * (cabinW - 12);
+      const flameY = cabinY + cabinH / 2;
+      if (evaluation && this.simGridMode === 'flame_o2') {
+        this.drawFlameRegime(ctx, mode, time, flameX, flameY, evaluation, deltaP);
+      }
 
       // Flow Velocity Vectors V_g at Inlet (Forced ECLSS Ventilation Flow)
       ctx.save();
@@ -2921,7 +2686,7 @@
       ctx.strokeStyle = '#00E5FF';
       ctx.fillStyle = '#00E5FF';
       ctx.lineWidth = 1.4;
-      arrowYPositions.forEach(ay => {
+      if (vg > 0) arrowYPositions.forEach(ay => {
         const ax = cabinX + 16;
         ctx.beginPath();
         ctx.moveTo(ax, ay);
@@ -2940,42 +2705,23 @@
       ctx.fillText(`V_g = ${vg.toFixed(1)} cm/s`, cabinX + 16, cabinY + 34);
       ctx.restore();
 
-      // Isotherm Contours Overlay
-      if (mode !== 'extinguished') {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.28)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        const fcX = cabinX + (13 / this.gridNx) * cabinW;
-        const fcY = cabinY + (12 / this.gridNy) * cabinH;
-        [16, 32, 54].forEach((rad, rIdx) => {
-          ctx.beginPath();
-          ctx.ellipse(fcX + rIdx * 6, fcY, rad * 1.2, rad * 0.85, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        });
-        ctx.restore();
-      }
 
       // Draw Flow Streamlines & Dust Particles
-      const flowSpeedFactor = Math.max(0.1, vg * 0.12);
+      const flowSpeedFactor = vg * 0.12;
       ctx.fillStyle = 'rgba(0, 229, 255, 0.6)';
       this.particles.forEach(p => {
-        p.x += p.speed * flowSpeedFactor;
-        if (p.x > cabinX + cabinW - 15) {
-          p.x = cabinX + 12;
-          p.y = cabinY + 25 + Math.random() * (cabinH - 50);
-        }
+        const x = cabinX + 12 + ((p.x - cabinX + time * p.speed * flowSpeedFactor) % (cabinW - 25));
         ctx.globalAlpha = p.alpha;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+        ctx.arc(x, p.y, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
         if (vg > 2.0) {
           ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x - Math.min(18, vg * 0.4), p.y);
+          ctx.moveTo(x, p.y);
+          ctx.lineTo(x - Math.min(18, vg * 0.4), p.y);
           ctx.stroke();
         }
       });
@@ -2986,7 +2732,7 @@
         ctx.font = '8px "JetBrains Mono"';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'right';
-        ctx.fillText(`HULL FLUX: ${heatFlux.toFixed(1)} kW/m²`, cabinX + cabinW - 14, cabinY + 24);
+        ctx.fillText(`HULL FLUX: ${heatFlux.toFixed(2)} kW/m²`, cabinX + cabinW - 14, cabinY + 24);
         ctx.fillStyle = heatFlux > 1.5 ? '#EF4444' : '#10B981';
         ctx.fillText(`T_HULL: ${(25.0 + heatFlux * 14.5).toFixed(0)}°C`, cabinX + cabinW - 14, cabinY + 36);
 
@@ -3006,7 +2752,7 @@
         ctx.textAlign = 'left';
         ctx.fillText(`INFLOW [${o2_raw.toFixed(1)}% O₂] →`, cabinX + 14, cabinY + 24);
 
-        if (mode !== 'extinguished') {
+        if (Y_O2_inlet - depletedO2 > 0.002) {
           ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
           ctx.fillText(`[O₂ SHADOW WAKE]`, cabinX + 120, cabinY + 24);
         }
@@ -3031,8 +2777,8 @@
       const wallY = cabinY + cabinH / 2;
       const fpRad = Math.min(50, Math.max(14, heatFlux * 1.8));
       const wallFootprint = ctx.createRadialGradient(wallX, wallY, 2, wallX, wallY, fpRad);
-      wallFootprint.addColorStop(0, `rgba(255, 69, 0, ${Math.min(0.9, 0.15 + heatFlux * 0.04)})`);
-      wallFootprint.addColorStop(0.5, `rgba(245, 158, 11, ${Math.min(0.6, 0.08 + heatFlux * 0.02)})`);
+      wallFootprint.addColorStop(0, `rgba(255, 69, 0, ${Math.min(0.9, heatFlux * 0.04)})`);
+      wallFootprint.addColorStop(0.5, `rgba(245, 158, 11, ${Math.min(0.6, heatFlux * 0.02)})`);
       wallFootprint.addColorStop(1, 'rgba(239, 68, 68, 0)');
       ctx.fillStyle = wallFootprint;
       ctx.beginPath();
@@ -3043,19 +2789,20 @@
         ctx.font = '8px "JetBrains Mono"';
         ctx.fillStyle = heatFlux > 15.0 ? '#EF4444' : '#F59E0B';
         ctx.textAlign = 'right';
-        ctx.fillText(`q''_w = ${heatFlux.toFixed(1)} kW/m²`, cabinX + cabinW - 14, cabinY + cabinH - 20);
+        ctx.fillText(`q″_w = ${heatFlux.toFixed(2)} kW/m²`, cabinX + cabinW - 14, cabinY + cabinH - 20);
       }
       ctx.restore();
 
       // Exterior Spacecraft Hull Breach (Inside -> Outside Blowout into Vacuum)
-      if (breach) {
+      if (heatFlux >= 28 || deltaP >= 45) {
         ctx.save();
         const breachX = cabinX + cabinW;
         const breachY = cabinY + 75;
 
         ctx.fillStyle = '#05070B';
         ctx.beginPath();
-        ctx.ellipse(breachX, breachY, 6, 18, 0, 0, Math.PI * 2);
+        const pulse = 1.5 * Math.sin(time / 4);
+        ctx.ellipse(breachX, breachY, 7 + pulse, 18 + pulse, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#EF4444';
         ctx.lineWidth = 2.5;
@@ -3080,7 +2827,7 @@
         ctx.fillStyle = '#FEF08A';
         for (let s = 0; s < 6; s++) {
           ctx.beginPath();
-          ctx.arc(breachX + 20 + Math.random() * 50, breachY + (Math.random() * 40 - 20), 1.5, 0, Math.PI * 2);
+          ctx.arc(breachX + 20 + ((time + s * 13) % 50), breachY + 16 * Math.sin(time / 4 + s), 1.5, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();
@@ -3100,25 +2847,66 @@
       ctx.restore();
     }
 
+    drawFlameRegime(ctx, mode, time, x, y, evaluation, deltaP) {
+      ctx.save();
+      const radius = this.frontRadius(evaluation.spread_rate_mm_s, time);
+      if (mode === 'extinguished') {
+        ctx.strokeStyle = `rgba(200, 216, 232, ${0.30 * Math.exp(-time / 45)})`;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + 6 * i);
+          ctx.bezierCurveTo(x + 12, y - 9, x + 22, y + 16, x + 32 + time / 6, y - 4 * i);
+          ctx.stroke();
+        }
+      } else if (mode === 'explosion_flash') {
+        const flash = Math.exp(-time / 30);
+        const shockRadius = 8 + 112 * (1 - Math.exp(-time / 20));
+        ctx.strokeStyle = `rgba(255, 109, 145, ${flash})`;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(x, y, shockRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#ffe1e8';
+        ctx.font = '10px monospace';
+        ctx.fillText(`ΔP(t) ${deltaP.toFixed(2)} kPa`, x + 36, y + 27);
+      } else if (time > 0) {
+        const cool = mode === 'cool_blue';
+        const r = radius + (cool ? 6 : 4) + Math.sin(time / 8) * 1.5;
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
+        glow.addColorStop(0, cool ? 'rgba(91, 175, 255, .04)' : 'rgba(255, 252, 225, .95)');
+        glow.addColorStop(0.48, cool ? 'rgba(118, 218, 255, .10)' : 'rgba(255, 196, 83, .84)');
+        glow.addColorStop(0.77, cool ? 'rgba(131, 225, 255, .65)' : 'rgba(245, 101, 26, .42)');
+        glow.addColorStop(1, cool ? 'rgba(63, 107, 245, 0)' : 'rgba(40, 27, 31, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+        if (!cool && evaluation.sim_telemetry.soot_density > 0) {
+          ctx.strokeStyle = `rgba(59, 43, 46, ${evaluation.sim_telemetry.soot_density * 0.65})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.ellipse(x, y, r * 0.9, r * 0.78, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
     onReceiveData(data) {
       super.onReceiveData(data);
+      this.solverTime = 0;
+      this.initGridFields(25, (data?.params?.o2_percent ?? 21) / 100);
+      this.timeSlider.disabled = this.playButton.disabled = !data?.evaluation;
+      if (!data?.evaluation) this.setPlaying(false);
+      this.needsRender = true;
       this.updateHUDAndVerdict();
       propagateDataFrom(this.id, data);
     }
 
     updateHUDAndVerdict() {
-      if (!this.data || !this.data.evaluation) return;
-      const evalData = this.data.evaluation;
-      const simTel = evalData.sim_telemetry || {};
-      const analog = evalData.historical_analog || {};
-      const bench = this.data.nearest_benchmark || {};
-      const params = this.data.params || {};
-
-      // 1. HUD Overlay
-      const hudRegime = this.element.querySelector(`#${this.id}-hud-regime`);
-      const hudFlux = this.element.querySelector(`#${this.id}-hud-flux`);
-      if (hudRegime) hudRegime.innerHTML = `REGIME: <b>${(simTel.flame_color_mode || 'INIT').toUpperCase()}</b>`;
-      if (hudFlux) hudFlux.innerHTML = `HEAT FLUX: <b>${(simTel.hull_heat_flux_kw_m2 || 0).toFixed(1)} kW/m²</b>`;
+      const evalData = this.data?.evaluation;
+      this.element.classList.toggle('stream-idle', !evalData);
+      if (!evalData) return;
+      const analog = evalData.historical_analog;
+      const bench = this.data.nearest_benchmark;
 
       // 2. Flight Status Badge
       const statusBadge = this.element.querySelector(`#${this.id}-status-badge`);
@@ -3143,40 +2931,7 @@
       // 4. Objective reasons
       const reasonsList = this.element.querySelector(`#${this.id}-reasons-list`);
       if (reasonsList) {
-        if (Array.isArray(evalData.objective_reasons) && evalData.objective_reasons.length > 0) {
-          reasonsList.innerHTML = evalData.objective_reasons
-            .map(r => `<li>${sanitize(r)}</li>`)
-            .join('');
-        } else {
-          const isRu = (state.language === 'ru');
-          const o2Val = parseFloat(params.o2_percent || 21.0);
-          const vgVal = parseFloat(params.flow_velocity_cms || 10.0);
-          let daVal = null;
-          if (evalData.damkohler_da !== undefined && !isNaN(evalData.damkohler_da)) {
-            daVal = Number(evalData.damkohler_da).toFixed(3);
-          } else if (simTel.damkohler_da !== undefined && !isNaN(simTel.damkohler_da)) {
-            daVal = Number(simTel.damkohler_da).toFixed(3);
-          } else {
-            const pBar = params && params.pressure_atm !== undefined ? Number(params.pressure_atm) : 1.0;
-            const xO2 = o2Val / 100.0;
-            const vgMs = vgVal / 100.0;
-            const tauFlow = 0.008 / (vgMs + 0.005);
-            const rateFactor = 3.2e7 * Math.pow(pBar, 1.75) * xO2 * Math.exp(-14500.0 / 1500.0);
-            const tauChem = 1.0 / Math.max(rateFactor, 1.0e-5);
-            daVal = (tauFlow / tauChem).toFixed(3);
-          }
-          const rMode = (simTel.flame_color_mode || 'steady').toUpperCase();
-          const qVal = (simTel.hull_heat_flux_kw_m2 || 0.5).toFixed(1);
-          const dpVal = (simTel.cabin_overpressure_kpa || 0.0).toFixed(1);
-          const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
-          const reasonsEn = [
-            `Combustion Regime: ${rMode} (Damköhler Da ≈ ${daVal} vs critical Da_ext = 0.45).`,
-            `Thermal & Structural Load: Localized hull heat flux = ${qVal} kW/m² (limit: 28 kW/m²), Delta P = ${dpVal} kPa.`,
-            `Ventilation Dynamics: Forced ECLSS flow V_g = ${vgVal.toFixed(1)} cm/s at 0g microgravity (LOI_crit = ${loiVal}%).`,
-            `Atmospheric Composition: ${o2Val.toFixed(1)}% O₂ in compartment (CO accumulation monitored vs NASA SMAC 55 ppm).`
-          ];
-          reasonsList.innerHTML = reasonsEn.map(r => `<li>${sanitize(r)}</li>`).join('');
-        }
+        reasonsList.innerHTML = evalData.objective_reasons.map(reason => `<li>${sanitize(reason)}</li>`).join('');
       }
 
       // 5. Analog & Benchmark
@@ -3189,9 +2944,10 @@
       const bName = this.element.querySelector(`#${this.id}-bench-name`);
       const bLink = this.element.querySelector(`#${this.id}-bench-link`);
 
-      if (bMatch) bMatch.textContent = `${(bench.match_pct || 100).toFixed(1)}% MATCH`;
-      if (bName) bName.textContent = `${bench.benchmark_id || ''} ${bench.investigation || 'NASA PSI'}`;
-      if (bLink && bench.url) {
+      if (bMatch) bMatch.textContent = Number.isFinite(bench?.match_pct) ? `${bench.match_pct.toFixed(1)}% SIMILARITY` : '—';
+      if (bName) bName.textContent = bench ? `${bench.benchmark_id || bench.id || ''} ${bench.investigation || 'NASA PSI'}` : 'No matching entry';
+      if (bLink) bLink.hidden = !bench?.url;
+      if (bLink && bench?.url) {
         bLink.href = bench.url;
         bLink.textContent = `View NASA PSI Investigation (${bench.benchmark_id || 'Direct Repo'}) ↗`;
       }
@@ -3212,6 +2968,7 @@
         if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
           canvas.width = cw;
           canvas.height = ch;
+          this.needsRender = true;
         }
       }
     }
@@ -3266,7 +3023,7 @@
               <option value="spread">Flame Front Spread L(t) [cm]</option>
               <option value="temp">Cabin Temperature T(t) [°C]</option>
               <option value="pressure">Overpressure Transient ΔP(t) [kPa] (Hull Limit 45 kPa)</option>
-              <option value="co" selected>Toxic CO Level [ppm] (NASA SMAC 55 ppm)</option>
+              <option value="co" selected>Toxic CO [ppm] · 55 ppm reference</option>
             </select>
           </div>
         </div>
@@ -3277,6 +3034,10 @@
         </div>
 
         <div class="graph-table-container" id="${this.id}-table-container" style="display: none;"></div>
+        <details class="graph-telemetry">
+          <summary>Model telemetry summary</summary>
+          <div class="telemetry-summary-grid" data-graph-telemetry>Awaiting evaluation stream.</div>
+        </details>
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
@@ -3434,6 +3195,7 @@
 
     onReceiveData(data) {
       super.onReceiveData(data);
+      this.element.querySelector('[data-graph-telemetry]').innerHTML = renderTelemetrySummary(data?.evaluation);
       if (this.viewMode === 'table') {
         this.renderTable();
       } else {
@@ -3456,6 +3218,14 @@
       ctx.fillStyle = '#050811';
       ctx.fillRect(0, 0, w, h);
 
+      if (!this.data?.evaluation) {
+        ctx.fillStyle = '#acbdd5';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Awaiting evaluation stream', w / 2, h / 2);
+        return;
+      }
+
       // Grid margins
       const padLeft = 38;
       const padRight = 14;
@@ -3469,7 +3239,7 @@
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
       const simToReal = this.data ? this.data.sim_to_real : null;
       const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
-      const hasDirectFlightData = simToReal && (simToReal.has_direct_flight_data === true);
+      const hasDirectFlightData = simToReal?.has_direct_flight_data && (this.selectedChannel !== 'co' || evalData?.co_applicable);
 
       // Check stream source: 'calibrated' if incoming wire from simtoreal, 'eval' if from variable or direct
       const incomingWires = state.wires.filter(w => w.toNode === this.id);
@@ -3505,15 +3275,9 @@
         yUnit = '°C';
         strokeColor = '#F59E0B';
       } else if (this.selectedChannel === 'pressure') {
-        const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
-        const rawP = (series && series.cabin_pressure_kpa) ? series.cabin_pressure_kpa : [101.3, 101.4, 101.7, 102.2, 102.9, 103.8, 104.5];
-        yValues = rawP.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))));
-        yMinValues = (series && series.pressure_kpa_min)
-          ? series.pressure_kpa_min.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))))
-          : yValues.map(v => Math.max(0.0, v - 0.2));
-        yMaxValues = (series && series.pressure_kpa_max)
-          ? series.pressure_kpa_max.map(p => Math.max(0.0, Number((p - pBaseKPa).toFixed(2))))
-          : yValues.map(v => v + 0.3);
+        yValues = series.overpressure_kpa;
+        yMinValues = yValues;
+        yMaxValues = yValues;
         yUnit = 'kPa';
         thresholdVal = 45.0; // Hull limit 45.0 kPa net overpressure
         thresholdLabel = 'HULL PROOF LIMIT 45 kPa';
@@ -3524,8 +3288,8 @@
         yMinValues = (series && series.co_ppm_min) ? series.co_ppm_min : (isH2Fuel ? new Array(7).fill(0) : yValues.map(v => Math.max(0, v * 0.88)));
         yMaxValues = (series && series.co_ppm_max) ? series.co_ppm_max : (isH2Fuel ? new Array(7).fill(0) : yValues.map(v => v * 1.12));
         yUnit = 'ppm';
-        thresholdVal = 55.0; // NASA SMAC 1-hr threshold
-        thresholdLabel = 'NASA SMAC LIMIT (55 ppm)';
+        thresholdVal = 55.0;
+        thresholdLabel = 'CO REFERENCE (55 ppm)';
         strokeColor = '#A855F7';
       }
 
@@ -3536,7 +3300,7 @@
 
       // Compute calibrated series against active benchmark points
       let yCalibrated = [];
-      const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
+      const pBaseKPa = overlay?.points?.[0]?.cabin_pressure_kpa ?? this.data?.evaluation?.ambient_pressure_kpa ?? 101.325;
       if (streamSource === 'calibrated' && hasDirectFlightData && overlay && Array.isArray(overlay.points) && overlay.points.length > 0) {
         yCalibrated = tSec.map((t, idx) => {
           const rawVal = yValues[idx];
@@ -3774,7 +3538,7 @@
           ctx.fillStyle = '#F59E0B';
           ctx.font = '8.5px "JetBrains Mono"';
           ctx.textAlign = 'center';
-          ctx.fillText('⚠ NO MATCHING NASA FLIGHT DATA (EXTRAPOLATION ZONE)', bx + bannerW / 2, by + 15);
+          ctx.fillText('⚠ NO BENCHMARK OVERLAY FOR THIS CHANNEL', bx + bannerW / 2, by + 15);
           ctx.restore();
         }
       }
@@ -3810,10 +3574,10 @@
       if (streamSource === 'calibrated') {
         if (hasDirectFlightData && yRealPoints.length > 0) {
           ctx.fillStyle = '#F59E0B';
-          ctx.fillText('● REAL NASA FLIGHT (±σ)', w - padRight, padTop - 6);
+          ctx.fillText('● CATALOG POINTS (±σ)', w - padRight, padTop - 6);
 
           ctx.fillStyle = '#00E5FF';
-          ctx.fillText('━ SIM CALIBRATED', w - padRight - 145, padTop - 6);
+          ctx.fillText('━ REFERENCE BLEND', w - padRight - 145, padTop - 6);
 
           ctx.fillStyle = strokeColor;
           ctx.fillText('┄ SIM RAW', w - padRight - 250, padTop - 6);
@@ -3859,7 +3623,7 @@
       const series = (evalData && evalData.time_series) ? evalData.time_series : null;
       const simToReal = this.data ? this.data.sim_to_real : null;
       const overlay = (simToReal && simToReal.real_data_overlay) ? simToReal.real_data_overlay : null;
-      const hasDirectFlightData = simToReal && (simToReal.has_direct_flight_data === true);
+      const hasDirectFlightData = simToReal?.has_direct_flight_data && (this.selectedChannel !== 'co' || evalData?.co_applicable);
 
       let yValues = [];
       let unit = '';
@@ -3870,8 +3634,7 @@
         yValues = series ? series.cabin_temp_c : [];
         unit = '°C';
       } else if (this.selectedChannel === 'pressure') {
-        const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
-        yValues = series ? series.cabin_pressure_kpa.map(p => Math.max(0.0, p - pBaseKPa)) : [];
+        yValues = series?.overpressure_kpa ?? [];
         unit = 'kPa';
       } else {
         yValues = series ? series.co_ppm : [];
@@ -3893,7 +3656,7 @@
           }
         });
         if (closestPt && minDt <= 30) {
-          const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
+          const pBaseKPa = overlay?.points?.[0]?.cabin_pressure_kpa ?? this.data?.evaluation?.ambient_pressure_kpa ?? 101.325;
           const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
                      : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
                      : (this.selectedChannel === 'pressure') ? Math.max(0.0, (closestPt.cabin_pressure_kpa || 101.325) - pBaseKPa).toFixed(2)
@@ -3937,7 +3700,7 @@
               closestPt = pt;
             }
           }
-          const pBaseKPa = (this.data && this.data.params) ? (parseFloat(this.data.params.pressure_atm || 1.0) * 101.325) : 101.325;
+          const pBaseKPa = overlay?.points?.[0]?.cabin_pressure_kpa ?? this.data?.evaluation?.ambient_pressure_kpa ?? 101.325;
           const rVal = (this.selectedChannel === 'spread') ? closestPt.front_cm
                      : (this.selectedChannel === 'temp') ? closestPt.cabin_temp_c
                      : (this.selectedChannel === 'pressure') ? Math.max(0.0, (closestPt.cabin_pressure_kpa || 101.325) - pBaseKPa)
@@ -4162,6 +3925,15 @@
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
+    }
+
+    onReceiveData(result) {
+      super.onReceiveData(result);
+      if (result?.advisory_text) {
+        this.setBriefContent(result, result.query);
+      } else {
+        this.element.querySelector('.brief-content').textContent = 'Awaiting an advisory.';
+      }
     }
 
     setBriefContent(result, queryText = null) {
@@ -4395,7 +4167,7 @@
         const currDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
         if (currDist > 0) {
           const ratio = currDist / pinchStartDistance;
-          const targetScale = Math.max(0.35, Math.min(2.5, pinchStartScale * ratio));
+          const targetScale = Math.max(0.05, Math.min(2.5, pinchStartScale * ratio));
           const rect = viewport.getBoundingClientRect();
           const currCenterX = (pts[0].x + pts[1].x) / 2 - rect.left;
           const currCenterY = (pts[0].y + pts[1].y) / 2 - rect.top;
@@ -4430,6 +4202,11 @@
 
     // Zoom on wheel
     viewport.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) {
+        for (let el = e.target; el instanceof HTMLElement && el !== viewport; el = el.parentElement) {
+          if (el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY)) return;
+        }
+      }
       e.preventDefault();
       const zoomFactor = 1.08;
       const rect = viewport.getBoundingClientRect();
@@ -4437,7 +4214,7 @@
       const mouseY = e.clientY - rect.top;
 
       const newScale = e.deltaY < 0 ? state.scale * zoomFactor : state.scale / zoomFactor;
-      const clampedScale = Math.max(0.35, Math.min(2.2, newScale));
+      const clampedScale = Math.max(0.05, Math.min(2.2, newScale));
 
       // Zoom towards mouse pointer
       state.pan.x = mouseX - ((mouseX - state.pan.x) / state.scale) * clampedScale;
@@ -4503,6 +4280,7 @@
 
     // Keyboard delete for selected wire OR selected node
     window.addEventListener('keydown', (e) => {
+      if (missionBrief.open || e.defaultPrevented) return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const tag = document.activeElement ? document.activeElement.tagName : '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (document.activeElement && document.activeElement.isContentEditable)) {
@@ -4713,14 +4491,33 @@
     const addNodeToggle = document.getElementById('btn-add-node-toggle');
     const addNodesMenu = document.getElementById('add-nodes-menu');
     if (addNodeToggle && addNodesMenu) {
+      document.body.append(addNodesMenu);
+      const closeAddMenu = () => {
+        addNodesMenu.classList.remove('open');
+        addNodeToggle.setAttribute('aria-expanded', 'false');
+      };
       addNodeToggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        addNodesMenu.classList.toggle('show');
+        const anchor = addNodeToggle.getBoundingClientRect();
+        addNodesMenu.style.left = `${Math.max(8, Math.min(anchor.left, window.innerWidth - 288))}px`;
+        addNodesMenu.style.top = `${anchor.bottom + 8}px`;
+        addNodeToggle.setAttribute('aria-expanded', String(addNodesMenu.classList.toggle('open')));
       });
       document.addEventListener('click', (e) => {
-        if (!addNodesMenu.contains(e.target) && e.target !== addNodeToggle) {
-          addNodesMenu.classList.remove('show');
+        if (!addNodesMenu.contains(e.target) && !addNodeToggle.contains(e.target)) closeAddMenu();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && addNodesMenu.classList.contains('open')) {
+          closeAddMenu();
+          addNodeToggle.focus();
         }
+      });
+      document.getElementById('top-bar').addEventListener('scroll', closeAddMenu);
+      window.addEventListener('resize', closeAddMenu);
+      document.getElementById('btn-tradeoff-demo').addEventListener('click', () => {
+        closeAddMenu();
+        addNodeToggle.focus();
+        loadTradeOffDemo();
       });
     }
 
@@ -4730,7 +4527,8 @@
         e.stopPropagation();
         const type = btn.dataset.type;
         if (!type) return;
-        if (addNodesMenu) addNodesMenu.classList.remove('show');
+        addNodesMenu.classList.remove('open');
+        addNodeToggle.setAttribute('aria-expanded', 'false');
 
         const vpRect = viewport.getBoundingClientRect();
         const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
@@ -4805,59 +4603,102 @@
         }
       });
     }
+    setupMissionBrief();
+  }
+
+  function setupMissionBrief() {
+    const { telemetryRows, mitigationSteps, benchmarkLabel } = window.StandaloneAPI;
+    const body = document.getElementById('mission-brief-body');
+    const status = document.getElementById('mission-copy-status');
+    const copy = document.getElementById('btn-copy-report');
+    const title = document.getElementById('mission-brief-title').textContent;
+    const scope = 'Model estimates for the 600-second scenario. NASA investigation links accompany reconstructed benchmark curves.';
+    let reportText = '';
+
+    document.getElementById('btn-mission-brief').addEventListener('click', () => {
+      const sections = [];
+      const reports = [];
+      let branch = 0;
+      for (const env of state.nodes.values()) {
+        if (env.type !== 'variable') continue;
+        const { params, evaluation, nearest_benchmark: benchmark } = env.evaluate();
+        const name = `Network ${++branch}${params.scenarioLabel ? ' · ' + params.scenarioLabel : ''}`;
+        const fuel = ({ h2: 'Hydrogen', methane: 'Methane', 'n-heptane': 'n-Heptane', sibal: 'SIBAL', pmma: 'PMMA' })[params.fuel] ?? params.fuel;
+        const gas = ['h2', 'methane'].includes(params.fuel) ? ` · ${params.h2_conc_pct.toFixed(1)}% fuel in cabin gas` : '';
+        const environment = `${fuel} · ${params.o2_percent.toFixed(1)}% O₂ · ${params.pressure_atm.toFixed(2)} atm · ${params.flow_velocity_cms.toFixed(1)} cm/s · ${params.cabin_volume_m3} m³${gas}`;
+        const rows = telemetryRows(evaluation);
+        const verdict = `${evaluation.flight_status} · ${evaluation.combustion_regime.replaceAll('_', ' ')} · fire risk ${evaluation.fire_risk_pct.toFixed(1)}% · explosion risk ${evaluation.explosion_risk_pct.toFixed(1)}%`;
+        const url = benchmark?.url && /^https:\/\/[^\s]+/.test(benchmark.url) ? benchmark.url : '';
+        const steps = mitigationSteps(evaluation);
+        sections.push(`<section class="mission-network" data-accent="${sanitize(env.accentColor)}">
+          <h3>${sanitize(name)}</h3>
+          <p>${sanitize(environment)}</p>
+          <p><strong>${sanitize(verdict)}</strong></p>
+          <dl>${rows.map(row => `<div><dt>${sanitize(row.label)}</dt><dd>${sanitize(row.text)}</dd></div>`).join('')}</dl>
+          <h4>NASA benchmark</h4>
+          <p>${sanitize(benchmarkLabel(benchmark))}${url ? ` · <a href="${sanitize(url)}" target="_blank" rel="noopener noreferrer">Open investigation ↗</a>` : ''}</p>
+          <h4>ECLSS mitigation</h4>
+          <ol>${steps.map(step => `<li>${sanitize(step)}</li>`).join('')}</ol>
+        </section>`);
+        reports.push([name, environment, verdict, '', ...rows.map(row => `${row.label} — ${row.text}`),
+          '', `NASA benchmark — ${benchmarkLabel(benchmark)}${url ? '\n' + url : ''}`, '', 'ECLSS mitigation',
+          ...steps.map((step, i) => `${i + 1}. ${step}`)].join('\n'));
+      }
+      body.innerHTML = `<p class="mission-scope">${scope}</p>${sections.join('') || '<p>Add an ENV node to generate a report.</p>'}`;
+      reportText = [title, scope, ...reports].join('\n\n');
+      copy.disabled = !sections.length;
+      status.textContent = '';
+      missionBrief.showModal();
+    });
+
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(reportText);
+        status.textContent = 'Report copied.';
+      } catch {
+        const field = document.createElement('textarea');
+        field.value = reportText;
+        field.className = 'copy-report-fallback';
+        field.setAttribute('aria-label', 'Mission report text');
+        body.append(field);
+        field.select();
+        if (document.execCommand('copy')) {
+          field.remove();
+          copy.focus();
+          status.textContent = 'Report copied.';
+        } else {
+          status.textContent = 'Report selected for manual copying.';
+        }
+      }
+    });
   }
 
   function autoLayoutGraph() {
-    const simNode = Array.from(state.nodes.values()).find(n => n.type === 'sim');
-    const simHeight = (simNode && simNode.element && simNode.element.offsetHeight > 100) ? simNode.element.offsetHeight : 700;
-    const simY = simNode ? simNode.y : 50;
-    const graphY = simY + simHeight + 28;
-
-    state.nodes.forEach(node => {
-      if (node.type === 'note') {
-        node.x = 40;
-        node.y = 50;
-      } else if (node.type === 'variable') {
-        node.x = 40;
-        node.y = 440;
-      } else if (node.type === 'simtoreal') {
-        node.x = 460;
-        node.y = 50;
-      } else if (node.type === 'table') {
-        node.x = 460;
-        node.y = 660;
-      } else if (node.type === 'aidiff') {
-        node.x = 920;
-        node.y = 50;
-      } else if (node.type === 'sim') {
-        node.x = 1480;
-        node.y = simY;
-      } else if (node.type === 'graph') {
-        node.x = 1480;
-        node.y = graphY;
-      } else if (node.type === 'prompt') {
-        node.x = 2000;
-        node.y = 50;
-      } else if (node.type === 'brief') {
-        node.x = 2420;
-        node.y = 50;
-      }
-      if (node.element) {
+    const columns = [
+      { x: 40, types: ['note', 'variable'], minimumY: { variable: 390 } },
+      { x: 460, types: ['sim', 'simtoreal'], minimumY: { simtoreal: 490 } },
+      { x: 960, types: ['graph', 'table'], minimumY: { table: 460 } },
+      { x: 1540, types: ['prompt', 'aidiff'] },
+      { x: 2120, types: ['brief'] }
+    ];
+    let rightEdge = 0;
+    for (const column of columns) {
+      const nodes = column.types.flatMap(type => Array.from(state.nodes.values()).filter(node => node.type === type));
+      if (!nodes.length) continue;
+      const x = Math.max(column.x, rightEdge ? rightEdge + 36 : 0);
+      let y = 40;
+      for (const node of nodes) {
+        node.x = x;
+        node.y = Math.max(y, column.minimumY?.[node.type] ?? 40);
         node.element.style.left = `${node.x}px`;
         node.element.style.top = `${node.y}px`;
+        y = node.y + node.element.offsetHeight + 26;
+        rightEdge = Math.max(rightEdge, x + node.element.offsetWidth);
       }
-    });
-
-    state.pan = { x: 30, y: 25 };
-    state.scale = 0.85;
-    updateWorldTransform();
-    saveGraphToLocalStorage();
-
-    requestAnimationFrame(() => {
-      fitView(32);
-      showToast('Auto-layout arranged & fitted');
-    });
+    }
+    fitView(28);
   }
+
 
   function fitView(padding = 32) {
     if (state.nodes.size === 0) {
@@ -4888,7 +4729,7 @@
 
     const scaleX = vpW / Math.max(100, graphW);
     const scaleY = vpH / Math.max(100, graphH);
-    const targetScale = Math.max(0.35, Math.min(1.15, Math.min(scaleX, scaleY)));
+    const targetScale = Math.min(1.15, scaleX, scaleY);
 
     const graphCenterX = (minX + maxX) / 2;
     const graphCenterY = (minY + maxY) / 2;
@@ -4904,22 +4745,9 @@
 
   function exportGraphJSON() {
     const exportData = {
-      version: '1.3.0',
+      version: '1.4.0',
       timestamp: new Date().toISOString(),
-      pan: state.pan,
-      scale: state.scale,
-      nodes: Array.from(state.nodes.values()).map(n => ({
-        id: n.id,
-        type: n.type,
-        x: n.x,
-        y: n.y,
-        width: n.width,
-        height: n.height || (n.element ? n.element.offsetHeight : null),
-        nodeScale: n.nodeScale || 1.0,
-        accentColor: n.accentColor || 'default',
-        params: n.params || null
-      })),
-      wires: state.wires
+      ...serializeGraph()
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -4937,22 +4765,16 @@
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
-        if (!data.nodes || !data.wires) throw new Error('Invalid blueprint JSON');
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.wires)) throw new Error('Invalid blueprint JSON');
 
         clearGraph();
 
         state.pan = data.pan || { x: 60, y: 40 };
         state.scale = data.scale || 0.95;
 
-        data.nodes.forEach(n => {
-          spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height, n.nodeScale || 1.0, n.accentColor || 'default');
-        });
-
-        data.wires.forEach(w => {
-          addWire(w.fromNode, w.fromPin, w.toNode, w.toPin);
-        });
-
+        restoreGraphNodes(data);
         updateWorldTransform();
+        saveGraphToLocalStorage();
         showToast('Blueprint imported successfully');
       } catch (err) {
         alert('Failed to import JSON: ' + err.message);
@@ -4962,6 +4784,10 @@
   }
 
   function clearGraph() {
+    cancelWireDraft();
+    deselectPin();
+    state.selectedNodeId = null;
+    state.selectedWireId = null;
     state.nodes.forEach(n => n.onDestroy());
     nodesLayer.innerHTML = '';
     wiresLayer.innerHTML = '';
@@ -4977,89 +4803,103 @@
 
   function buildDefaultGraph() {
     clearGraph();
+    const note = spawnNode('note', 40, 40, {}, 384, 320);
+    const env = spawnNode('variable', 40, 390);
+    const sim = spawnNode('sim', 460, 40, {}, 460, 424);
+    const reference = spawnNode('simtoreal', 460, 490, {}, 430, 378);
+    const graph = spawnNode('graph', 960, 40, {}, 460, 394);
+    const table = spawnNode('table', 960, 460, {}, 544);
+    const prompt = spawnNode('prompt', 1540, 40);
 
-    state.pan = { x: 30, y: 25 };
-    state.scale = 0.85;
+    for (const [source, target] of [[note, env], [env, sim], [sim, reference], [reference, graph], [reference, table], [reference, prompt]]) {
+      addWire(source.id, 'out', target.id, 'in');
+    }
+    env.evaluate();
+    fitView(28);
+  }
 
-    // Node 0: Note AI // JARVIS Architect
-    const noteNode = spawnNode('note', 40, 50);
+  function loadTradeOffDemo() {
+    clearGraph();
+    const diff = spawnNode('aidiff', 1450, 40, {}, 520, 660);
+    const brief = spawnNode('brief', 2010, 40, { title: 'AI BRIEF // DIFFERENTIAL SAFETY' }, 460, 660);
+    addWire(diff.id, 'out', brief.id, 'in');
 
-    // Node 1: Variable / Parameter Feed
-    const varNode = spawnNode('variable', 40, 440, {
-      o2_percent: 21.0,
-      pressure_atm: 1.0,
-      flow_velocity_cms: 10.0,
-      fuel: 'pmma',
-      h2_conc_pct: 0.0,
-      cabin_volume_m3: 28.0
-    });
+    const configs = [
+      { scenario: SCENARIOS.iss_nominal, color: 'cyan', y: 40, pin: 'in_a' },
+      { scenario: SCENARIOS.saffire_v, color: 'amber', y: 512, pin: 'in_b' }
+    ];
+    for (const { scenario, color, y, pin } of configs) {
+      const env = spawnNode('variable', 40, y, { ...scenario.params, scenarioLabel: scenario.name }, 380, 424, 1, color);
+      const sim = spawnNode('sim', 460, y, {}, 460, 424, 1, color);
+      const reference = spawnNode('simtoreal', 960, y, {}, 450, 424, 1, color);
+      addWire(env.id, 'out', sim.id, 'in');
+      addWire(sim.id, 'out', reference.id, 'in');
+      addWire(reference.id, 'out', diff.id, pin);
+      env.evaluate();
+    }
+    diff.executeComparison();
+    fitView(28);
+    showToast('Two-network demo loaded');
+  }
 
-    // Node 2: Sim-to-Real NASA Grounding
-    const s2rNode = spawnNode('simtoreal', 460, 50);
 
-    // Node 3: SIM Spacecraft Cutaway
-    const simNode = spawnNode('sim', 920, 50);
+  function serializeGraph() {
+    return {
+      pan: state.pan,
+      scale: state.scale,
+      nodes: Array.from(state.nodes.values()).map(n => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        x: n.x,
+        y: n.y,
+        width: n.baseWidth,
+        height: n.baseHeight,
+        nodeScale: n.nodeScale,
+        accentColor: n.accentColor,
+        params: n.params || null,
+        benchmark: n.type === 'simtoreal' ? {
+          matchBy: n.matchBy, activeBenchmarkId: n.activeBenchmarkId, filterMission: n.filterMission, filterFuel: n.filterFuel
+        } : undefined
+      })),
+      wires: state.wires
+    };
+  }
 
-    // Calculate dynamic Y for graphNode with robust clearance
-    const simHeight = (simNode && simNode.element && simNode.element.offsetHeight > 100) ? simNode.element.offsetHeight : 700;
-    const graphY = simNode.y + simHeight + 28;
-
-    // Node 4: Graph Time Telemetry
-    const graphNode = spawnNode('graph', 920, graphY);
-
-    // Node 5: Prompt AI Safety Officer
-    const promptNode = spawnNode('prompt', 1400, 50);
-
-    // Wires:
-    // Note AI out -> Variable in
-    addWire(noteNode.id, 'out', varNode.id, 'in');
-    // Variable out -> Sim-to-Real in
-    addWire(varNode.id, 'out', s2rNode.id, 'in');
-    // Sim-to-Real out -> SIM in, Graph in, Prompt in
-    addWire(s2rNode.id, 'out', simNode.id, 'in');
-    addWire(s2rNode.id, 'out', graphNode.id, 'in');
-    addWire(s2rNode.id, 'out', promptNode.id, 'in');
-
-    updateWorldTransform();
-    saveGraphToLocalStorage();
-
-    // Secondary clearance check after DOM layout pass
-    requestAnimationFrame(() => {
-      if (simNode.element && graphNode.element) {
-        const actualSimH = simNode.element.offsetHeight;
-        if (actualSimH > 100) {
-          const targetY = simNode.y + actualSimH + 28;
-          if (graphNode.y < targetY) {
-            graphNode.y = targetY;
-            graphNode.element.style.top = `${targetY}px`;
-            updateWorldTransform();
-            saveGraphToLocalStorage();
-          }
-        }
-      }
-      fitView(32);
-    });
+  function restoreGraphNodes(data) {
+    const idMap = new Map();
+    for (const saved of data.nodes) {
+      const initial = saved.type === 'brief' ? { title: saved.title } : (saved.params || {});
+      const scale = saved.nodeScale || 1.0;
+      // Earlier exports recorded physical dimensions, including the node scale.
+      const divisor = saved.title ? 1 : scale;
+      const node = spawnNode(saved.type, saved.x, saved.y, initial,
+        saved.width / divisor, saved.height / divisor, scale, saved.accentColor);
+      if (!node) continue;
+      if (node.type === 'simtoreal' && saved.benchmark) Object.assign(node, {
+        matchBy: saved.benchmark.matchBy ?? 'physics',
+        filterMission: saved.benchmark.filterMission ?? 'all',
+        filterFuel: saved.benchmark.filterFuel ?? 'all',
+        activeBenchmarkId: saved.benchmark.activeBenchmarkId ?? null
+      });
+      idMap.set(saved.id, node.id);
+    }
+    for (const wire of data.wires || []) {
+      const from = idMap.get(wire.fromNode);
+      const to = idMap.get(wire.toNode);
+      if (from && to) addWire(from, wire.fromPin, to, wire.toPin);
+    }
+    for (const node of state.nodes.values()) {
+      if (node.type === 'variable') node.evaluate();
+    }
+    for (const node of state.nodes.values()) {
+      if (node.type === 'aidiff' && findDownstreamNode(node.id, 'brief')) node.executeComparison();
+    }
   }
 
   function saveGraphToLocalStorage() {
     try {
-      const data = {
-        pan: state.pan,
-        scale: state.scale,
-        nodes: Array.from(state.nodes.values()).map(n => ({
-          id: n.id,
-          type: n.type,
-          x: n.x,
-          y: n.y,
-          width: n.width,
-          height: n.height || (n.element ? n.element.offsetHeight : null),
-          nodeScale: n.nodeScale || 1.0,
-          accentColor: n.accentColor || 'default',
-          params: n.params || null
-        })),
-        wires: state.wires
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeGraph()));
     } catch (e) {
       console.warn('[Storage] Failed to save graph:', e);
     }
@@ -5067,9 +4907,10 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8', 'flame_blueprint_graph_v9', 'flame_blueprint_graph_v10'].forEach(k => {
-        if (localStorage.getItem(k)) localStorage.removeItem(k);
-      });
+      localStorage.removeItem('flame_blueprint_graph');
+      for (let version = 1; version < 12; version++) {
+        localStorage.removeItem(`flame_blueprint_graph_v${version}`);
+      }
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
@@ -5080,40 +4921,13 @@
       state.pan = data.pan || { x: 40, y: 30 };
       state.scale = data.scale || 0.92;
 
-      data.nodes.forEach(n => {
-        spawnNode(n.type, n.x, n.y, n.params || {}, n.width, n.height, n.nodeScale || 1.0, n.accentColor || 'default');
-      });
-
-      if (Array.isArray(data.wires)) {
-        data.wires.forEach(w => {
-          addWire(w.fromNode, w.fromPin, w.toNode, w.toPin);
-        });
-      }
-
-      // Check and enforce clearance for graphNode below simNode if on same branch
-      const simNode = Array.from(state.nodes.values()).find(n => n.type === 'sim');
-      const graphNode = Array.from(state.nodes.values()).find(n => n.type === 'graph');
-      if (simNode && graphNode && Math.abs(simNode.x - graphNode.x) < 50) {
-        requestAnimationFrame(() => {
-          if (simNode.element && graphNode.element) {
-            const actualSimH = simNode.element.offsetHeight || 700;
-            const minGraphY = simNode.y + actualSimH + 28;
-            if (graphNode.y < minGraphY) {
-              graphNode.y = minGraphY;
-              graphNode.element.style.top = `${minGraphY}px`;
-              updateWorldTransform();
-              saveGraphToLocalStorage();
-            }
-          }
-        });
-      }
-
+      restoreGraphNodes(data);
       updateWorldTransform();
       return true;
     } catch (e) {
       console.warn('[Storage] Failed to load graph from localStorage, clearing cache & resetting default:', e);
       try {
-        localStorage.clear();
+        localStorage.removeItem(STORAGE_KEY);
       } catch (_) {}
       buildDefaultGraph();
       return true;
@@ -5154,7 +4968,7 @@
     } catch (e) {
       console.warn('[Init] LocalStorage load failed, clearing cache & building default graph:', e);
       try {
-        localStorage.clear();
+        localStorage.removeItem(STORAGE_KEY);
       } catch (_) {}
       buildDefaultGraph();
     }
@@ -5164,10 +4978,7 @@
     }
 
     // Auto-fit nodes on initial screen load
-    requestAnimationFrame(() => {
-      const isMobile = window.innerWidth <= 1024;
-      fitView(isMobile ? 16 : 32);
-    });
+    requestAnimationFrame(() => fitView(28));
 
     window.addEventListener('resize', () => {
       renderAllWires();
@@ -5186,17 +4997,17 @@
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const pillText = document.getElementById('connection-status-text') || document.querySelector('.connection-pill span');
       if (!isLocal) {
-        if (pillText) pillText.textContent = 'CLOUD ENGINE // ONLINE';
+        if (pillText) pillText.textContent = 'BROWSER ENGINE // ONLINE';
       } else {
         fetch('/api/status')
           .then(res => res.json())
           .then(data => {
             if (pillText) {
-              pillText.textContent = data.mode === 'standalone_cloud' ? 'CLOUD ENGINE // ONLINE' : 'PORT 5000 // CORE ONLINE';
+              pillText.textContent = data.mode === 'standalone_cloud' ? 'BROWSER ENGINE // ONLINE' : 'PORT 5000 // CORE ONLINE';
             }
           })
           .catch(() => {
-            if (pillText) pillText.textContent = 'CLOUD ENGINE // ONLINE';
+            if (pillText) pillText.textContent = 'BROWSER ENGINE // ONLINE';
           });
       }
     } catch (_) {}

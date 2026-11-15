@@ -39,7 +39,7 @@
     x_o2 = Math.max(0.001, Math.min(1.0, x_o2));
     const o2_pct = x_o2 * 100.0;
 
-    let p_bar = Number(params.pressure_bar !== undefined ? params.pressure_bar : (params.pressure_atm !== undefined ? params.pressure_atm : 1.0));
+    let p_bar = Number(params.pressure_bar ?? (Number(params.pressure_atm ?? 1.0) * 1.01325));
     p_bar = Math.max(0.1, Math.min(10.0, p_bar));
     const p_pa = p_bar * 1.0e5;
 
@@ -140,9 +140,11 @@
       }
     }
 
+    is_explosive = is_explosive && is_ignited;
     if (is_explosive) {
       flame_color_mode = 'explosion_flash';
       flame_temp_k = Math.max(flame_temp_k, 2400.0);
+      regime = 'explosion_flash';
     }
 
     // Module 2: U-Shaped Flammability Boundary
@@ -152,7 +154,7 @@
     const is_in_blowoff_zone = (v_g_cms >= v_g_blowoff);
 
     if (is_in_quench_zone && !is_explosive) {
-      if (['heptane', 'n-heptane'].includes(fuel_name) && x_o2 >= 0.15) {
+      if (fuel_name === 'heptane' && is_ignited && !is_below_law_limit && x_o2 >= 0.15 && x_o2 <= 0.22 && v_g_cms <= 1.2) {
         regime = 'cool_flame';
         flame_temp_k = 650.0 + 130.0 * Math.tanh((x_o2 - 0.15) * 50.0);
         flame_color_mode = 'cool_blue';
@@ -205,14 +207,14 @@
     let explosion_risk_pct = 0.0;
     if (is_gas_fuel) {
       if (['hydrogen', 'h2'].includes(fuel_name)) {
-        if (h2_pct >= 4.0) {
+        if (is_explosive) {
           delta_p_blast_kpa = p_bar * 100.0 * (6.5 + 2.8 * ((h2_pct - 4.0) / 4.0));
           explosion_risk_pct = Math.min(100.0, 85.0 + (h2_pct - 4.0) * 5.0);
         } else {
           explosion_risk_pct = Math.max(0.0, Math.min(25.0, (h2_pct / 4.0) * 20.0));
         }
       } else {
-        if (h2_pct >= 5.0 && x_o2 >= 0.12) {
+        if (is_explosive) {
           delta_p_blast_kpa = p_bar * 100.0 * (5.5 + 2.0 * ((h2_pct - 5.0) / 5.0));
           explosion_risk_pct = Math.min(100.0, 80.0 + (h2_pct - 5.0) * 4.0);
         } else {
@@ -262,6 +264,7 @@
     const pressure_series_kpa = [];
     const pressure_min_kpa = [];
     const pressure_max_kpa = [];
+    const overpressure_series_kpa = [];
     const co_series_ppm = [];
     const co_min_ppm = [];
     const co_max_ppm = [];
@@ -269,11 +272,13 @@
     let curr_t_cabin = t_inf;
     let curr_front_cm = 0.0;
     const is_carbon_free = ['hydrogen', 'h2'].includes(fuel_name);
-    let curr_co_ppm = is_carbon_free ? 0.0 : 5.0;
+    const co_initial_ppm = is_carbon_free ? 0.0 : 5.0;
     const dt_step = 10.0;
     const dt_sub = 0.25;
     const n_sub = 40;
     const co_yield = (is_carbon_free || regime === 'extinction') ? 0.0 : 0.08;
+    const co_rate_ppm_s = (m_dot_fuel * co_yield / m_air) * (28.97 / 28.01) * 1.0e6;
+    const time_to_smac_sec = co_rate_ppm_s > 0 ? (55.0 - co_initial_ppm) / co_rate_ppm_s : null;
 
     for (let step_idx = 0; step_idx <= 60; step_idx++) {
       const t_now = step_idx * dt_step;
@@ -303,14 +308,16 @@
       const p_sigma = Math.max(0.12, 0.035 * Math.max(0.0, p_fluc - (p_pa * 1.0e-3)) + 0.15);
       pressure_min_kpa.push(Number((p_fluc - p_sigma).toFixed(1)));
       pressure_max_kpa.push(Number((p_fluc + p_sigma).toFixed(1)));
+      const thermal_overpressure = (p_pa * 1.0e-3) * Math.max(0, curr_t_cabin / t_inf - 1);
+      // The ignition pulse is superimposed on the evolving thermal overpressure.
+      overpressure_series_kpa.push(Number((thermal_overpressure + delta_p_blast_kpa * Math.exp(-t_now / 10)).toFixed(2)));
 
       if (is_carbon_free) {
         co_series_ppm.push(0.0);
         co_min_ppm.push(0.0);
         co_max_ppm.push(0.0);
       } else {
-        const co_nominal = curr_co_ppm;
-        const co_fluc = Number((co_nominal + (0.10 * (fluc_factor - 1.0) * Math.max(0.0, co_nominal - 5.0))).toFixed(1));
+        const co_fluc = co_initial_ppm + co_rate_ppm_s * t_now;
         co_series_ppm.push(co_fluc);
         const co_sigma = Math.max(0.5, 0.065 * Math.max(0.0, co_fluc - 5.0) + 0.60);
         co_min_ppm.push(Number(Math.max(0.0, co_fluc - co_sigma).toFixed(1)));
@@ -323,28 +330,14 @@
           const dt_cabin = ((q_dot_chem_watts - q_loss) / (m_air * cv_air)) * dt_sub;
           curr_t_cabin = Math.max(t_inf, curr_t_cabin + dt_cabin);
           curr_front_cm = Math.min(100.0, curr_front_cm + (spread_rate_mm_s * 0.1) * dt_sub);
-          if (!is_carbon_free && regime !== 'extinction') {
-            const delta_co_mass = m_dot_fuel * co_yield * dt_sub;
-            const delta_co_ppm = (delta_co_mass / m_air) * (28.97 / 28.01) * 1.0e6;
-            curr_co_ppm += delta_co_ppm;
-          }
         }
       }
     }
 
-    const final_delta_p_kpa = pressure_series_kpa[pressure_series_kpa.length - 1] - (p_pa * 1.0e-3);
-    const cabin_overpressure_kpa = Math.max(0.0, final_delta_p_kpa) + delta_p_blast_kpa;
-    const breach_outside_risk = (cabin_overpressure_kpa >= 45.0) || (hull_heat_flux_kw_m2 >= 28.0) || (delta_p_blast_kpa >= 100.0);
-
-    // Module 4: Toxicity & Soot
-    let co_rate_ppm_s = 0.0;
-    let time_to_smac_sec = 99999.0;
-    if (!is_carbon_free) {
-      co_rate_ppm_s = regime !== 'extinction' ? (m_dot_fuel * co_yield / m_air) * (28.97 / 28.01) * 1.0e6 : 0.0;
-      if (co_rate_ppm_s > 1.0e-4) {
-        time_to_smac_sec = Math.max(1.0, (55.0 - 5.0) / co_rate_ppm_s);
-      }
-    }
+    const cabin_overpressure_kpa = Math.max(...overpressure_series_kpa);
+    const breach_outside_risk = cabin_overpressure_kpa >= 45.0 || hull_heat_flux_kw_m2 >= 28.0;
+    const co_600s_ppm = co_series_ppm[co_series_ppm.length - 1];
+    const smacLabel = formatSmacTime({ co_applicable: !is_carbon_free, time_to_smac_s: time_to_smac_sec });
 
     let soot_density = 0.0;
     if (regime === 'hot_flame' && flame_temp_k > 1200.0) {
@@ -367,7 +360,7 @@
     } else if (regime === 'extinction') {
       analog_name = "Chung K. Law Inherent Flammability Extinction";
       similarity_pct = 100.0;
-      analog_reason = `Atmospheric oxygen (O2=${o2_pct.toFixed(1)}%) is below Chung K. Law critical non-flammability index (15.0%) or below Damköhler extinction turning point (Da=${da.toFixed(3)} < 0.45), guaranteeing radiative self-extinction.`;
+      analog_reason = `Atmospheric oxygen (O2=${o2_pct.toFixed(1)}%) is below Chung K. Law critical non-flammability index (15.0%) or below Damköhler extinction turning point (Da=${da.toFixed(3)} < 0.45), limiting sustained burning in the model.`;
     } else if (regime === 'cool_flame') {
       analog_name = "NASA PSI-117 FLEX Cool Flame Mode";
       similarity_pct = 99.2;
@@ -375,7 +368,7 @@
     } else if (p_bar <= 0.85 && x_o2 >= 0.25 && v_g_cms >= 12.0) {
       analog_name = "NASA Saffire V Spacecraft In-Flight Burn";
       similarity_pct = 98.4;
-      analog_reason = `Hypobaric enriched environment (P=${p_bar.toFixed(2)} atm, O2=${o2_pct.toFixed(1)}%) with forced SFU draft (${v_g_cms.toFixed(1)} cm/s) matching Cygnus vehicle Saffire V in-flight thick PMMA combustion telemetry.`;
+      analog_reason = `Hypobaric enriched environment (P=${(p_bar / 1.01325).toFixed(2)} atm, O2=${o2_pct.toFixed(1)}%) with forced SFU draft (${v_g_cms.toFixed(1)} cm/s), similar to the Cygnus Saffire V test conditions.`;
     } else {
       analog_name = "NASA BASS-II Microgravity Solid Combustion";
       similarity_pct = 95.0;
@@ -403,7 +396,7 @@
     }
 
     let flight_status = 'GO';
-    if (breach_outside_risk || explosion_risk_pct >= 60.0 || fire_risk_pct >= 75.0 || x_o2 >= 0.65) {
+    if (breach_outside_risk || co_600s_ppm >= 55 || explosion_risk_pct >= 60.0 || fire_risk_pct >= 75.0 || x_o2 >= 0.65) {
       flight_status = 'NO-GO';
     } else if (fire_risk_pct >= 30.0 || explosion_risk_pct >= 15.0 || regime === 'cool_flame') {
       flight_status = 'CAUTION';
@@ -411,11 +404,11 @@
 
     // Construct 4 specific engineering physical reasons
     const objective_reasons = [
-      `Combustion Regime: ${regime.toUpperCase()} at peak flame zone temperature T_f = ${flame_temp_k.toFixed(0)} K (LOI_crit = ${x_o2_law_limit.toFixed(3)} vs X_O2 = ${x_o2.toFixed(3)}).`,
+      `Combustion Regime: ${regime.toUpperCase()} at peak flame zone temperature T_f = ${flame_temp_k.toFixed(0)} K (LOI_crit = ${(x_o2_law_limit * 100).toFixed(2)}% vs O₂ = ${o2_pct.toFixed(1)}%).`,
       `Damköhler Criterion: Da = ${da.toFixed(3)} (extinction threshold Da_ext = 0.45, ignition Da_ign = 2.20); kinetic Arrhenius rate factor = ${rate_factor.toExponential(2)}.`,
       `Ventilation Dynamics: V_g = ${v_g_cms.toFixed(1)} cm/s (U-curve spread rate V_f = ${spread_rate_mm_s.toFixed(2)} mm/s${is_in_quench_zone ? ' in radiative quenching zone' : (is_in_blowoff_zone ? ' in blowoff zone' : '')}).`,
-      `Thermal & Structural Load: Localized hull heat flux = ${hull_heat_flux_kw_m2.toFixed(1)} kW/m² (normal limit: 28 kW/m²), cabin overpressure Delta P = ${cabin_overpressure_kpa.toFixed(1)} kPa (proof limit: 45.0 kPa).`,
-      is_carbon_free ? 'Cabin Atmosphere: CO generation: N/A (carbon-free H₂ fuel); 0.0 ppm generated.' : `Cabin Toxicity: Incomplete combustion CO generation rate = ${co_rate_ppm_s.toFixed(2)} ppm/s (NASA SMAC 55 ppm limit reached in ${time_to_smac_sec.toFixed(0)} s; 600s cumulative = ${co_series_ppm[co_series_ppm.length - 1].toFixed(0)} ppm).`
+      `Thermal & Structural Load: Peak hull heat flux = ${hull_heat_flux_kw_m2.toFixed(2)} kW/m² (model limit: 28 kW/m²), peak overpressure ΔP = ${cabin_overpressure_kpa.toFixed(2)} kPa (model proof limit: 45 kPa).`,
+      `Cabin Toxicity: CO at 600 s = ${co_600s_ppm.toFixed(1)} ppm. Time to 55 ppm = ${smacLabel}.`
     ];
 
     return {
@@ -427,13 +420,20 @@
       outside_breach: breach_outside_risk,
       hull_breach_predicted: breach_outside_risk,
       damkohler_da: Number(da.toFixed(3)),
+      damkohler: Number(da.toFixed(3)),
+      loi_crit: x_o2_law_limit,
+      combustion_regime: regime,
       t_flame_k: Number(flame_temp_k.toFixed(1)),
       flame_temp_k: Number(flame_temp_k.toFixed(1)),
       hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2)),
-      time_to_smac_sec: Number(time_to_smac_sec.toFixed(1)),
-      time_to_smac_s: Number(time_to_smac_sec.toFixed(1)),
+      peak_overpressure_kpa: cabin_overpressure_kpa,
+      ambient_pressure_kpa: p_pa * 1.0e-3,
+      time_to_smac_sec,
+      time_to_smac_s: time_to_smac_sec,
+      co_applicable: !is_carbon_free,
+      co_600s_ppm,
       co_rate_ppm_s: Number(co_rate_ppm_s.toFixed(3)),
-      toxic_co_ppm_600s: Number(co_series_ppm[co_series_ppm.length - 1].toFixed(1)),
+      toxic_co_ppm_600s: co_600s_ppm,
       spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
       flame_spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
       historical_analog: {
@@ -444,6 +444,7 @@
       objective_reasons: objective_reasons,
       sim_telemetry: {
         damkohler_da: Number(da.toFixed(3)),
+        loi_crit_pct: x_o2_law_limit * 100,
         flame_temp_k: Number(flame_temp_k.toFixed(1)),
         t_flame_k: Number(flame_temp_k.toFixed(1)),
         flame_color_mode: flame_color_mode,
@@ -453,8 +454,8 @@
         soot_density: soot_density,
         hull_heat_flux_kw_m2: Number(hull_heat_flux_kw_m2.toFixed(2)),
         cabin_overpressure_kpa: Number(cabin_overpressure_kpa.toFixed(2)),
-        time_to_smac_sec: Number(time_to_smac_sec.toFixed(1)),
-        toxic_co_ppm_600s: Number(co_series_ppm[co_series_ppm.length - 1].toFixed(1))
+        time_to_smac_sec,
+        toxic_co_ppm_600s: co_600s_ppm
       },
       safety_metrics: {
         fire_risk_pct: Number(fire_risk_pct.toFixed(1)),
@@ -472,6 +473,7 @@
         temp_c_min: temp_min_c,
         temp_c_max: temp_max_c,
         cabin_pressure_kpa: pressure_series_kpa,
+        overpressure_kpa: overpressure_series_kpa,
         pressure_kpa_min: pressure_min_kpa,
         pressure_kpa_max: pressure_max_kpa,
         co_ppm: co_series_ppm,
@@ -480,6 +482,52 @@
       },
       provenance: 'STANDALONE_CLIENT_PHYSICS_LAW_BASS2_SAFFIREV'
     };
+  }
+
+  function formatSmacTime(evaluation) {
+    if (!evaluation.co_applicable) return 'N/A (carbon-free H₂)';
+    const seconds = evaluation.time_to_smac_s;
+    if (!Number.isFinite(seconds) || seconds > 600) return '> 600 s';
+    // Preserve the side of the threshold when a crossing is very close to 600 s.
+    return `${seconds < 600 && seconds.toFixed(1) === '600.0' ? '< 600' : seconds.toFixed(1)} s`;
+  }
+
+  function telemetryRows(evaluation) {
+    const units = [
+      ['Flame temperature', 'flame_temp_k', 0, ' K'],
+      ['Damköhler number', 'damkohler', 3, ''],
+      ['Critical LOI', 'loi_crit', 2, '%', 100],
+      ['Flame spread rate', 'spread_rate_mm_s', 2, ' mm/s'],
+      ['Peak hull heat flux', 'hull_heat_flux_kw_m2', 2, ' kW/m²'],
+      ['Peak overpressure', 'peak_overpressure_kpa', 2, ' kPa'],
+      ['CO at 600 s', 'co_600s_ppm', 1, ' ppm']
+    ];
+    return [
+      ...units.map(([label, key, digits, unit, scale = 1]) => {
+        const value = evaluation?.[key];
+        return { label, key, text: Number.isFinite(value) ? `${(value * scale).toFixed(digits)}${unit}` : '—', value, digits, unit, scale };
+      }),
+      { label: 'Outside breach risk', key: 'outside_breach', text: evaluation ? (evaluation.outside_breach ? 'YES' : 'NO') : '—' },
+      { label: 'Time to 55 ppm CO', key: 'time_to_smac_s', text: evaluation ? formatSmacTime(evaluation) : '—' }
+    ];
+  }
+
+  function compareTelemetry(evaluationA, evaluationB) {
+    const rowsB = telemetryRows(evaluationB);
+    return telemetryRows(evaluationA).map((a, i) => {
+      const b = rowsB[i];
+      const delta = Number.isFinite(a.value) && Number.isFinite(b.value) ? ((b.value - a.value) * a.scale).toFixed(a.digits) : null;
+      return [a.label, a.text, b.text, delta === null ? '—' : `${Number(delta) > 0 ? '+' : ''}${delta}${a.unit}`];
+    });
+  }
+
+  function mitigationSteps(evaluation) {
+    const steps = ['Verify the alarm and localize the fire using smoke, temperature and cabin-gas readings.'];
+    if (evaluation.outside_breach) steps.push('Assess compartment pressure and hull temperature, and follow the vehicle’s isolation and crew protection procedures.');
+    if (evaluation.peak_overpressure_kpa >= 45) steps.push('Check the gas source and ignition hazards before restoring ventilation.');
+    if (evaluation.co_600s_ppm >= 55) steps.push('Monitor cabin CO and initiate approved respiratory protection and post-fire cleanup procedures.');
+    steps.push('Use vehicle-approved ECLSS airflow isolation and suppression procedures before restoring normal ventilation.');
+    return steps;
   }
 
   // ---------------------------------------------------------------------------
@@ -652,11 +700,11 @@
       has_direct_flight_data = false;
       reality_gap_pct = Number(Math.max(35.0, (100.0 - best_match_pct) * 0.75).toFixed(1));
       sim_to_real_confidence_pct = Math.max(5.0, Math.min(99.4, Number((0.50 * best_match_pct + 0.50 * (100.0 - reality_gap_pct)).toFixed(1))));
-      gap_explanation = `EXTRAPOLATION ZONE — NO DIRECT FLIGHT TELEMETRY (match: ${best_match_pct.toFixed(1)}% < 55.0% threshold). Operational conditions (O₂=${tgt_o2.toFixed(1)}%, P=${tgt_p.toFixed(2)} atm, Vg=${tgt_vg.toFixed(1)} cm/s, fuel=${tgt_fuel}) fall outside empirical flight boundaries of NASA BASS-II, Saffire, and CIR archives. Predictions operate in purely analytical physics extrapolation mode.`;
+      gap_explanation = `EXTRAPOLATION ZONE — NO CLOSE CATALOG REFERENCE (match: ${best_match_pct.toFixed(1)}% < 55.0% threshold). Operational conditions (O₂=${tgt_o2.toFixed(1)}%, P=${tgt_p.toFixed(2)} atm, Vg=${tgt_vg.toFixed(1)} cm/s, fuel=${tgt_fuel}) fall outside the matching range of the project catalog. The displayed curve comes from the analytical model.`;
       real_data_overlay = {
         has_direct_flight_data: false,
         status: 'extrapolation_zone',
-        label: 'EXTRAPOLATION ZONE — NO DIRECT FLIGHT TELEMETRY',
+        label: 'EXTRAPOLATION ZONE — NO CLOSE CATALOG REFERENCE',
         points: [],
         t_sec: [],
         measured_front_cm: [],
@@ -683,12 +731,12 @@
           const f_s = sim_front[idx] || 0.0;
           const t_s = sim_temp[idx] || 25.0;
           const p_s = sim_press[idx] || 101.3;
-          const c_s = sim_co[idx] || 5.0;
+          const c_s = sim_co[idx] ?? 5.0;
 
           const f_r = pt.front_cm || 0.0;
           const t_r = pt.cabin_temp_c || 25.0;
           const p_r = pt.cabin_pressure_kpa || 101.3;
-          const c_r = pt.co_ppm || 5.0;
+          const c_r = pt.co_ppm ?? 5.0;
 
           const e_f = Math.abs(f_s - f_r) / Math.max(1.0, f_r) * 100.0;
           const e_t = Math.abs(t_s - t_r) / Math.max(25.0, t_r) * 100.0;
@@ -709,9 +757,9 @@
       sim_to_real_confidence_pct = Math.max(5.0, Math.min(99.4, Number((0.50 * best_match_pct + 0.50 * (100.0 - reality_gap_pct)).toFixed(1))));
 
       if (reality_gap_pct < 8.0) {
-        gap_explanation = `Minimal reality gap (${reality_gap_pct.toFixed(1)}%): Theoretical de Ris/Arrhenius kinetic prediction closely reproduces empirical flight telemetry from ${best_match.investigation || best_match.title}.`;
+        gap_explanation = `Minimal reality gap (${reality_gap_pct.toFixed(1)}%): The model is close to the reconstructed curve for ${best_match.investigation || best_match.title}.`;
       } else if (best_match.measured_regime === 'cool_flame') {
-        gap_explanation = `Reality gap (${reality_gap_pct.toFixed(1)}%) is governed by low-temperature negative temperature coefficient (NTC) kinetics and non-luminous CO radical recombination matching NASA PSI-117 CIR flight data.`;
+        gap_explanation = `Reality gap (${reality_gap_pct.toFixed(1)}%) is governed by low-temperature negative temperature coefficient (NTC) kinetics and non-luminous CO radical recombination in the regime described by the NASA PSI-117 reference.`;
       } else if (tgt_vg < 2.5) {
         gap_explanation = `Reality gap (${reality_gap_pct.toFixed(1)}%) arises from diffusive-thermal cellular fingering instability and large spherical radiative standoff losses (rf/rs ~ 10) in quiescent microgravity.`;
       } else if (String(best_match.id || '').includes('SAFFIRE')) {
@@ -732,7 +780,7 @@
         measured_front_cm: discrete_pts.map(pt => pt.front_cm || 0.0),
         measured_cabin_temp_c: discrete_pts.map(pt => pt.cabin_temp_c || 25.0),
         measured_cabin_pressure_kpa: discrete_pts.map(pt => pt.cabin_pressure_kpa || 101.3),
-        measured_co_ppm: discrete_pts.map(pt => pt.co_ppm || 5.0),
+        measured_co_ppm: discrete_pts.map(pt => pt.co_ppm ?? 5.0),
         sensor_sigma: discrete_pts.map(pt => pt.sensor_sigma || 0.5)
       };
     }
@@ -920,59 +968,26 @@
   // ---------------------------------------------------------------------------
   function askSafetyOfficer(userQuery, params, evaluation, nearestBenchmark, language) {
     params = params || {};
-    evaluation = evaluation || evaluateFireSafety(params);
+    if (!Number.isFinite(evaluation?.damkohler)) evaluation = evaluateFireSafety(params);
     if (!nearestBenchmark) {
       const s2r = computeSimToReal(params, evaluation);
       nearestBenchmark = s2r.best_match;
     }
 
     const status = evaluation.flight_status || 'CAUTION';
-    const fire_risk = Number(evaluation.fire_risk_pct || 50.0);
-    const expl_risk = Number(evaluation.explosion_risk_pct || 0.0);
-    const breach = Boolean(evaluation.breach_outside_risk);
-    const sim_tel = evaluation.sim_telemetry || {};
-    const t_flame = Number(sim_tel.flame_temp_k || 1800.0);
-    const spread_rate = Number(sim_tel.spread_rate_mm_s || 1.5);
-    const color_mode = String(sim_tel.flame_color_mode || 'sooty_yellow');
-    const overpressure = Number(sim_tel.cabin_overpressure_kpa || 0.0);
-    const heat_flux = Number(sim_tel.hull_heat_flux_kw_m2 || 0.0);
-    const analog = evaluation.historical_analog || {};
+    const text = `### FLIGHT SAFETY VERDICT
+- **Model verdict:** \`${status}\`
+- **Fire risk:** ${evaluation.fire_risk_pct.toFixed(1)}% · **Explosion risk:** ${evaluation.explosion_risk_pct.toFixed(1)}%
+- **Regime:** ${evaluation.combustion_regime.replaceAll('_', ' ').toUpperCase()}
 
-    const bench_id = nearestBenchmark.id || nearestBenchmark.benchmark_id || 'SAFFIRE-V-01';
-    const bench_name = nearestBenchmark.investigation || nearestBenchmark.title || 'NASA Saffire-V Spacecraft Fire Safety';
-    const bench_url = nearestBenchmark.url || 'https://psi.nasa.gov/physci/repo/search?q=Saffire&data_source=psi&data_type=investigation';
-    const bench_match = Number(nearestBenchmark.match_pct || 95.0);
+| Model metric | Value |
+| --- | --- |
+${telemetryRows(evaluation).map(row => `| ${row.label} | ${row.text} |`).join('\n')}
 
-    const o2_pct = Number(params.o2_percent !== undefined ? params.o2_percent : 21.0);
-    const p_atm = Number(params.pressure_atm !== undefined ? params.pressure_atm : 1.0);
-    const vg_cms = Number(params.flow_velocity_cms !== undefined ? params.flow_velocity_cms : 10.0);
-    const x_o2 = o2_pct / 100.0;
-    const loi_crit = 0.15 * Math.pow(1.0 / Math.max(0.1, p_atm), 0.10);
-
-    const lang = String(language || 'ru').toLowerCase();
-    let text;
-
-    let da_desc_en = 'vigorous diffusion burning';
-    if (color_mode === 'extinguished') da_desc_en = 'radiative extinction';
-    else if (color_mode === 'cool_blue') da_desc_en = 'cool flame NTC branch';
-
-    text = `### 1. VERDICT (FLIGHT SAFETY VERDICT)
-- **Operational Verdict:** \`${status}\`
-- **Fire Risk Score:** **${fire_risk.toFixed(1)}%** | **Explosion Risk:** **${expl_risk.toFixed(1)}%**
-- **Hull Breach Risk:** **${breach ? 'CRITICAL (YES // EXCEEDS 45 kPa / 28 kW/m²)' : 'NOMINAL (NO)'}**
-- **Combustion Regime:** **${color_mode.toUpperCase()}** (flame temp: **${t_flame.toFixed(0)} K**, spread rate: **${spread_rate.toFixed(2)} mm/s**, hull heat flux: **${heat_flux.toFixed(1)} kW/m²**)
-
-### 2. OBJECTIVE PHYSICAL REASONS
-[THEORETICAL EXTRAPOLATION — C.K. LAW / SAFFIRE V MODEL]
-- **Chung K. Law Flammability Criterion (Section 0.1):** Operating with O2 = ${o2_pct.toFixed(1)}% at pressure P = ${p_atm.toFixed(2)} atm yields X_O2 = ${x_o2.toFixed(3)} against non-flammability threshold LOI_crit = ${loi_crit.toFixed(3)}.
-- **S-Curve Damköhler Criterion:** Flow time vs chemical Arrhenius rate determines regime: ${da_desc_en}.
-- **NASA BASS-II Flow Dynamics:** Ventilation velocity V_g = ${vg_cms.toFixed(1)} cm/s determines convective oxygen supply and flame boundary stability.
-
-### 3. NASA BENCHMARK & ECLSS EMERGENCY PROTOCOL
-[VERIFIED NASA PSI DATA] ${bench_url}
-- **Closest Flight Experiment:** \`${bench_id}\` (${bench_name}), parameter correlation: **${bench_match.toFixed(1)}%**.
-- **Historical Spacecraft Analog:** **${analog.name || 'NASA Historical Analog'}** (match: **${(analog.similarity_pct || 95.0).toFixed(1)}%**).
-- **Emergency ECLSS Protocol:** 1) Isolate cabin airflow loop (drop V_g < 1.5 cm/s); 2) Depressurize cabin to suppress gas reaction; 3) Flood compartment with inert gas.`;
+### NASA BENCHMARK & ECLSS RESPONSE
+- **Catalog reference:** ${benchmarkLabel(nearestBenchmark)}
+- Benchmark curves are reconstructed from the project's reference catalog. Similarity scores describe the match to that catalog.
+${mitigationSteps(evaluation).map(step => `- ${step}`).join('\n')}`;
 
     return {
       source: 'standalone-safety-officer',
@@ -983,6 +998,14 @@
     };
   }
 
+  function benchmarkLabel(benchmark) {
+    if (!benchmark) return 'No matching entry';
+    const id = benchmark.id ?? benchmark.benchmark_id ?? 'Catalog entry';
+    const name = benchmark.investigation ?? benchmark.title ?? 'NASA investigation';
+    const score = Number.isFinite(benchmark.match_pct) ? ` · ${benchmark.match_pct.toFixed(1)}% similarity` : '';
+    return `${id} · ${name}${score}`;
+  }
+
   // ---------------------------------------------------------------------------
   // 4.5 DIFFERENTIAL COMPARATOR (AI DIFF / 2-PIN COMPARISON)
   // ---------------------------------------------------------------------------
@@ -990,105 +1013,65 @@
     const pA = (branchA && branchA.params) ? branchA.params : (branchA || {});
     const pB = (branchB && branchB.params) ? branchB.params : (branchB || {});
 
-    // Ensure complete physical evaluation with fresh fallback
-    const eA = (branchA && branchA.evaluation && Number.isFinite(branchA.evaluation.fire_risk_pct))
-      ? branchA.evaluation : evaluateFireSafety(pA);
-    const eB = (branchB && branchB.evaluation && Number.isFinite(branchB.evaluation.fire_risk_pct))
-      ? branchB.evaluation : evaluateFireSafety(pB);
+    const eA = Number.isFinite(branchA?.evaluation?.damkohler) ? branchA.evaluation : evaluateFireSafety(pA);
+    const eB = Number.isFinite(branchB?.evaluation?.damkohler) ? branchB.evaluation : evaluateFireSafety(pB);
+    const s2rA = branchA?.sim_to_real ?? computeSimToReal(pA, eA);
+    const s2rB = branchB?.sim_to_real ?? computeSimToReal(pB, eB);
+    const bA = branchA?.nearest_benchmark ?? s2rA.best_match;
+    const bB = branchB?.nearest_benchmark ?? s2rB.best_match;
 
-    const s2rA = (branchA && branchA.sim_to_real) ? branchA.sim_to_real : computeSimToReal(pA, eA);
-    const s2rB = (branchB && branchB.sim_to_real) ? branchB.sim_to_real : computeSimToReal(pB, eB);
-
-    const o2_a = Number(pA.o2_percent !== undefined ? pA.o2_percent : 21.0);
-    const o2_b = Number(pB.o2_percent !== undefined ? pB.o2_percent : 21.0);
-    const delta_o2 = o2_b - o2_a;
-
-    const p_a = Number(pA.pressure_atm !== undefined ? pA.pressure_atm : 1.0);
-    const p_b = Number(pB.pressure_atm !== undefined ? pB.pressure_atm : 1.0);
-    const delta_p = p_b - p_a;
-
-    const v_a = Number(pA.flow_velocity_cms !== undefined ? pA.flow_velocity_cms : 10.0);
-    const v_b = Number(pB.flow_velocity_cms !== undefined ? pB.flow_velocity_cms : 10.0);
-    const delta_v = v_b - v_a;
-
-    const tf_a = Number.isFinite(Number(eA.t_flame_k)) ? Number(eA.t_flame_k) : (Number.isFinite(Number(eA.flame_temp_k)) ? Number(eA.flame_temp_k) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.flame_temp_k))) ? Number(eA.sim_telemetry.flame_temp_k) : 1650));
-    const tf_b = Number.isFinite(Number(eB.t_flame_k)) ? Number(eB.t_flame_k) : (Number.isFinite(Number(eB.flame_temp_k)) ? Number(eB.flame_temp_k) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.flame_temp_k))) ? Number(eB.sim_telemetry.flame_temp_k) : 1650));
-    const delta_tf = tf_b - tf_a;
-
-    const vf_a = Number.isFinite(Number(eA.spread_rate_mm_s)) ? Number(eA.spread_rate_mm_s) : (Number.isFinite(Number(eA.flame_spread_rate_mm_s)) ? Number(eA.flame_spread_rate_mm_s) : 2.0);
-    const vf_b = Number.isFinite(Number(eB.spread_rate_mm_s)) ? Number(eB.spread_rate_mm_s) : (Number.isFinite(Number(eB.flame_spread_rate_mm_s)) ? Number(eB.flame_spread_rate_mm_s) : 2.0);
-    const delta_vf = vf_b - vf_a;
-
-    const flux_a = Number.isFinite(Number(eA.hull_heat_flux_kw_m2)) ? Number(eA.hull_heat_flux_kw_m2) : ((eA.sim_telemetry && Number.isFinite(Number(eA.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eA.sim_telemetry.hull_heat_flux_kw_m2) : 5.0);
-    const flux_b = Number.isFinite(Number(eB.hull_heat_flux_kw_m2)) ? Number(eB.hull_heat_flux_kw_m2) : ((eB.sim_telemetry && Number.isFinite(Number(eB.sim_telemetry.hull_heat_flux_kw_m2))) ? Number(eB.sim_telemetry.hull_heat_flux_kw_m2) : 5.0);
-    const delta_flux = flux_b - flux_a;
-
-    const risk_a = Number.isFinite(Number(eA.fire_risk_pct)) ? Number(eA.fire_risk_pct) : (Number.isFinite(Number(eA.fire_risk_score)) ? Number(eA.fire_risk_score) : 4.0);
-    const risk_b = Number.isFinite(Number(eB.fire_risk_pct)) ? Number(eB.fire_risk_pct) : (Number.isFinite(Number(eB.fire_risk_score)) ? Number(eB.fire_risk_score) : 4.0);
-    const delta_risk = risk_b - risk_a;
-
-    const expl_a = Number.isFinite(Number(eA.explosion_risk_pct)) ? Number(eA.explosion_risk_pct) : 0.0;
-    const expl_b = Number.isFinite(Number(eB.explosion_risk_pct)) ? Number(eB.explosion_risk_pct) : 0.0;
-    const delta_expl = expl_b - expl_a;
-
-    const breach_a = !!(eA.breach_outside_risk || eA.outside_breach || eA.hull_breach_predicted || (flux_a >= 28.0));
-    const breach_b = !!(eB.breach_outside_risk || eB.outside_breach || eB.hull_breach_predicted || (flux_b >= 28.0));
-
-    const match_a = Number((s2rA && s2rA.best_match && s2rA.best_match.match_pct) || (s2rA && s2rA.sim_to_real_confidence_pct) || 85.0);
-    const match_b = Number((s2rB && s2rB.best_match && s2rB.best_match.match_pct) || (s2rB && s2rB.sim_to_real_confidence_pct) || 85.0);
-    const delta_match = match_b - match_a;
-
-    // Safety assessment: lower risk score indicates safer regime
-    const scoreA = risk_a + 2.0 * expl_a + (breach_a ? 100 : 0) + (flux_a >= 28.0 ? 50 : 0);
-    const scoreB = risk_b + 2.0 * expl_b + (breach_b ? 100 : 0) + (flux_b >= 28.0 ? 50 : 0);
-
-    let saferBranch = 'EQUAL';
-    let saferTextEn = 'Both configurations exhibit identical overall safety profiles.';
-
-    if (scoreA < scoreB - 1.0) {
-      saferBranch = 'A';
-      saferTextEn = `Branch A (Network 1) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreB - scoreA).toFixed(1)} pts lower.`;
-    } else if (scoreB < scoreA - 1.0) {
-      saferBranch = 'B';
-      saferTextEn = `Branch B (Network 2) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreA - scoreB).toFixed(1)} pts lower.`;
+    const metrics = {};
+    for (const [key, valueA, valueB] of [
+      ['o2', pA.o2_percent ?? 21, pB.o2_percent ?? 21],
+      ['p', pA.pressure_atm ?? 1, pB.pressure_atm ?? 1],
+      ['v', pA.flow_velocity_cms ?? 10, pB.flow_velocity_cms ?? 10],
+      ['tf', eA.flame_temp_k, eB.flame_temp_k],
+      ['vf', eA.spread_rate_mm_s, eB.spread_rate_mm_s],
+      ['flux', eA.hull_heat_flux_kw_m2, eB.hull_heat_flux_kw_m2],
+      ['risk', eA.fire_risk_pct, eB.fire_risk_pct],
+      ['expl', eA.explosion_risk_pct, eB.explosion_risk_pct],
+      ['match', bA?.match_pct ?? 0, bB?.match_pct ?? 0]
+    ]) {
+      metrics[key + '_a'] = Number(valueA);
+      metrics[key + '_b'] = Number(valueB);
+      metrics['delta_' + key] = Number(valueB) - Number(valueA);
     }
 
-    const advisoryText = `### 1. DIFFERENTIAL FLIGHT SAFETY VERDICT (DIFF VERDICT)
-- **Safer Configuration:** **BRANCH ${saferBranch}** (${saferTextEn})
-- **Delta Fire Risk (Δ Fire Risk):** **${delta_risk >= 0 ? '+' : ''}${delta_risk.toFixed(1)}%** (${delta_risk > 0 ? 'Branch B more hazardous' : (delta_risk < 0 ? 'Branch B safer' : 'Identical')})
-- **Delta Explosion Risk (Δ Explosion Risk):** **${delta_expl >= 0 ? '+' : ''}${delta_expl.toFixed(1)}%**
-- **Hull Breach Risk:** Branch A: **${breach_a ? 'YES ⚠️' : 'NO ✓'}** | Branch B: **${breach_b ? 'YES ⚠️' : 'NO ✓'}**
+    const hazard = e => e.fire_risk_pct + 2 * e.explosion_risk_pct +
+      (e.outside_breach ? 100 : 0) + (e.hull_heat_flux_kw_m2 >= 28 ? 50 : 0) +
+      (e.co_600s_ppm >= 55 ? 50 : 0);
+    const scoreDelta = hazard(eB) - hazard(eA);
+    const saferBranch = Math.abs(scoreDelta) <= 1 ? 'EQUAL' : (scoreDelta > 0 ? 'A' : 'B');
+    const verdict = saferBranch === 'EQUAL'
+      ? 'Comparable model hazard scores'
+      : `Branch ${saferBranch} has a ${Math.abs(scoreDelta).toFixed(1)}-point lower model hazard score`;
 
-### 2. PHYSICAL DELTAS COMPARISON MATRIX
-| Metric | Branch A (Net 1) | Branch B (Net 2) | Delta (B - A) | Engineering Safety Impact |
-| :--- | :---: | :---: | :---: | :--- |
-| **Oxygen [O₂]** | ${o2_a.toFixed(1)}% | ${o2_b.toFixed(1)}% | ${delta_o2 >= 0 ? '+' : ''}${delta_o2.toFixed(1)}% | ${delta_o2 > 0 ? 'Higher flame speed & thermal kinetics' : 'Lower oxidizer potential (safer)'} |
-| **Cabin Pressure [P]** | ${p_a.toFixed(2)} atm | ${p_b.toFixed(2)} atm | ${delta_p >= 0 ? '+' : ''}${delta_p.toFixed(2)} atm | ${delta_p > 0 ? 'Higher O2 partial pressure' : 'Reduced gas mixture density'} |
-| **Ventilation Flow [V_g]** | ${v_a.toFixed(1)} cm/s | ${v_b.toFixed(1)} cm/s | ${delta_v >= 0 ? '+' : ''}${delta_v.toFixed(1)} cm/s | ${delta_v > 0 ? 'Enhanced convective oxidizer draft' : 'Closer to radiative extinction'} |
-| **Flame Temp [T_f]** | ${tf_a.toFixed(0)} K | ${tf_b.toFixed(0)} K | ${delta_tf >= 0 ? '+' : ''}${delta_tf.toFixed(0)} K | ${delta_tf > 0 ? 'Increased structural thermal load' : 'Reduced radiative heat flux'} |
-| **Flame Spread Rate [V_f]** | ${vf_a.toFixed(2)} mm/s | ${vf_b.toFixed(2)} mm/s | ${delta_vf >= 0 ? '+' : ''}${delta_vf.toFixed(2)} mm/s | ${delta_vf > 0 ? 'Faster emergency response required' : 'Slower flame propagation'} |
-| **Hull Heat Flux [q''_hull]** | ${flux_a.toFixed(1)} kW/m² | ${flux_b.toFixed(1)} kW/m² | ${delta_flux >= 0 ? '+' : ''}${delta_flux.toFixed(1)} kW/m² | Hull thermal limit: 28.0 kW/m² |
+    const environment = [
+      ['Oxygen', 'o2', 1, '%'],
+      ['Cabin pressure', 'p', 2, ' atm'],
+      ['Ventilation', 'v', 1, ' cm/s'],
+      ['Fire risk', 'risk', 1, '%'],
+      ['Explosion risk', 'expl', 1, '%']
+    ].map(([label, key, digits, unit]) => {
+      const delta = metrics['delta_' + key].toFixed(digits);
+      return [label, metrics[key + '_a'].toFixed(digits) + unit, metrics[key + '_b'].toFixed(digits) + unit,
+        (Number(delta) > 0 ? '+' : '') + delta + unit];
+    });
+    const rows = [...environment, ...compareTelemetry(eA, eB)];
+    const advisoryText = `### DIFFERENTIAL FLIGHT SAFETY
+- **${verdict}**
 
-### 3. SAFETY OFFICER RECOMMENDATION
-- **NASA PSI Grounding:** Branch A calibrated against \`${(s2rA && s2rA.best_match && s2rA.best_match.id) || 'SAFFIRE-V-01'}\` (${match_a.toFixed(1)}%), Branch B calibrated against \`${(s2rB && s2rB.best_match && s2rB.best_match.id) || 'SAFFIRE-VI-01'}\` (${match_b.toFixed(1)}%).
-- **Engineering Directive:** Adopt **BRANCH ${saferBranch}** parameters to maximize spacecraft hull structural margins and suppress microgravity flame progression.`;
+| Metric | Branch A | Branch B | Δ (B − A) |
+| --- | --- | --- | --- |
+${rows.map(row => `| ${row.join(' | ')} |`).join('\n')}
 
-    return {
-      status: 'success',
-      safer_branch: saferBranch,
-      advisory_text: advisoryText,
-      metrics: {
-        o2_a, o2_b, delta_o2,
-        p_a, p_b, delta_p,
-        v_a, v_b, delta_v,
-        tf_a, tf_b, delta_tf,
-        vf_a, vf_b, delta_vf,
-        flux_a, flux_b, delta_flux,
-        risk_a, risk_b, delta_risk,
-        expl_a, expl_b, delta_expl,
-        match_a, match_b, delta_match
-      }
-    };
+### NASA BENCHMARK & ECLSS RESPONSE
+- **Branch A:** ${benchmarkLabel(bA)}
+- **Branch B:** ${benchmarkLabel(bB)}
+- Benchmark curves are reconstructed from the project's reference catalog.
+${(saferBranch === 'EQUAL' ? [...new Set([...mitigationSteps(eA), ...mitigationSteps(eB)])] : mitigationSteps(saferBranch === 'A' ? eA : eB)).map(step => `- ${step}`).join('\n')}`;
+
+    return { status: 'success', safer_branch: saferBranch, advisory_text: advisoryText, verdict, rows, metrics };
   }
 
   // ---------------------------------------------------------------------------
@@ -1101,7 +1084,7 @@
       const dotElem = document.querySelector('.connection-dot');
       if (textElem) {
         if (mode === 'cloud') {
-          textElem.textContent = 'CLOUD ENGINE // ONLINE';
+          textElem.textContent = 'BROWSER ENGINE // ONLINE';
           if (dotElem) dotElem.style.background = 'var(--color-go, #00E5FF)';
         } else if (mode === 'local') {
           textElem.textContent = 'PORT 5000 // CORE ONLINE';
@@ -1238,6 +1221,10 @@
     compileNoteToBlueprint: compileNoteToBlueprint,
     askSafetyOfficer: askSafetyOfficer,
     compareBlueprints: compareBlueprints,
+    telemetryRows,
+    compareTelemetry,
+    mitigationSteps,
+    benchmarkLabel,
     NASA_EXPERIMENTS: NASA_FLIGHT_EXPERIMENTS
   };
 
