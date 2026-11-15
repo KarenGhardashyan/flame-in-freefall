@@ -181,59 +181,68 @@
     return worldCoord;
   }
 
+  const wireElements = new Map();
+  let wireFrame = null;
+
   function renderAllWires() {
-    wiresLayer.innerHTML = '';
-    state.wires.forEach(w => {
-      const p1 = getPinWorldPos(w.fromNode, w.fromPin, true);
-      const p2 = getPinWorldPos(w.toNode, w.toPin, false);
-      const d = createBezierCurve(p1.x, p1.y, p2.x, p2.y);
+    if (wireFrame !== null) return;
+    wireFrame = requestAnimationFrame(() => {
+      wireFrame = null;
+      const activeIds = new Set(state.wires.map(wire => wire.id));
+      for (const [id, entry] of wireElements) {
+        if (activeIds.has(id)) continue;
+        entry.group.remove();
+        wireElements.delete(id);
+      }
 
-      const fromNodeObj = state.nodes.get(w.fromNode);
-      const accent = (fromNodeObj && fromNodeObj.accentColor) ? fromNodeObj.accentColor : 'default';
-
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.dataset.wireId = w.id;
-      g.dataset.accentColor = accent;
-
-      // Base visible wire
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('class', `wire-path ${state.selectedWireId === w.id ? 'selected' : ''} wire-accent-${accent}`);
-      path.setAttribute('d', d);
-
-      // Wire data flow animation
-      const flowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      flowPath.setAttribute('class', `wire-flow wire-flow-pulse wire-flow-accent-${accent}`);
-      flowPath.toggleAttribute('data-active', Boolean(fromNodeObj?.data));
-      flowPath.setAttribute('d', d);
-
-      // Invisible thick hitbox (18px) for effortless touch / mouse selection
-      const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      hitbox.setAttribute('class', 'wire-hitbox');
-      hitbox.setAttribute('d', d);
-
-      g.appendChild(path);
-      g.appendChild(flowPath);
-      g.appendChild(hitbox);
-
-      const handleWireSelect = (e) => {
-        e.stopPropagation();
-        if (e.altKey) {
-          removeWire(w.id);
-          showToast('Wire disconnected');
-        } else {
-          if (state.selectedWireId === w.id) {
-            deselectWire();
-          } else {
-            selectWire(w.id);
-          }
+      for (const wire of state.wires) {
+        const start = getPinWorldPos(wire.fromNode, wire.fromPin, true);
+        const end = getPinWorldPos(wire.toNode, wire.toPin, false);
+        const curve = createBezierCurve(start.x, start.y, end.x, end.y);
+        const source = state.nodes.get(wire.fromNode);
+        const accent = source?.accentColor || 'default';
+        let entry = wireElements.get(wire.id);
+        if (!entry) {
+          entry = createWireElements(wire.id);
+          wireElements.set(wire.id, entry);
         }
-      };
-
-      hitbox.addEventListener('click', handleWireSelect);
-      path.addEventListener('click', handleWireSelect);
-
-      wiresLayer.appendChild(g);
+        if (entry.curve !== curve) {
+          entry.curve = curve;
+          for (const path of [entry.path, entry.flow, entry.hitbox]) path.setAttribute('d', curve);
+        }
+        if (entry.group.dataset.accentColor !== accent) {
+          entry.group.dataset.accentColor = accent;
+          entry.path.setAttribute('class', `wire-path wire-accent-${accent}`);
+          entry.flow.setAttribute('class', `wire-flow wire-flow-pulse wire-flow-accent-${accent}`);
+        }
+        entry.path.classList.toggle('selected', state.selectedWireId === wire.id);
+        entry.flow.toggleAttribute('data-active', Boolean(source?.data));
+      }
     });
+  }
+
+  function createWireElements(wireId) {
+    const svg = 'http://www.w3.org/2000/svg';
+    const group = document.createElementNS(svg, 'g');
+    const path = document.createElementNS(svg, 'path');
+    const flow = document.createElementNS(svg, 'path');
+    const hitbox = document.createElementNS(svg, 'path');
+    group.dataset.wireId = wireId;
+    hitbox.setAttribute('class', 'wire-hitbox');
+    group.append(path, flow, hitbox);
+    group.addEventListener('click', e => {
+      e.stopPropagation();
+      if (e.altKey) {
+        removeWire(wireId);
+        showToast('Wire disconnected');
+      } else if (state.selectedWireId === wireId) {
+        deselectWire();
+      } else {
+        selectWire(wireId);
+      }
+    });
+    wiresLayer.appendChild(group);
+    return { group, path, flow, hitbox };
   }
 
   function selectWire(wireId) {
@@ -374,7 +383,7 @@
   function propagateDataFrom(nodeId, data) {
     const outgoing = state.wires.filter(w => w.fromNode === nodeId);
     outgoing.forEach(w => {
-      wiresLayer.querySelector(`[data-wire-id="${w.id}"] .wire-flow`)?.toggleAttribute('data-active', Boolean(data));
+      wireElements.get(w.id)?.flow.toggleAttribute('data-active', Boolean(data));
       const target = state.nodes.get(w.toNode);
       if (target) {
         target.onReceiveData(data, w.toPin);
@@ -2181,7 +2190,7 @@
       this.simTime = 120;
       this.solverTime = 0;
       this.playing = false;
-      this.needsRender = true;
+      this.needsRender = false;
       this.stars = [];
       this.init();
     }
@@ -2274,7 +2283,9 @@
       this.bindSimModeEvents();
       this.updateHUDAndVerdict();
       this.initParticles();
-      this.startCanvasAnimation();
+      this.canvas = this.element.querySelector('canvas');
+      this.canvasContext = this.canvas.getContext('2d');
+      this.invalidateCanvas();
 
       if (window.ResizeObserver) {
         this.resizeObserver = new ResizeObserver(() => this.onResize());
@@ -2291,12 +2302,12 @@
       this.timeSlider.addEventListener('input', () => {
         this.simTime = Number(this.timeSlider.value);
         this.setPlaying(false);
-        this.needsRender = true;
+        this.invalidateCanvas();
       });
       this.playButton.addEventListener('click', () => {
         if (this.simTime >= 600) this.simTime = 0;
         this.setPlaying(!this.playing);
-        this.needsRender = true;
+        this.invalidateCanvas();
       });
     }
 
@@ -2314,14 +2325,14 @@
         btnFlame.addEventListener('click', (e) => {
           e.stopPropagation();
           this.simGridMode = 'flame_o2';
-          this.needsRender = true;
+          this.invalidateCanvas();
           btnFlame.classList.add('active');
           btnHull.classList.remove('active');
         });
         btnHull.addEventListener('click', (e) => {
           e.stopPropagation();
           this.simGridMode = 'thermal_hull';
-          this.needsRender = true;
+          this.invalidateCanvas();
           btnHull.classList.add('active');
           btnFlame.classList.remove('active');
         });
@@ -2349,31 +2360,35 @@
       }
     }
 
-    startCanvasAnimation() {
-      const canvas = this.element.querySelector(`#${this.id}-canvas`);
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+    invalidateCanvas() {
+      this.needsRender = true;
+      this.requestCanvasFrame();
+    }
 
-      const render = (timestamp) => {
-        if (this.playing) {
-          this.lastTick ??= timestamp;
-          const ticks = Math.floor((timestamp - this.lastTick) / 125);
-          if (ticks > 0) {
-            this.simTime = Math.min(600, this.simTime + ticks * 5);
-            this.lastTick += ticks * 125;
-            this.needsRender = true;
-            if (this.simTime === 600) this.setPlaying(false);
-          }
+    requestCanvasFrame() {
+      if (this.animFrameId !== null) return;
+      this.animFrameId = requestAnimationFrame(timestamp => this.renderCanvasFrame(timestamp));
+    }
+
+    renderCanvasFrame(timestamp) {
+      this.animFrameId = null;
+      if (this.playing) {
+        this.lastTick ??= timestamp;
+        const ticks = Math.floor((timestamp - this.lastTick) / 125);
+        if (ticks > 0) {
+          this.simTime = Math.min(600, this.simTime + ticks * 5);
+          this.lastTick += ticks * 125;
+          this.needsRender = true;
+          if (this.simTime === 600) this.setPlaying(false);
         }
-        if (this.needsRender) {
-          this.needsRender = false;
-          this.timeSlider.value = this.simTime;
-          this.timeReadout.textContent = `${this.simTime} / 600 s`;
-          this.drawScene(ctx, canvas.width, canvas.height);
-        }
-        this.animFrameId = requestAnimationFrame(render);
-      };
-      this.animFrameId = requestAnimationFrame(render);
+      }
+      if (this.needsRender) {
+        this.needsRender = false;
+        this.timeSlider.value = this.simTime;
+        this.timeReadout.textContent = `${this.simTime} / 600 s`;
+        this.drawScene(this.canvasContext, this.canvas.width, this.canvas.height);
+      }
+      if (this.playing) this.requestCanvasFrame();
     }
 
     stepSolver(params, evaluation, time) {
@@ -2938,7 +2953,7 @@
       this.initGridFields(25, (data?.params?.o2_percent ?? 21) / 100);
       this.timeSlider.disabled = this.playButton.disabled = !data?.evaluation;
       if (!data?.evaluation) this.setPlaying(false);
-      this.needsRender = true;
+      this.invalidateCanvas();
       this.updateHUDAndVerdict();
       propagateDataFrom(this.id, data);
     }
@@ -2997,7 +3012,7 @@
 
     onResize() {
       const container = this.element.querySelector('.cutaway-canvas-container');
-      const canvas = this.element.querySelector(`#${this.id}-canvas`);
+      const canvas = this.canvas;
       if (container && canvas) {
         if (this.nodeScale && this.nodeScale > 1.0) {
           const scaledH = Math.round(180 * this.nodeScale);
@@ -3010,7 +3025,7 @@
         if (cw > 40 && ch > 40 && (canvas.width !== cw || canvas.height !== ch)) {
           canvas.width = cw;
           canvas.height = ch;
-          this.needsRender = true;
+          this.invalidateCanvas();
         }
       }
     }
@@ -4836,7 +4851,8 @@
     state.selectedWireId = null;
     state.nodes.forEach(n => n.onDestroy());
     nodesLayer.innerHTML = '';
-    wiresLayer.innerHTML = '';
+    wiresLayer.replaceChildren();
+    wireElements.clear();
     state.nodes.clear();
     state.wires = [];
     state.nodeCounter = 0;
