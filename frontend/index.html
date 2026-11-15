@@ -24,16 +24,22 @@
       </div>
     </div>
 
-    <!-- ADD NODE TOOLBAR -->
-    <div class="add-nodes-section" title="Add node to blueprint canvas">
-      <span class="add-node-label">+ ADD NODE:</span>
-      <button class="btn-add-node" data-type="variable" title="Add Environment & Inflow Variables Node">+ ENV</button>
-      <button class="btn-add-node" data-type="sim" title="Add 2D Finite-Volume Physical Solver Node">+ SIM 2D</button>
-      <button class="btn-add-node" data-type="simtoreal" title="Add NASA Flight Grounding & Benchmarks Node">+ SIM-TO-REAL</button>
-      <button class="btn-add-node" data-type="graph" title="Add Time-Series Telemetry & Uncertainty Curve Node">+ GRAPH</button>
-      <button class="btn-add-node" data-type="table" title="Add NASA PSI Matrix 41-Run Table Node">+ TABLE</button>
-      <button class="btn-add-node" data-type="aidiff" title="Add 2-Pin Differential Safety Comparator Node">+ AI DIFF (2-PIN)</button>
-      <button class="btn-add-node" data-type="note" title="Add NOTE AI JARVIS Architect Node">+ NOTE AI</button>
+    <!-- ADD NODE DROPDOWN (COMPACT FOR ALL SCREENS) -->
+    <div class="add-nodes-dropdown-wrap">
+      <button class="btn-bar btn-add-node-toggle" id="btn-add-node-toggle" title="Add blueprint node">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span data-i18n="add_node">+ ADD NODE ▾</span>
+      </button>
+      <div class="add-nodes-dropdown-menu" id="add-nodes-menu">
+        <button class="btn-add-node-item" data-type="variable"><span class="dot dot-var"></span><b>+ ENV</b> <span class="item-desc">(Environment & Inflow)</span></button>
+        <button class="btn-add-node-item" data-type="sim"><span class="dot dot-sim"></span><b>+ SIM 2D</b> <span class="item-desc">(Finite-Volume Solver)</span></button>
+        <button class="btn-add-node-item" data-type="simtoreal"><span class="dot dot-s2r"></span><b>+ SIM-TO-REAL</b> <span class="item-desc">(NASA Grounding)</span></button>
+        <button class="btn-add-node-item" data-type="graph"><span class="dot dot-graph"></span><b>+ GRAPH</b> <span class="item-desc">(Time-Series Curves)</span></button>
+        <button class="btn-add-node-item" data-type="table"><span class="dot dot-table"></span><b>+ TABLE</b> <span class="item-desc">(Telemetry & PSI Matrix)</span></button>
+        <button class="btn-add-node-item" data-type="aidiff"><span class="dot dot-aidiff"></span><b>+ AI DIFF</b> <span class="item-desc">(2-Pin Comparator)</span></button>
+        <button class="btn-add-node-item" data-type="prompt"><span class="dot dot-prompt"></span><b>+ PROMPT</b> <span class="item-desc">(AI Safety Officer)</span></button>
+        <button class="btn-add-node-item" data-type="note"><span class="dot dot-note"></span><b>+ NOTE AI</b> <span class="item-desc">(JARVIS Architect)</span></button>
+      </div>
     </div>
 
     <!-- TOP BAR ACTIONS -->
@@ -42,7 +48,7 @@
         <svg viewBox="0 0 24 24">
           <path d="M4 4h7v7H4V4zm0 9h7v7H4v-7zm9-9h7v7h-7V4zm0 9h7v7h-7v-7z" />
         </svg>
-        Auto-Layout
+        <span class="btn-text" data-i18n="autolayout">Auto-Layout</span>
       </button>
 
       <button class="btn-bar" id="btn-export-json" title="Save blueprint graph as JSON file">
@@ -50,14 +56,14 @@
           <path
             d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
         </svg>
-        Export (.json)
+        <span class="btn-text" data-i18n="export">Export</span>
       </button>
 
       <button class="btn-bar" id="btn-import-json" title="Load blueprint graph from JSON file">
         <svg viewBox="0 0 24 24">
           <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
         </svg>
-        Import (.json)
+        <span class="btn-text" data-i18n="import">Import</span>
       </button>
       <input type="file" id="file-import-input" accept=".json" style="display: none;">
 
@@ -66,7 +72,18 @@
           <path
             d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
         </svg>
-        Reset
+        <span class="btn-text" data-i18n="reset">Reset</span>
+      </button>
+
+      <!-- THEME TOGGLE: LIGHT / DARK -->
+      <button class="btn-bar btn-theme-toggle" id="btn-theme-toggle" title="Toggle Light / Dark theme">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-text">DARK</span>
+      </button>
+
+      <!-- LANGUAGE TOGGLE: EN / RU -->
+      <button class="btn-bar btn-lang-toggle" id="btn-lang-toggle" title="Toggle Language (EN / RU)">
+        <span id="lang-text">EN</span>
       </button>
 
       <div class="connection-pill" id="connection-status-pill">

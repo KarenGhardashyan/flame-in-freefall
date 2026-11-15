@@ -11,10 +11,31 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v6';
+  const STORAGE_KEY = 'flame_blueprint_graph_v7';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
+
+  const I18N = {
+    en: {
+      add_node: '+ ADD NODE ▾',
+      autolayout: 'Auto-Layout',
+      export: 'Export (.json)',
+      import: 'Import (.json)',
+      reset: 'Reset',
+      cloud_online: 'CLOUD ENGINE // ONLINE',
+      core_online: 'PORT 5000 // CORE ONLINE'
+    },
+    ru: {
+      add_node: '+ ДОБАВИТЬ НОДУ ▾',
+      autolayout: 'Авто-схема',
+      export: 'Экспорт (.json)',
+      import: 'Импорт (.json)',
+      reset: 'Сброс',
+      cloud_online: 'ОБЛАЧНЫЙ ДВИЖОК // ОНЛАЙН',
+      core_online: 'ПОРТ 5000 // ЯДРО ОНЛАЙН'
+    }
+  };
 
   const SCENARIOS = {
     iss_nominal: {
@@ -56,7 +77,9 @@
     nodeCounter: 0,
     wireCounter: 0,
     contextMenuPos: { x: 0, y: 0 },
-    evalDebounceTimer: null
+    evalDebounceTimer: null,
+    theme: localStorage.getItem('flame_blueprint_theme') || 'dark',
+    language: localStorage.getItem('flame_blueprint_lang') || 'en'
   };
 
   // DOM Elements
@@ -205,8 +228,67 @@
     });
   }
 
+  function isOutputPin(pin) {
+    if (!pin) return false;
+    const p = String(pin).toLowerCase();
+    return p === 'out' || p.startsWith('out_') || p.includes('output');
+  }
+
+  function isInputPin(pin) {
+    if (!pin) return false;
+    const p = String(pin).toLowerCase();
+    return p === 'in' || p === 'in_a' || p === 'in_b' || p.startsWith('in_') || p.includes('input');
+  }
+
+  function isReachable(startNodeId, targetNodeId, visited = new Set()) {
+    if (startNodeId === targetNodeId) return true;
+    visited.add(startNodeId);
+    const outgoing = state.wires.filter(w => w.fromNode === startNodeId);
+    for (const w of outgoing) {
+      if (!visited.has(w.toNode)) {
+        if (isReachable(w.toNode, targetNodeId, visited)) return true;
+      }
+    }
+    return false;
+  }
+
   function addWire(fromNode, fromPin, toNode, toPin) {
     if (fromNode === toNode) return; // Prevent self-loop
+
+    // If user dragged from an input pin to an output pin, auto-reverse to maintain OUT -> IN direction
+    if (isInputPin(fromPin) && isOutputPin(toPin)) {
+      const tNode = fromNode;
+      const tPin = fromPin;
+      fromNode = toNode;
+      fromPin = toPin;
+      toNode = tNode;
+      toPin = tPin;
+    }
+
+    // Disallow IN -> IN connections
+    if (isInputPin(fromPin) && isInputPin(toPin)) {
+      showToast(state.language === 'ru' ? 'Ошибка: нельзя соединять вход (IN) со входом (IN)' : 'Invalid: Cannot connect IN pin to IN pin');
+      return;
+    }
+
+    // Disallow OUT -> OUT connections
+    if (isOutputPin(fromPin) && isOutputPin(toPin)) {
+      showToast(state.language === 'ru' ? 'Ошибка: нельзя соединять выход (OUT) с выходом (OUT)' : 'Invalid: Cannot connect OUT pin to OUT pin');
+      return;
+    }
+
+    // Must be OUT -> IN
+    if (!isOutputPin(fromPin) || !isInputPin(toPin)) {
+      showToast(state.language === 'ru' ? 'Соединение должно быть строго OUT ➔ IN' : 'Connection must be directed OUT ➔ IN');
+      return;
+    }
+
+    // Cycle check (strictly enforce DAG feed-forward flow)
+    if (isReachable(toNode, fromNode)) {
+      showToast(state.language === 'ru' ? 'Обнаружен цикл: связи должны быть направленными (DAG)' : 'Cycle detected: connections must be feed-forward DAG');
+      return;
+    }
+
     // Prevent duplicate wires
     const exists = state.wires.some(w =>
       w.fromNode === fromNode && w.fromPin === fromPin && w.toNode === toNode && w.toPin === toPin
@@ -225,7 +307,7 @@
     renderAllWires();
     saveGraphToLocalStorage();
 
-    // Propagate data from sender to receiver
+    // Propagate data strictly forward from sender to receiver
     const sender = state.nodes.get(fromNode);
     const receiver = state.nodes.get(toNode);
     if (sender && receiver && sender.data) {
@@ -287,7 +369,7 @@
         </div>
         ${portsHtml ? `<div class="node-ports-bar ${portsExtraClass}">${portsHtml}</div>` : ''}
         <div class="node-body">${bodyHtml}</div>
-        <div class="node-resizer" title="Drag to resize card"></div>
+        <div class="node-resizer node-resize-handle" title="Drag to resize card"></div>
       `;
 
       this.element = el;
@@ -319,7 +401,7 @@
     }
 
     bindResizeEvents() {
-      const resizer = this.element.querySelector('.node-resizer');
+      const resizer = this.element.querySelector('.node-resizer, .node-resize-handle');
       if (!resizer) return;
       let startX = 0, startY = 0;
       let startW = 0, startH = 0;
@@ -327,6 +409,7 @@
 
       resizer.addEventListener('mousedown', (e) => {
         e.stopPropagation();
+        e.stopImmediatePropagation();
         e.preventDefault();
         isResizing = true;
         resizer.classList.add('resizing');
@@ -337,6 +420,8 @@
 
         const onMouseMove = (ev) => {
           if (!isResizing) return;
+          ev.stopPropagation();
+          ev.preventDefault();
           const dw = (ev.clientX - startX) / state.scale;
           const dh = (ev.clientY - startY) / state.scale;
           this.width = Math.max(260, Math.round(startW + dw));
@@ -349,7 +434,10 @@
           }
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (ev) => {
+          if (!isResizing) return;
+          ev.stopPropagation();
+          ev.preventDefault();
           isResizing = false;
           resizer.classList.remove('resizing');
           window.removeEventListener('mousemove', onMouseMove);
@@ -981,7 +1069,7 @@
 
     async evaluate() {
       try {
-        const s2rNode = findDownstreamNode(this.id, 'simtoreal') || Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+        const s2rNode = findDownstreamNode(this.id, 'simtoreal');
         const payload = Object.assign({}, this.params, {
           match_by: s2rNode ? s2rNode.matchBy : 'physics',
           active_benchmark_id: s2rNode ? s2rNode.activeBenchmarkId : null,
@@ -1028,7 +1116,7 @@
     }
 
     triggerBranchEvaluate() {
-      const varNode = findUpstreamNode(this.id, 'variable') || Array.from(state.nodes.values()).find(n => n.type === 'variable');
+      const varNode = findUpstreamNode(this.id, 'variable');
       if (varNode) {
         varNode.queueEvaluate();
       }
@@ -1312,39 +1400,61 @@
   }
 
   // -------------------------------------------------------------------------
-  // NODE 1.75: TABLE (NASA PSI Flight Matrix)
+  // NODE 1.75: TABLE (NASA PSI Flight Matrix & Telemetry Summary)
   // -------------------------------------------------------------------------
 
   class TableNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 580, height = 440) {
+    constructor(id, x, y, initialData = {}, width = 490, height = 540) {
       super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height);
       this.activeBenchmarkId = null;
       this.filterText = '';
+      this.filterMode = 'relevant'; // 'relevant' (top 5) or 'all' (all 41)
       this.init();
     }
 
     init() {
+      // Strictly a terminal analytical node: ONLY input pin 'in' (NO out pin)
       const portsHtml = `
         <div class="pin pin-in" data-pin="in">
           <div class="pin-socket"></div>
           <span>IN (Eval Stream)</span>
         </div>
-        <div class="pin pin-out" data-pin="out">
-          <span>OUT (Selected Benchmark)</span>
-          <div class="pin-socket"></div>
-        </div>
       `;
 
       const bodyHtml = `
-        <div class="table-node-toolbar">
-          <input type="text" class="table-node-search" id="${this.id}-search" placeholder="Filter 41 runs (e.g. Saffire, PMMA, BASS, H2, 21%)...">
-          <div class="table-node-stats" id="${this.id}-stats">41 EXPERIMENTS</div>
+        <div class="table-node-sections">
+          <div class="telemetry-summary-section">
+            <div class="table-section-title">
+              <span>SIMULATION TELEMETRY SUMMARY</span>
+              <span style="color: var(--text-muted); font-size: 8.5px;" id="${this.id}-summary-status">STREAM: LIVE</span>
+            </div>
+            <div class="telemetry-summary-grid" id="${this.id}-summary-grid">
+              <div class="telemetry-summary-item" style="grid-column: span 2; text-align: center; color: var(--text-muted);">
+                Awaiting physical telemetry stream...
+              </div>
+            </div>
+          </div>
+
+          <div class="psi-runs-section">
+            <div class="table-section-title">
+              <span>MATCHING NASA PSI EXPERIMENTAL RUNS</span>
+              <span style="color: var(--color-go); font-size: 8.5px;">CLICK ROW TO CALIBRATE</span>
+            </div>
+            <div class="table-node-toolbar">
+              <div class="table-filter-pills" id="${this.id}-filter-pills">
+                <button class="btn-table-filter ${this.filterMode === 'relevant' ? 'active' : ''}" data-mode="relevant">RELEVANT (TOP 5)</button>
+                <button class="btn-table-filter ${this.filterMode === 'all' ? 'active' : ''}" data-mode="all">ALL 41 RUNS</button>
+              </div>
+              <input type="text" class="table-node-search" id="${this.id}-search" placeholder="Filter runs (PMMA, Saffire, 21%, BASS)...">
+            </div>
+            <div class="table-node-container" id="${this.id}-table-container"></div>
+          </div>
         </div>
-        <div class="table-node-container" id="${this.id}-table-container"></div>
       `;
 
       this.createDOM('', portsHtml, bodyHtml);
       this.bindTableEvents();
+      this.renderTelemetrySummary();
       this.renderMatrix();
     }
 
@@ -1356,27 +1466,165 @@
           this.renderMatrix();
         });
       }
+
+      const filterPills = this.element.querySelectorAll(`#${this.id}-filter-pills .btn-table-filter`);
+      filterPills.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const mode = btn.dataset.mode;
+          if (mode && (mode === 'relevant' || mode === 'all')) {
+            this.filterMode = mode;
+            filterPills.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            this.renderMatrix();
+          }
+        });
+      });
+    }
+
+    renderTelemetrySummary() {
+      const grid = this.element.querySelector(`#${this.id}-summary-grid`);
+      const statusEl = this.element.querySelector(`#${this.id}-summary-status`);
+      if (!grid) return;
+
+      const evalData = this.data ? this.data.evaluation : null;
+      const params = this.data ? this.data.params : null;
+      const simTel = (evalData && evalData.sim_telemetry) ? evalData.sim_telemetry : {};
+
+      if (!evalData) {
+        grid.innerHTML = `
+          <div class="telemetry-summary-item" style="grid-column: span 2; text-align: center; color: var(--text-muted); padding: 8px;">
+            Awaiting physical telemetry stream...
+          </div>
+        `;
+        if (statusEl) statusEl.textContent = 'STREAM: IDLE';
+        return;
+      }
+
+      if (statusEl) {
+        const flightStatus = evalData.flight_status || 'NOMINAL';
+        statusEl.textContent = `STATUS: ${flightStatus}`;
+        statusEl.style.color = flightStatus === 'GO' ? 'var(--color-go)' : (flightStatus === 'NO-GO' ? 'var(--color-nogo)' : '#F59E0B');
+      }
+
+      const rawRegime = (simTel.flame_color_mode || evalData.combustion_regime || 'nominal').toUpperCase();
+      const tfVal = evalData.t_flame_k !== undefined ? evalData.t_flame_k : (simTel.flame_temp_k || 1650);
+      const tf = `${Number(tfVal).toFixed(0)} K`;
+
+      const vgVal = params && params.flow_velocity_cms !== undefined ? Number(params.flow_velocity_cms) : 10.0;
+      const daVal = simTel.damkohler_da !== undefined ? Number(simTel.damkohler_da).toFixed(2)
+                  : (vgVal > 0.05 ? (14.2 / vgVal).toFixed(2) : '35.0');
+
+      const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
+      const vfVal = evalData.flame_spread_rate_mm_s !== undefined ? Number(evalData.flame_spread_rate_mm_s).toFixed(2)
+                  : (simTel.flame_spread_rate_mm_s !== undefined ? Number(simTel.flame_spread_rate_mm_s).toFixed(2) : '2.10');
+
+      const fluxVal = evalData.hull_heat_flux_kw_m2 !== undefined ? Number(evalData.hull_heat_flux_kw_m2)
+                    : (simTel.hull_heat_flux_kw_m2 !== undefined ? Number(simTel.hull_heat_flux_kw_m2) : 0.0);
+      const flux = `${fluxVal.toFixed(1)} kW/m²`;
+
+      const dpVal = simTel.cabin_overpressure_kpa !== undefined ? Number(simTel.cabin_overpressure_kpa) : 0.0;
+      const dp = `+${dpVal.toFixed(2)} kPa`;
+
+      const isH2 = params && ['h2', 'hydrogen'].includes(String(params.fuel || '').toLowerCase());
+      let coVal = '0.0 ppm';
+      if (isH2) {
+        coVal = '0.0 (H₂ Fuel)';
+      } else if (evalData.time_series && Array.isArray(evalData.time_series.co_ppm) && evalData.time_series.co_ppm.length > 0) {
+        const lastCO = evalData.time_series.co_ppm[evalData.time_series.co_ppm.length - 1];
+        coVal = `${Number(lastCO).toFixed(1)} ppm`;
+      } else if (evalData.toxic_co_ppm_600s !== undefined) {
+        coVal = `${Number(evalData.toxic_co_ppm_600s).toFixed(1)} ppm`;
+      } else {
+        coVal = '24.5 ppm';
+      }
+
+      let smacStr = '> 600 s (SAFE)';
+      let isSmacCritical = false;
+      if (isH2) {
+        smacStr = 'N/A (Carbon-free)';
+      } else {
+        const tSmac = evalData.time_to_smac_sec !== undefined ? evalData.time_to_smac_sec
+                    : (simTel.time_to_smac_sec !== undefined ? simTel.time_to_smac_sec : 99999);
+        if (tSmac < 600) {
+          smacStr = `${Math.round(tSmac)} s (CRITICAL SMAC)`;
+          isSmacCritical = true;
+        }
+      }
+
+      grid.innerHTML = `
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Combustion Regime:</span>
+          <span class="telemetry-summary-value highlight-cyan">${sanitize(rawRegime)}</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Flame Temp T_f:</span>
+          <span class="telemetry-summary-value">${sanitize(tf)}</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Damköhler Da:</span>
+          <span class="telemetry-summary-value">${sanitize(daVal)}</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Critical LOI_crit:</span>
+          <span class="telemetry-summary-value">${sanitize(loiVal)}%</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Spread Rate V_f:</span>
+          <span class="telemetry-summary-value highlight-cyan">${sanitize(vfVal)} mm/s</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Hull Heat Flux q''_w:</span>
+          <span class="telemetry-summary-value ${fluxVal >= 28.0 ? 'highlight-danger' : (fluxVal > 15.0 ? 'highlight-cyan' : '')}">${sanitize(flux)}</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Peak ΔP Overpressure:</span>
+          <span class="telemetry-summary-value ${dpVal >= 45.0 ? 'highlight-danger' : ''}">${sanitize(dp)}</span>
+        </div>
+        <div class="telemetry-summary-item">
+          <span class="telemetry-summary-label">Toxic CO @ 600s:</span>
+          <span class="telemetry-summary-value">${sanitize(coVal)}</span>
+        </div>
+        <div class="telemetry-summary-item" style="grid-column: span 2;">
+          <span class="telemetry-summary-label">Time to SMAC 55 ppm:</span>
+          <span class="telemetry-summary-value ${isSmacCritical ? 'highlight-danger' : 'highlight-safe'}">${sanitize(smacStr)}</span>
+        </div>
+      `;
     }
 
     renderMatrix() {
       const container = this.element.querySelector(`#${this.id}-table-container`);
-      const stats = this.element.querySelector(`#${this.id}-stats`);
       if (!container) return;
 
-      const runs = (window.StandaloneAPI && window.StandaloneAPI.NASA_EXPERIMENTS)
+      const allRuns = (window.StandaloneAPI && Array.isArray(window.StandaloneAPI.NASA_EXPERIMENTS))
         ? window.StandaloneAPI.NASA_EXPERIMENTS
-        : (this.data && this.data.sim_to_real && this.data.sim_to_real.all_runs ? this.data.sim_to_real.all_runs : []);
+        : (this.data && this.data.sim_to_real && Array.isArray(this.data.sim_to_real.all_runs) ? this.data.sim_to_real.all_runs : []);
 
-      let filtered = runs;
+      let baseList = allRuns;
+
+      if (this.filterMode === 'relevant') {
+        const topMatches = (this.data && this.data.sim_to_real && Array.isArray(this.data.sim_to_real.top_matches) && this.data.sim_to_real.top_matches.length > 0)
+          ? this.data.sim_to_real.top_matches
+          : null;
+
+        if (topMatches && topMatches.length > 0) {
+          const matchedIds = new Set(topMatches.map(m => m.id));
+          const topRunObjects = topMatches.map(m => {
+            const found = allRuns.find(r => r.id === m.id);
+            return found ? { ...found, match_pct: m.match_pct } : m;
+          });
+          const remaining = allRuns.filter(r => !matchedIds.has(r.id));
+          baseList = [...topRunObjects, ...remaining].slice(0, 5);
+        } else {
+          baseList = allRuns.slice(0, 5);
+        }
+      }
+
+      let filtered = baseList;
       if (this.filterText) {
-        filtered = runs.filter(r => {
+        filtered = allRuns.filter(r => {
           const s = `${r.id} ${r.mission} ${r.investigation} ${r.fuel} ${r.fuel_display || ''} ${r.outcome || ''} ${r.measured_regime || ''}`.toLowerCase();
           return s.includes(this.filterText);
         });
-      }
-
-      if (stats) {
-        stats.textContent = `${filtered.length} / ${runs.length} RUNS`;
       }
 
       let html = `
@@ -1390,47 +1638,48 @@
               <th>P atm</th>
               <th>V_g cm/s</th>
               <th>V_f mm/s</th>
-              <th>CO Ratio</th>
               <th>Outcome</th>
-              <th>Verified URL</th>
+              <th>NASA PSI ↗</th>
             </tr>
           </thead>
           <tbody>
       `;
 
-      filtered.forEach(r => {
-        const isActive = (r.id === this.activeBenchmarkId);
-        const reg = String(r.measured_regime || 'nominal').toLowerCase();
-        let outcomeClass = 'outcome-nominal';
-        if (reg.includes('extinct')) outcomeClass = 'outcome-extinction';
-        else if (reg.includes('cool')) outcomeClass = 'outcome-cool';
-        else if (reg.includes('blast') || reg.includes('breach') || reg.includes('critical')) outcomeClass = 'outcome-breach';
+      if (filtered.length === 0) {
+        html += `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 14px;">No matching NASA PSI runs found</td></tr>`;
+      } else {
+        filtered.forEach(r => {
+          const isActive = (r.id === this.activeBenchmarkId);
+          const reg = String(r.measured_regime || 'nominal').toLowerCase();
+          let outcomeClass = 'outcome-nominal';
+          if (reg.includes('extinct')) outcomeClass = 'outcome-extinction';
+          else if (reg.includes('cool')) outcomeClass = 'outcome-cool';
+          else if (reg.includes('blast') || reg.includes('breach') || reg.includes('critical')) outcomeClass = 'outcome-breach';
 
-        const outcomeText = r.outcome || reg.toUpperCase();
-        const coRatio = r.co_ratio !== undefined ? r.co_ratio : '—';
-        const vf = (r.measured_vf_mm_s !== undefined && r.measured_vf_mm_s !== null) ? Number(r.measured_vf_mm_s).toFixed(2) : '0.00';
-        const url = r.url || 'https://psi.nasa.gov/physci/repo/search?q=Saffire';
+          const outcomeText = r.outcome || reg.toUpperCase();
+          const vf = (r.measured_vf_mm_s !== undefined && r.measured_vf_mm_s !== null) ? Number(r.measured_vf_mm_s).toFixed(2) : '0.00';
+          const url = r.url || 'https://psi.nasa.gov/physci/repo/search?q=Saffire';
 
-        html += `
-          <tr class="${isActive ? 'active-psi-row' : ''}" data-run-id="${sanitize(r.id)}">
-            <td style="font-weight: 700; color: ${isActive ? '#00E5FF' : '#FFFFFF'};">${sanitize(r.id)}</td>
-            <td>${sanitize(r.mission || '')}</td>
-            <td>${sanitize(r.fuel_display || r.fuel || '')}</td>
-            <td>${Number(r.o2_percent || 21.0).toFixed(1)}%</td>
-            <td>${Number(r.pressure_atm || 1.0).toFixed(2)}</td>
-            <td>${Number(r.flow_velocity_cms || 10.0).toFixed(1)}</td>
-            <td>${vf}</td>
-            <td>${coRatio}</td>
-            <td><span class="psi-outcome-tag ${outcomeClass}">${sanitize(outcomeText)}</span></td>
-            <td><a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa" style="font-size: 8.5px;" onclick="event.stopPropagation();">NASA PSI ↗</a></td>
-          </tr>
-        `;
-      });
+          html += `
+            <tr class="${isActive ? 'active-psi-row' : ''}" data-run-id="${sanitize(r.id)}">
+              <td style="font-weight: 700; color: ${isActive ? 'var(--color-go)' : '#FFFFFF'};">${sanitize(r.id)}</td>
+              <td>${sanitize(r.mission || '')}</td>
+              <td>${sanitize(r.fuel_display || r.fuel || '')}</td>
+              <td>${Number(r.o2_percent || 21.0).toFixed(1)}%</td>
+              <td>${Number(r.pressure_atm || 1.0).toFixed(2)}</td>
+              <td>${Number(r.flow_velocity_cms || 10.0).toFixed(1)}</td>
+              <td>${vf}</td>
+              <td><span class="psi-outcome-tag ${outcomeClass}">${sanitize(outcomeText)}</span></td>
+              <td><a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa" style="font-size: 8.5px;" onclick="event.stopPropagation();">NASA PSI ↗</a></td>
+            </tr>
+          `;
+        });
+      }
 
       html += `</tbody></table>`;
       container.innerHTML = html;
 
-      // Bind row clicks
+      // Bind row clicks: strict branch isolation (notify upstream simtoreal only)
       container.querySelectorAll('tbody tr').forEach(tr => {
         tr.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1441,8 +1690,8 @@
           container.querySelectorAll('tbody tr').forEach(r => r.classList.remove('active-psi-row'));
           tr.classList.add('active-psi-row');
 
-          // Notify upstream or downstream simtoreal
-          const s2rNode = findUpstreamNode(this.id, 'simtoreal') || findDownstreamNode(this.id, 'simtoreal');
+          // Strict branch isolation: notify ONLY upstream simtoreal on this branch
+          const s2rNode = findUpstreamNode(this.id, 'simtoreal');
           if (s2rNode && typeof s2rNode.setActiveBenchmark === 'function') {
             s2rNode.setActiveBenchmark(rId);
           } else {
@@ -1450,10 +1699,7 @@
             if (varNode) varNode.queueEvaluate();
           }
 
-          const selectedRun = runs.find(r => r.id === rId);
-          this.data = { selected_run: selectedRun, active_benchmark_id: rId };
-          propagateDataFrom(this.id, this.data);
-          showToast(`Selected benchmark: ${rId}`);
+          showToast(`Calibrated branch with NASA benchmark ${rId}`);
         });
       });
     }
@@ -1468,8 +1714,9 @@
       if (data && data.sim_to_real && data.sim_to_real.active_benchmark_id) {
         this.activeBenchmarkId = data.sim_to_real.active_benchmark_id;
       }
+      this.renderTelemetrySummary();
       this.renderMatrix();
-      propagateDataFrom(this.id, data);
+      // Strictly terminal: do NOT propagate downstream
     }
   }
 
@@ -1669,6 +1916,7 @@
       }
 
       try {
+        const lang = state.language || 'en';
         const res = await fetch('/api/compare-blueprints', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1676,7 +1924,7 @@
             branch_a: this.dataA || {},
             branch_b: this.dataB || {},
             query: this.diffQuery,
-            language: 'ru'
+            language: lang
           })
         });
 
@@ -1695,7 +1943,15 @@
 
         this.data = result;
         propagateDataFrom(this.id, result);
-        showToast('Differential comparison computed');
+
+        // Spawn a new connected AI BRIEF node to the right
+        const title = lang === 'ru' ? 'AI BRIEF // ДИФФЕРЕНЦИАЛЬНЫЙ АНАЛИЗ' : 'AI BRIEF // DIFFERENTIAL SAFETY';
+        const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title });
+        addWire(this.id, 'out', briefNode.id, 'in');
+        briefNode.setBriefContent(result, this.diffQuery);
+        saveGraphToLocalStorage();
+
+        showToast('Differential comparison computed & Brief generated');
       } catch (err) {
         console.error('[AiDiffNode] Compare error:', err);
         showToast('Comparison error: ' + err.message);
@@ -3305,12 +3561,13 @@
       execBtn.innerHTML = `<div class="spinner"></div> <span>ANALYZING PHYSICAL TELEMETRY...</span>`;
 
       try {
+        const lang = state.language || 'en';
         const payload = {
           user_query: this.query,
           params: (this.data && this.data.params) ? this.data.params : {},
           evaluation: (this.data && this.data.evaluation) ? this.data.evaluation : null,
           nearest_benchmark: (this.data && this.data.nearest_benchmark) ? this.data.nearest_benchmark : null,
-          language: 'ru'
+          language: lang
         };
 
         const res = await fetch(API_PROMPT_URL, {
@@ -3323,7 +3580,7 @@
         const result = await res.json();
 
         showToast('AI Safety Briefing synthesized');
-        this.spawnOrUpdateBriefNode(result);
+        this.spawnBriefNode(result);
       } catch (err) {
         console.error('[PromptNode] Error:', err);
         showToast('Prompt execution failed: ' + err.message);
@@ -3333,23 +3590,42 @@
       }
     }
 
-    spawnOrUpdateBriefNode(result) {
-      // Check if an AI SAFETY BRIEF is already connected to OUT pin
-      const connectedWire = state.wires.find(w => w.fromNode === this.id && w.fromPin === 'out');
-      let briefNode = null;
-
-      if (connectedWire) {
-        briefNode = state.nodes.get(connectedWire.toNode);
-      }
-
-      if (!briefNode || briefNode.type !== 'brief') {
-        // Spawn a new brief node to the right
-        briefNode = spawnNode('brief', this.x + 420, this.y);
-        addWire(this.id, 'out', briefNode.id, 'in');
-      }
-
-      briefNode.setBriefContent(result);
+    spawnBriefNode(result) {
+      const title = state.language === 'ru' ? 'AI BRIEF // СОВЕТНИК ECLSS' : 'AI BRIEF // ECLSS ADVISOR';
+      const briefNode = spawnNode('brief', this.x + this.width + 36, this.y, { title });
+      addWire(this.id, 'out', briefNode.id, 'in');
+      briefNode.setBriefContent(result, this.query);
       saveGraphToLocalStorage();
+    }
+
+    onLanguageChange(lang) {
+      const quickGroup = this.element.querySelector('.quick-prompts-group');
+      if (!quickGroup) return;
+
+      if (lang === 'ru') {
+        quickGroup.innerHTML = `
+          <div class="quick-prompts-title">Быстрые сценарии анализа</div>
+          <button class="btn-quick-prompt" data-q="Оценить риск взрыва и пробоя">⚡ Оценить риск взрыва и пробоя</button>
+          <button class="btn-quick-prompt" data-q="Сравнить с тестами NASA PSI">🔬 Сравнить с тестами NASA PSI</button>
+          <button class="btn-quick-prompt" data-q="План действий для ECLSS">🚨 План действий для ECLSS</button>
+        `;
+      } else {
+        quickGroup.innerHTML = `
+          <div class="quick-prompts-title">Quick Action Blueprints</div>
+          <button class="btn-quick-prompt" data-q="Evaluate hull breach and explosion risk">⚡ Evaluate Breach & Explosion Risk</button>
+          <button class="btn-quick-prompt" data-q="Compare with NASA PSI flight tests">🔬 Compare with NASA PSI Tests</button>
+          <button class="btn-quick-prompt" data-q="ECLSS action plan for ventilation">🚨 ECLSS Action Plan</button>
+        `;
+      }
+
+      quickGroup.querySelectorAll('.btn-quick-prompt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.query = btn.dataset.q;
+          const textarea = this.element.querySelector(`#${this.id}-query-text`);
+          if (textarea) textarea.value = this.query;
+          this.execute();
+        });
+      });
     }
   }
 
@@ -3359,7 +3635,8 @@
 
   class BriefNode extends BaseNode {
     constructor(id, x, y, initialData = {}, width = 440, height = null) {
-      super(id, 'brief', 'AI SAFETY BRIEF // NASA ADVISORY', x, y, width, height);
+      const title = (initialData && initialData.title) || (state.language === 'ru' ? 'AI BRIEF // СОВЕТНИК ECLSS' : 'AI BRIEF // ECLSS ADVISOR');
+      super(id, 'brief', title, x, y, width, height);
       this.init();
     }
 
@@ -3382,41 +3659,52 @@
       this.createDOM('', portsHtml, bodyHtml);
     }
 
-    setBriefContent(result) {
+    setBriefContent(result, queryText = null) {
       const container = this.element.querySelector(`#${this.id}-content`);
       if (!container) return;
 
       const rawText = result.advisory_text || 'No response generated.';
 
-      // Format markdown & tags
-      let html = sanitize(rawText);
+      let html = '';
+      if (queryText) {
+        const timeStr = new Date().toLocaleTimeString();
+        html += `
+          <div class="brief-meta-bar">
+            <span class="brief-meta-query">QUERY: <b>${sanitize(queryText)}</b></span>
+            <span class="brief-meta-time">${timeStr}</span>
+          </div>
+        `;
+      }
+
+      let bodyHtml = sanitize(rawText);
 
       // Replace tags
-      html = html.replace(/\[VERIFIED NASA PSI DATA\]\s*(https?:\/\/[^\s<]+)/g, (match, url) => {
+      bodyHtml = bodyHtml.replace(/\[VERIFIED NASA PSI DATA\]\s*(https?:\/\/[^\s<]+)/g, (match, url) => {
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="badge-nasa">✓ [VERIFIED NASA PSI DATA] ↗</a>`;
       });
 
-      html = html.replace(/\[VERIFIED NASA PSI DATA\]/g, () => {
+      bodyHtml = bodyHtml.replace(/\[VERIFIED NASA PSI DATA\]/g, () => {
         return `<span class="badge-nasa">✓ [VERIFIED NASA PSI DATA]</span>`;
       });
 
-      html = html.replace(/\[THEORETICAL EXTRAPOLATION[^\]]*\]/g, (match) => {
+      bodyHtml = bodyHtml.replace(/\[THEORETICAL EXTRAPOLATION[^\]]*\]/g, (match) => {
         return `<span class="badge-theory">⚛ ${match}</span>`;
       });
 
       // Headers ###
-      html = html.replace(/###\s+(.+)/g, '<h3>$1</h3>');
+      bodyHtml = bodyHtml.replace(/###\s+(.+)/g, '<h3>$1</h3>');
 
       // Bold **text**
-      html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+      bodyHtml = bodyHtml.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
 
       // Bullets - text
-      html = html.replace(/^- (.+)/gm, '<li>$1</li>');
-      html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+      bodyHtml = bodyHtml.replace(/^- (.+)/gm, '<li>$1</li>');
+      bodyHtml = bodyHtml.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
 
       // Line breaks
-      html = html.replace(/\n\n/g, '<br><br>');
+      bodyHtml = bodyHtml.replace(/\n\n/g, '<br><br>');
 
+      html += `<div class="brief-body">${bodyHtml}</div>`;
       container.innerHTML = html;
     }
   }
@@ -3611,12 +3899,72 @@
   // TOP BAR CONTROLS & SCENARIOS
   // =========================================================================
 
+  function applyTheme(theme) {
+    state.theme = theme;
+    localStorage.setItem('flame_blueprint_theme', theme);
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+
+    if (theme === 'light') {
+      document.body.classList.add('theme-light');
+      if (themeIcon) themeIcon.textContent = '☀';
+      if (themeText) themeText.textContent = 'LIGHT';
+    } else {
+      document.body.classList.remove('theme-light');
+      if (themeIcon) themeIcon.textContent = '🌙';
+      if (themeText) themeText.textContent = 'DARK';
+    }
+
+    renderAllWires();
+    state.nodes.forEach(n => {
+      if (typeof n.renderGraph === 'function') n.renderGraph();
+    });
+  }
+
+  function applyLanguage(lang) {
+    state.language = lang;
+    localStorage.setItem('flame_blueprint_lang', lang);
+    const langText = document.getElementById('lang-text');
+    if (langText) langText.textContent = lang.toUpperCase();
+
+    const dict = I18N[lang] || I18N.en;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (dict[key]) {
+        el.textContent = dict[key];
+      }
+    });
+
+    state.nodes.forEach(n => {
+      if (typeof n.onLanguageChange === 'function') {
+        n.onLanguageChange(lang);
+      }
+    });
+  }
+
   function setupTopBar() {
-    // Add Node buttons from topbar
-    document.querySelectorAll('.btn-add-node').forEach(btn => {
-      btn.addEventListener('click', () => {
+    // Add Node dropdown
+    const addNodeToggle = document.getElementById('btn-add-node-toggle');
+    const addNodesMenu = document.getElementById('add-nodes-menu');
+    if (addNodeToggle && addNodesMenu) {
+      addNodeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addNodesMenu.classList.toggle('show');
+      });
+      document.addEventListener('click', (e) => {
+        if (!addNodesMenu.contains(e.target) && e.target !== addNodeToggle) {
+          addNodesMenu.classList.remove('show');
+        }
+      });
+    }
+
+    // Add Node items (dropdown menu + any legacy buttons)
+    document.querySelectorAll('.btn-add-node-item, .btn-add-node').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const type = btn.dataset.type;
         if (!type) return;
+        if (addNodesMenu) addNodesMenu.classList.remove('show');
 
         const vpRect = viewport.getBoundingClientRect();
         const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
@@ -3631,6 +3979,26 @@
         }
       });
     });
+
+    // Theme toggle
+    const btnTheme = document.getElementById('btn-theme-toggle');
+    if (btnTheme) {
+      btnTheme.addEventListener('click', () => {
+        const nextTheme = state.theme === 'light' ? 'dark' : 'light';
+        applyTheme(nextTheme);
+        showToast(`Theme switched to ${nextTheme.toUpperCase()}`);
+      });
+    }
+
+    // Language toggle
+    const btnLang = document.getElementById('btn-lang-toggle');
+    if (btnLang) {
+      btnLang.addEventListener('click', () => {
+        const nextLang = state.language === 'en' ? 'ru' : 'en';
+        applyLanguage(nextLang);
+        showToast(`Language switched to ${nextLang.toUpperCase()}`);
+      });
+    }
 
     // Scenario select dropdown (if present)
     const scSelect = document.getElementById('scenario-select');
@@ -3908,7 +4276,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -3966,6 +4334,13 @@
   // =========================================================================
 
   function init() {
+    try {
+      applyTheme(state.theme);
+      applyLanguage(state.language);
+    } catch (e) {
+      console.warn('[Init] Theme/Language init warning:', e);
+    }
+
     try {
       setupViewportInteractions();
     } catch (e) {

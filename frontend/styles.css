@@ -140,53 +140,112 @@ body {
   text-transform: uppercase;
 }
 
-/* Add Node Toolbar */
-.add-nodes-section {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(15, 23, 42, 0.65);
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid #1E293B;
+/* Add Node Dropdown */
+.add-nodes-dropdown-wrap {
+  position: relative;
   flex-shrink: 0;
 }
 
-.add-node-label {
-  font-size: 9.5px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
+.btn-add-node-toggle {
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid var(--color-go);
+  color: var(--color-go);
   font-weight: 700;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
 }
 
-.btn-add-node {
-  background: rgba(15, 23, 42, 0.9);
+.btn-add-node-toggle:hover {
+  background: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+}
+
+.add-nodes-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #0B111E;
   border: 1px solid #334155;
-  color: var(--color-go);
+  border-radius: 6px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.85);
+  display: none;
+  flex-direction: column;
+  min-width: 250px;
+  z-index: 2000;
+  padding: 4px;
+  backdrop-filter: blur(12px);
+}
+
+.add-nodes-dropdown-menu.open {
+  display: flex;
+}
+
+.btn-add-node-item {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 3px 7px;
+  font-size: 11px;
+  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  text-align: left;
+  transition: all 0.12s ease;
 }
 
-.btn-add-node:hover {
+.btn-add-node-item:hover {
   background: rgba(0, 229, 255, 0.12);
-  border-color: var(--color-go);
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
-  transform: translateY(-1px);
+  color: var(--color-go);
 }
 
-.btn-add-node:active {
-  transform: translateY(0);
+.btn-add-node-item .item-desc {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.btn-add-node-item:hover .item-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-var { background: #10B981; box-shadow: 0 0 6px #10B981; }
+.dot-sim { background: #3B82F6; box-shadow: 0 0 6px #3B82F6; }
+.dot-s2r { background: #06B6D4; box-shadow: 0 0 6px #06B6D4; }
+.dot-graph { background: #0EA5E9; box-shadow: 0 0 6px #0EA5E9; }
+.dot-table { background: #14B8A6; box-shadow: 0 0 6px #14B8A6; }
+.dot-aidiff { background: #C026D3; box-shadow: 0 0 6px #C026D3; }
+.dot-prompt { background: #8B5CF6; box-shadow: 0 0 6px #8B5CF6; }
+.dot-note { background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
+
+/* Theme and Lang buttons */
+.btn-theme-toggle,
+.btn-lang-toggle {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.btn-theme-toggle:hover {
+  border-color: #F59E0B;
+  color: #F59E0B;
+}
+
+.btn-lang-toggle {
+  min-width: 32px;
+  justify-content: center;
+}
+
+.btn-lang-toggle:hover {
+  border-color: var(--color-go);
+  color: var(--color-go);
 }
 
 /* Top bar actions */
@@ -363,6 +422,8 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 280px;
+  box-sizing: border-box;
+  overflow: hidden;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
@@ -492,12 +553,13 @@ body {
 }
 
 /* Node Card Resizing Handle */
-.node-resizer {
+.node-resizer,
+.node-resize-handle {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   cursor: nwse-resize;
   z-index: 50;
   border-bottom-right-radius: 7px;
@@ -506,12 +568,15 @@ body {
   opacity: 0.6;
 }
 
-.bp-node:hover .node-resizer {
+.bp-node:hover .node-resizer,
+.bp-node:hover .node-resize-handle {
   opacity: 1;
 }
 
 .node-resizer:hover,
-.node-resizer.resizing {
+.node-resize-handle:hover,
+.node-resizer.resizing,
+.node-resize-handle.resizing {
   opacity: 1;
   background: linear-gradient(135deg, transparent 40%, var(--color-go) 40%, var(--color-go) 50%, transparent 50%, transparent 70%, var(--color-go) 70%, var(--color-go) 80%, transparent 80%);
   filter: drop-shadow(0 0 4px var(--color-go));
@@ -522,6 +587,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Ports / Pins */
@@ -1992,19 +2062,125 @@ select {
 }
 
 /* =========================================================================
-   TABLE NODE // NASA PSI MATRIX
+   TABLE NODE // NASA PSI MATRIX & TELEMETRY SUMMARY
    ========================================================================= */
 
 .node-type-table {
-  width: 580px;
+  width: 490px;
+}
+
+.table-node-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.table-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-go);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 4px;
+}
+
+/* 1. Simulation Telemetry Summary Grid (2-column compact) */
+.telemetry-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  background: #070B14;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.telemetry-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.telemetry-summary-label {
+  color: var(--text-muted);
+  font-size: 9.5px;
+}
+
+.telemetry-summary-value {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.telemetry-summary-value.highlight-cyan {
+  color: var(--color-go);
+  font-weight: 700;
+}
+
+.telemetry-summary-value.highlight-danger {
+  color: var(--color-nogo);
+  font-weight: 700;
+}
+
+.telemetry-summary-value.highlight-safe {
+  color: #10B981;
+  font-weight: 700;
+}
+
+/* 2. NASA PSI Experimental Runs (Compact Adaptive Matrix) */
+.psi-runs-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 140px;
+  overflow: hidden;
 }
 
 .table-node-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.table-filter-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-table-filter {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2.5px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-table-filter:hover {
+  color: var(--text-primary);
+  border-color: #475569;
+}
+
+.btn-table-filter.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: var(--color-go);
+  color: var(--color-go);
 }
 
 .table-node-search {
@@ -2013,8 +2189,8 @@ select {
   border: 1px solid var(--border-card);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 5px 8px;
+  font-size: 9.5px;
+  padding: 3px 6px;
   border-radius: 4px;
   outline: none;
 }
@@ -2024,15 +2200,9 @@ select {
   box-shadow: 0 0 6px rgba(0, 229, 255, 0.25);
 }
 
-.table-node-stats {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
 .table-node-container {
-  max-height: 320px;
+  flex: 1 1 auto;
+  max-height: 240px;
   overflow-y: auto;
   overflow-x: auto;
   border: 1px solid var(--border-card);
@@ -2054,18 +2224,20 @@ select {
   color: var(--text-secondary);
   font-weight: 700;
   text-transform: uppercase;
-  padding: 6px 8px;
+  padding: 5px 6px;
   border-bottom: 1px solid var(--border-card);
   white-space: nowrap;
   text-align: left;
   z-index: 2;
+  font-size: 8.5px;
 }
 
 .psi-matrix-table td {
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   white-space: nowrap;
+  font-size: 9px;
 }
 
 .psi-matrix-table tbody tr {
@@ -2312,4 +2484,278 @@ select {
 .smart-connect-btn:hover {
   background: #06B6D4;
   color: #05070B;
+}
+
+/* =========================================================================
+   NODE 5: AI SAFETY BRIEF
+   ========================================================================= */
+
+.node-type-brief {
+  width: 440px;
+}
+
+.brief-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  margin-bottom: 6px;
+}
+
+.brief-meta-query {
+  color: #FCD34D;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 270px;
+}
+
+.brief-meta-time {
+  color: var(--text-muted);
+  font-size: 8.5px;
+}
+
+.brief-content {
+  background: #070B14;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.brief-content h3,
+.brief-content h4 {
+  color: var(--color-go);
+  margin: 10px 0 4px 0;
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+}
+
+.brief-content h3:first-child,
+.brief-content h4:first-child {
+  margin-top: 0;
+}
+
+.brief-content ul {
+  margin-left: 14px;
+  margin-bottom: 6px;
+}
+
+.brief-content li {
+  margin-bottom: 3px;
+}
+
+/* =========================================================================
+   LIGHT THEME (Engineering Blueprint Schematic)
+   ========================================================================= */
+
+body.theme-light {
+  --bg-space: #F1F5F9;
+  --bg-card: rgba(255, 255, 255, 0.96);
+  --bg-card-header: #E2E8F0;
+  --border-card: #CBD5E1;
+  --border-card-hover: #94A3B8;
+  --border-focus: #0284C7;
+
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+
+  --color-go: #0284C7;
+  --color-caution: #D97706;
+  --color-nogo: #DC2626;
+
+  --wire-default: #0284C7;
+  --wire-glow: rgba(2, 132, 199, 0.35);
+}
+
+body.theme-light .topbar {
+  background: rgba(248, 250, 252, 0.96);
+  border-bottom: 1px solid #CBD5E1;
+}
+
+body.theme-light .brand-title {
+  color: #0F172A;
+}
+
+body.theme-light .brand-title span {
+  color: #0284C7;
+}
+
+body.theme-light .btn-bar {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+
+body.theme-light .btn-bar:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+body.theme-light .btn-add-node-toggle {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: #0284C7;
+  color: #0284C7;
+}
+
+body.theme-light .add-nodes-dropdown-menu {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.15);
+}
+
+body.theme-light .btn-add-node-item {
+  color: #0F172A;
+}
+
+body.theme-light .btn-add-node-item:hover {
+  background: #F1F5F9;
+  color: #0284C7;
+}
+
+body.theme-light #viewport {
+  background-color: #F8FAFC;
+  background-image: radial-gradient(circle, rgba(15, 23, 42, 0.12) 1px, transparent 1px);
+}
+
+body.theme-light .bp-node {
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light .node-header {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+body.theme-light .node-title {
+  color: #0F172A;
+}
+
+body.theme-light .node-type-badge {
+  background: rgba(15, 23, 42, 0.08);
+  color: #334155;
+}
+
+body.theme-light .btn-node-close {
+  color: #64748B;
+}
+
+body.theme-light .btn-node-close:hover {
+  color: #0F172A;
+}
+
+body.theme-light .node-ports-bar {
+  background: #F1F5F9;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+body.theme-light .pin {
+  color: #475569;
+}
+
+body.theme-light .pin:hover {
+  color: #0F172A;
+}
+
+body.theme-light .pin-socket {
+  background: #FFFFFF;
+  border-color: #0284C7;
+}
+
+body.theme-light input[type="range"] {
+  background: #E2E8F0;
+}
+
+body.theme-light .input-num-sm,
+body.theme-light select,
+body.theme-light textarea {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+body.theme-light .table-node-container,
+body.theme-light .diff-output-box,
+body.theme-light .graph-canvas-container,
+body.theme-light .cutaway-canvas-container,
+body.theme-light .diff-matrix-table,
+body.theme-light .psi-matrix-table,
+body.theme-light .telemetry-summary-grid {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+}
+
+body.theme-light .psi-matrix-table th,
+body.theme-light .diff-matrix-table th {
+  background: #F1F5F9;
+  color: #334155;
+  border-bottom: 1px solid #CBD5E1;
+}
+
+body.theme-light .psi-matrix-table td,
+body.theme-light .diff-matrix-table td {
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+}
+
+body.theme-light .connection-pill {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284C7;
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+body.theme-light .brief-content {
+  background: #FFFFFF;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+body.theme-light .brief-meta-bar {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.25);
+}
+
+body.theme-light .brief-meta-query {
+  color: #B45309;
+}
+
+body.theme-light .diff-verdict-banner {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+body.theme-light #context-menu {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-light .context-header {
+  color: #64748B;
+  border-bottom-color: #E2E8F0;
+}
+
+body.theme-light .context-item {
+  color: #1E293B;
+}
+
+body.theme-light .context-item:hover {
+  background: #F1F5F9;
+  color: #0284C7;
+}
+
+body.theme-light .telemetry-summary-value {
+  color: #0F172A;
 }
