@@ -1047,10 +1047,10 @@
 
     if (scoreA < scoreB - 1.0) {
       saferBranch = 'A';
-      saferTextEn = `Branch A (Network 1) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreB - scoreA).toFixed(1)}% lower.`;
+      saferTextEn = `Branch A (Network 1) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreB - scoreA).toFixed(1)} pts lower.`;
     } else if (scoreB < scoreA - 1.0) {
       saferBranch = 'B';
-      saferTextEn = `Branch B (Network 2) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreA - scoreB).toFixed(1)}% lower.`;
+      saferTextEn = `Branch B (Network 2) is demonstrably safer: cumulative hazard index is ${Math.abs(scoreA - scoreB).toFixed(1)} pts lower.`;
     }
 
     const advisoryText = `### 1. DIFFERENTIAL FLIGHT SAFETY VERDICT (DIFF VERDICT)

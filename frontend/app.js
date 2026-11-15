@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v10';
+  const STORAGE_KEY = 'flame_blueprint_graph_v11';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -19,6 +19,7 @@
   const I18N = {
     en: {
       add_node: 'ADD NODE ▾',
+      fit_view: 'Fit View',
       autolayout: 'Auto-Layout',
       export: 'Export (.json)',
       import: 'Import (.json)',
@@ -62,7 +63,8 @@
     scale: 0.95,
     isPanning: false,
     panStart: { x: 0, y: 0 },
-    activeWireDraft: null, // { fromNode, fromPin, startX, startY }
+    activeWireDraft: null, // { fromNode, fromPin, isOut }
+    selectedPin: null,     // { nodeId, pin, isOut, element }
     selectedNodeId: null,
     selectedWireId: null,
     nodeCounter: 0,
@@ -327,6 +329,54 @@
     });
   }
 
+  // -------------------------------------------------------------------------
+  // TAP-TO-CONNECT PIN SELECTION
+  // -------------------------------------------------------------------------
+
+  function selectPin(nodeId, pinName, isOut, pinEl) {
+    deselectPin();
+    state.selectedPin = { nodeId, pin: pinName, isOut, element: pinEl };
+    if (pinEl) pinEl.classList.add('pin-selected');
+    const role = isOut ? 'OUT' : 'IN';
+    showToast(`Pin selected: [${pinName.toUpperCase()}] ${role}. Tap target pin to connect.`);
+  }
+
+  function deselectPin() {
+    if (state.selectedPin && state.selectedPin.element) {
+      state.selectedPin.element.classList.remove('pin-selected');
+    }
+    state.selectedPin = null;
+  }
+
+  function handlePinTap(nodeId, pinName, isOut, pinEl) {
+    if (!state.selectedPin) {
+      selectPin(nodeId, pinName, isOut, pinEl);
+      return;
+    }
+
+    if (state.selectedPin.nodeId === nodeId && state.selectedPin.pin === pinName) {
+      deselectPin();
+      showToast('Pin selection cancelled');
+      return;
+    }
+
+    const first = state.selectedPin;
+    let fromNode = first.nodeId;
+    let fromPin = first.pin;
+    let toNode = nodeId;
+    let toPin = pinName;
+
+    if (!first.isOut && isOut) {
+      fromNode = nodeId;
+      fromPin = pinName;
+      toNode = first.nodeId;
+      toPin = first.pin;
+    }
+
+    deselectPin();
+    addWire(fromNode, fromPin, toNode, toPin);
+  }
+
   // =========================================================================
   // BASE NODE CLASS & TYPES
   // =========================================================================
@@ -457,18 +507,57 @@
         deleteNode(this.id);
       });
 
-      // Pin socket events
-      el.querySelectorAll('.pin-out').forEach(pin => {
-        pin.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-          startWireDraft(this.id, pin.dataset.pin, e);
-        });
-      });
+      // Pin socket events: Drag-to-Connect + Tap-to-Connect
+      el.querySelectorAll('.pin').forEach(pinEl => {
+        const pinName = pinEl.dataset.pin;
+        const isOut = pinEl.classList.contains('pin-out');
 
-      el.querySelectorAll('.pin-in').forEach(pin => {
-        pin.addEventListener('mouseup', (e) => {
+        let downX = 0, downY = 0;
+        let isDown = false;
+        let isDraggingDraft = false;
+
+        pinEl.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
-          completeWireDraft(this.id, pin.dataset.pin);
+          isDown = true;
+          isDraggingDraft = false;
+          downX = e.clientX;
+          downY = e.clientY;
+
+          const onPinPointerMove = (ev) => {
+            if (!isDown) return;
+            const dist = Math.hypot(ev.clientX - downX, ev.clientY - downY);
+            if (!isDraggingDraft && dist > 6) {
+              isDraggingDraft = true;
+              startWireDraft(this.id, pinName, ev, isOut);
+            }
+          };
+
+          const onPinPointerUp = (ev) => {
+            if (!isDown) return;
+            isDown = false;
+            window.removeEventListener('pointermove', onPinPointerMove);
+            window.removeEventListener('pointerup', onPinPointerUp);
+            window.removeEventListener('pointercancel', onPinPointerUp);
+
+            if (isDraggingDraft) {
+              const hitEl = document.elementFromPoint(ev.clientX, ev.clientY);
+              const targetPin = hitEl ? hitEl.closest('.pin') : null;
+              if (targetPin && targetPin !== pinEl) {
+                const targetNodeEl = targetPin.closest('.bp-node');
+                if (targetNodeEl) {
+                  completeWireDraft(targetNodeEl.id, targetPin.dataset.pin, targetPin.classList.contains('pin-out'));
+                  return;
+                }
+              }
+              cancelWireDraft();
+            } else {
+              handlePinTap(this.id, pinName, isOut, pinEl);
+            }
+          };
+
+          window.addEventListener('pointermove', onPinPointerMove);
+          window.addEventListener('pointerup', onPinPointerUp);
+          window.addEventListener('pointercancel', onPinPointerUp);
         });
       });
 
@@ -481,12 +570,14 @@
       let startX = 0, startY = 0;
       let startW = 0, startH = 0;
       let isResizing = false;
+      let activeResizePointerId = null;
 
       const onStartResize = (e) => {
         e.stopPropagation();
-        e.stopImmediatePropagation();
         e.preventDefault();
         isResizing = true;
+        activeResizePointerId = e.pointerId;
+        try { resizer.setPointerCapture(e.pointerId); } catch (_) {}
         resizer.classList.add('resizing');
         this.element.classList.add('resizing-node');
         startX = e.clientX;
@@ -494,15 +585,14 @@
         startW = this.element.offsetWidth;
         startH = this.element.offsetHeight;
 
-        const onMouseMove = (ev) => {
-          if (!isResizing) return;
+        const onPointerMove = (ev) => {
+          if (!isResizing || ev.pointerId !== activeResizePointerId) return;
           ev.stopPropagation();
           ev.preventDefault();
           const dw = (ev.clientX - startX) / state.scale;
           const dh = (ev.clientY - startY) / state.scale;
-          // 2D free resizing with strictly enforced minimum dimensions
           this.width = Math.max(280, Math.round(startW + dw));
-          this.height = Math.max(220, Math.round(startH + dh));
+          this.height = Math.max(200, Math.round(startH + dh));
           this.element.style.width = `${this.width}px`;
           this.element.style.height = `${this.height}px`;
           renderAllWires();
@@ -511,41 +601,49 @@
           }
         };
 
-        const onMouseUp = (ev) => {
-          if (!isResizing) return;
-          ev.stopPropagation();
-          ev.preventDefault();
+        const onPointerUp = (ev) => {
+          if (!isResizing || ev.pointerId !== activeResizePointerId) return;
           isResizing = false;
+          try { resizer.releasePointerCapture(ev.pointerId); } catch (_) {}
           resizer.classList.remove('resizing');
           this.element.classList.remove('resizing-node');
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
-          window.removeEventListener('pointermove', onMouseMove);
-          window.removeEventListener('pointerup', onMouseUp);
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          window.removeEventListener('pointercancel', onPointerUp);
           renderAllWires();
           saveGraphToLocalStorage();
         };
 
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-        window.addEventListener('pointermove', onMouseMove);
-        window.addEventListener('pointerup', onMouseUp);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
       };
 
-      resizer.addEventListener('mousedown', onStartResize);
       resizer.addEventListener('pointerdown', onStartResize);
     }
 
     bindDragEvents() {
       const header = this.element.querySelector('.node-header');
+      if (!header) return;
       let startX = 0, startY = 0;
       let initialNodeX = 0, initialNodeY = 0;
       let isDragging = false;
+      let activeDragPointerId = null;
 
-      header.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('btn-node-close')) return;
+      header.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.btn-node-close') ||
+            e.target.closest('.btn-node-scale') ||
+            e.target.closest('.node-color-dot') ||
+            e.target.closest('.node-scale-selector') ||
+            e.target.closest('.node-color-palette')) {
+          return;
+        }
         e.stopPropagation();
+        e.preventDefault();
+
         isDragging = true;
+        activeDragPointerId = e.pointerId;
+        try { header.setPointerCapture(e.pointerId); } catch (_) {}
         startX = e.clientX;
         startY = e.clientY;
         initialNodeX = this.x;
@@ -555,8 +653,10 @@
         document.querySelectorAll('.bp-node').forEach(n => n.classList.remove('selected'));
         this.element.classList.add('selected');
 
-        const onMouseMove = (ev) => {
-          if (!isDragging) return;
+        const onPointerMove = (ev) => {
+          if (!isDragging || ev.pointerId !== activeDragPointerId) return;
+          ev.stopPropagation();
+          ev.preventDefault();
           const dx = (ev.clientX - startX) / state.scale;
           const dy = (ev.clientY - startY) / state.scale;
           this.x = Math.round(initialNodeX + dx);
@@ -566,15 +666,20 @@
           renderAllWires();
         };
 
-        const onMouseUp = () => {
+        const onPointerUp = (ev) => {
+          if (!isDragging || ev.pointerId !== activeDragPointerId) return;
           isDragging = false;
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
+          try { header.releasePointerCapture(ev.pointerId); } catch (_) {}
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          window.removeEventListener('pointercancel', onPointerUp);
+          renderAllWires();
           saveGraphToLocalStorage();
         };
 
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
       });
     }
 
@@ -1436,6 +1541,13 @@
 
       this.createDOM('', portsHtml, bodyHtml);
       this.bindCriteriaEvents();
+
+      // Ensure initial physics grounding even before external event
+      if (!this.data || !this.data.sim_to_real) {
+        const defaultEval = evaluateBranchPhysics({ o2_percent: 21.0, pressure_atm: 1.0, flow_velocity_cms: 10.0, fuel: 'pmma' });
+        this.data = defaultEval;
+      }
+      this.updateSimToRealDisplay();
     }
 
     bindCriteriaEvents() {
@@ -1480,15 +1592,31 @@
     }
 
     onReceiveData(data, toPin = 'in') {
-      super.onReceiveData(data, toPin);
+      let finalData = data;
+      // If data is raw ENV params (e.g. connected directly without intermediate SIM), automatically evaluate physics
+      if (!finalData || !finalData.sim_to_real || !Array.isArray(finalData.sim_to_real.top_matches)) {
+        const envParams = (finalData && finalData.params) ? finalData.params : (finalData || { o2_percent: 21.0 });
+        const evaluated = evaluateBranchPhysics(envParams);
+        if (evaluated && evaluated.sim_to_real) {
+          finalData = evaluated;
+        }
+      }
+      super.onReceiveData(finalData, toPin);
       this.updateSimToRealDisplay();
-      propagateDataFrom(this.id, data);
+      propagateDataFrom(this.id, finalData);
     }
 
     updateSimToRealDisplay() {
-      if (!this.data) return;
+      if (!this.data || !this.data.sim_to_real) {
+        const upVar = findUpstreamNode(this.id, 'variable');
+        const envParams = (upVar && upVar.params) ? upVar.params : (this.data && this.data.params ? this.data.params : { o2_percent: 21.0 });
+        const evaluated = evaluateBranchPhysics(envParams);
+        if (evaluated && evaluated.sim_to_real) {
+          this.data = evaluated;
+        }
+      }
+      if (!this.data || !this.data.sim_to_real) return;
       const s2r = this.data.sim_to_real;
-      if (!s2r) return;
 
       if (s2r.match_by && s2r.match_by !== this.matchBy) {
         this.matchBy = s2r.match_by;
@@ -1632,7 +1760,7 @@
   // -------------------------------------------------------------------------
 
   class TableNode extends BaseNode {
-    constructor(id, x, y, initialData = {}, width = 490, height = 540, nodeScale = 1.0, accentColor = 'default') {
+    constructor(id, x, y, initialData = {}, width = 540, height = 560, nodeScale = 1.0, accentColor = 'default') {
       super(id, 'table', 'TABLE // NASA PSI MATRIX', x, y, width, height, nodeScale, accentColor);
       this.activeBenchmarkId = null;
       this.filterText = '';
@@ -2190,10 +2318,12 @@
         const scoreB = numRiskB + 2.0 * (numExplB || 0) + (breachB ? 100 : 0) + (numFluxB && numFluxB >= 28.0 ? 50 : 0);
 
         if (scoreA < scoreB - 1.0) {
-          if (vText) vText.textContent = 'BRANCH A IS SAFER';
+          const deltaPts = (scoreB - scoreA).toFixed(1);
+          if (vText) vText.textContent = `BRANCH A IS SAFER (${deltaPts} pts lower)`;
           if (vTag) { vTag.className = 'diff-verdict-tag safer-a'; vTag.textContent = 'BRANCH A SAFER'; }
         } else if (scoreB < scoreA - 1.0) {
-          if (vText) vText.textContent = 'BRANCH B IS SAFER';
+          const deltaPts = (scoreA - scoreB).toFixed(1);
+          if (vText) vText.textContent = `BRANCH B IS SAFER (${deltaPts} pts lower)`;
           if (vTag) { vTag.className = 'diff-verdict-tag safer-b'; vTag.textContent = 'BRANCH B SAFER'; }
         } else {
           if (vText) vText.textContent = 'EQUAL RISK PROFILES';
@@ -4054,68 +4184,142 @@
   // WIRE DRAFTING (DRAG & DROP TO CONNECT)
   // =========================================================================
 
-  function startWireDraft(fromNodeId, fromPin, e) {
+  function startWireDraft(fromNodeId, fromPin, e, isOut = true) {
     state.activeWireDraft = {
       fromNode: fromNodeId,
-      fromPin: fromPin
+      fromPin: fromPin,
+      isOut: isOut
     };
     draftWirePath.style.display = 'block';
 
     const onDraftMove = (ev) => {
       if (!state.activeWireDraft) return;
-      const p1 = getPinWorldPos(state.activeWireDraft.fromNode, state.activeWireDraft.fromPin, true);
+      const p1 = getPinWorldPos(state.activeWireDraft.fromNode, state.activeWireDraft.fromPin, state.activeWireDraft.isOut);
       const p2 = screenToWorld(ev.clientX, ev.clientY);
-      draftWirePath.setAttribute('d', createBezierCurve(p1.x, p1.y, p2.x, p2.y));
+      draftWirePath.setAttribute('d', state.activeWireDraft.isOut ? createBezierCurve(p1.x, p1.y, p2.x, p2.y) : createBezierCurve(p2.x, p2.y, p1.x, p1.y));
     };
 
     const onDraftUp = () => {
-      state.activeWireDraft = null;
-      draftWirePath.style.display = 'none';
-      window.removeEventListener('mousemove', onDraftMove);
-      window.removeEventListener('mouseup', onDraftUp);
+      cancelWireDraft();
+      window.removeEventListener('pointermove', onDraftMove);
+      window.removeEventListener('pointerup', onDraftUp);
+      window.removeEventListener('pointercancel', onDraftUp);
     };
 
-    window.addEventListener('mousemove', onDraftMove);
-    window.addEventListener('mouseup', onDraftUp);
+    window.addEventListener('pointermove', onDraftMove);
+    window.addEventListener('pointerup', onDraftUp);
+    window.addEventListener('pointercancel', onDraftUp);
   }
 
-  function completeWireDraft(toNodeId, toPin) {
+  function completeWireDraft(toNodeId, toPin, isTargetOut = false) {
     if (!state.activeWireDraft) return;
-    addWire(state.activeWireDraft.fromNode, state.activeWireDraft.fromPin, toNodeId, toPin);
-    state.activeWireDraft = null;
-    draftWirePath.style.display = 'none';
+    let fromN = state.activeWireDraft.fromNode;
+    let fromP = state.activeWireDraft.fromPin;
+    let toN = toNodeId;
+    let toP = toPin;
+
+    if (!state.activeWireDraft.isOut && isTargetOut) {
+      fromN = toNodeId;
+      fromP = toPin;
+      toN = state.activeWireDraft.fromNode;
+      toP = state.activeWireDraft.fromPin;
+    }
+
+    addWire(fromN, fromP, toN, toP);
+    cancelWireDraft();
     showToast('Wire connected');
   }
 
+  function cancelWireDraft() {
+    state.activeWireDraft = null;
+    draftWirePath.style.display = 'none';
+  }
+
   // =========================================================================
-  // PAN & ZOOM (VIEWPORT NAVIGATION)
+  // PAN & ZOOM (VIEWPORT NAVIGATION & PINCH-TO-ZOOM)
   // =========================================================================
 
   function setupViewportInteractions() {
-    viewport.addEventListener('mousedown', (e) => {
+    const activeViewportPointers = new Map();
+    let pinchStartDistance = 0;
+    let pinchStartScale = 1;
+    let pinchStartPan = { x: 0, y: 0 };
+
+    viewport.addEventListener('pointerdown', (e) => {
       // Middle click or drag background
-      if (e.target === viewport || e.target === canvasWorld || e.target.id === 'wire-canvas') {
+      const isBg = (e.target === viewport || e.target === canvasWorld || e.target.id === 'wire-canvas' || e.target === wiresLayer);
+      if (!isBg) return;
+
+      contextMenu.style.display = 'none';
+
+      // Cancel pin selection if user taps empty canvas
+      if (state.selectedPin) {
+        deselectPin();
+      }
+
+      activeViewportPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { viewport.setPointerCapture(e.pointerId); } catch (_) {}
+
+      if (activeViewportPointers.size === 1) {
         state.isPanning = true;
         state.panStart = { x: e.clientX - state.pan.x, y: e.clientY - state.pan.y };
         viewport.classList.add('panning');
-        contextMenu.style.display = 'none';
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!state.isPanning) return;
-      state.pan.x = e.clientX - state.panStart.x;
-      state.pan.y = e.clientY - state.panStart.y;
-      updateWorldTransform();
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (state.isPanning) {
+      } else if (activeViewportPointers.size === 2) {
+        // Multi-touch pinch zoom started
         state.isPanning = false;
         viewport.classList.remove('panning');
-        saveGraphToLocalStorage();
+        const pts = Array.from(activeViewportPointers.values());
+        pinchStartDistance = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        pinchStartScale = state.scale;
+        pinchStartPan = { ...state.pan };
       }
     });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (!activeViewportPointers.has(e.pointerId)) return;
+      activeViewportPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (activeViewportPointers.size === 1 && state.isPanning) {
+        state.pan.x = e.clientX - state.panStart.x;
+        state.pan.y = e.clientY - state.panStart.y;
+        updateWorldTransform();
+      } else if (activeViewportPointers.size >= 2 && pinchStartDistance > 0) {
+        const pts = Array.from(activeViewportPointers.values());
+        const currDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        if (currDist > 0) {
+          const ratio = currDist / pinchStartDistance;
+          const targetScale = Math.max(0.35, Math.min(2.5, pinchStartScale * ratio));
+          const rect = viewport.getBoundingClientRect();
+          const currCenterX = (pts[0].x + pts[1].x) / 2 - rect.left;
+          const currCenterY = (pts[0].y + pts[1].y) / 2 - rect.top;
+
+          state.pan.x = currCenterX - ((currCenterX - pinchStartPan.x) / pinchStartScale) * targetScale;
+          state.pan.y = currCenterY - ((currCenterY - pinchStartPan.y) / pinchStartScale) * targetScale;
+          state.scale = targetScale;
+          updateWorldTransform();
+        }
+      }
+    });
+
+    const endViewportPointer = (e) => {
+      if (activeViewportPointers.has(e.pointerId)) {
+        try { viewport.releasePointerCapture(e.pointerId); } catch (_) {}
+        activeViewportPointers.delete(e.pointerId);
+      }
+      if (activeViewportPointers.size === 0) {
+        state.isPanning = false;
+        viewport.classList.remove('panning');
+        pinchStartDistance = 0;
+        saveGraphToLocalStorage();
+      } else if (activeViewportPointers.size === 1) {
+        const remaining = Array.from(activeViewportPointers.values())[0];
+        state.isPanning = true;
+        state.panStart = { x: remaining.x - state.pan.x, y: remaining.y - state.pan.y };
+      }
+    };
+
+    viewport.addEventListener('pointerup', endViewportPointer);
+    viewport.addEventListener('pointercancel', endViewportPointer);
 
     // Zoom on wheel
     viewport.addEventListener('wheel', (e) => {
@@ -4280,6 +4484,15 @@
       });
     }
 
+    // Fit View
+    const btnFit = document.getElementById('btn-fit-view');
+    if (btnFit) {
+      btnFit.addEventListener('click', () => {
+        fitView(32);
+        showToast('Canvas centered (Fit View)');
+      });
+    }
+
     // Auto-layout
     const btnAuto = document.getElementById('btn-autolayout');
     if (btnAuto) {
@@ -4367,7 +4580,54 @@
     state.scale = 0.85;
     updateWorldTransform();
     saveGraphToLocalStorage();
-    showToast('Auto-layout arranged');
+
+    requestAnimationFrame(() => {
+      fitView(32);
+      showToast('Auto-layout arranged & fitted');
+    });
+  }
+
+  function fitView(padding = 32) {
+    if (state.nodes.size === 0) {
+      state.pan = { x: 30, y: 25 };
+      state.scale = 0.85;
+      updateWorldTransform();
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    state.nodes.forEach(node => {
+      const w = node.width || (node.element ? node.element.offsetWidth : 340);
+      const h = node.height || (node.element ? node.element.offsetHeight : 300);
+      if (node.x < minX) minX = node.x;
+      if (node.y < minY) minY = node.y;
+      if (node.x + w > maxX) maxX = node.x + w;
+      if (node.y + h > maxY) maxY = node.y + h;
+    });
+
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return;
+
+    const vpRect = viewport.getBoundingClientRect();
+    const vpW = vpRect.width || window.innerWidth;
+    const vpH = vpRect.height || (window.innerHeight - 48);
+
+    const graphW = (maxX - minX) + padding * 2;
+    const graphH = (maxY - minY) + padding * 2;
+
+    const scaleX = vpW / Math.max(100, graphW);
+    const scaleY = vpH / Math.max(100, graphH);
+    const targetScale = Math.max(0.35, Math.min(1.15, Math.min(scaleX, scaleY)));
+
+    const graphCenterX = (minX + maxX) / 2;
+    const graphCenterY = (minY + maxY) / 2;
+
+    const targetPanX = Math.round((vpW / 2) - graphCenterX * targetScale);
+    const targetPanY = Math.round((vpH / 2) - graphCenterY * targetScale);
+
+    state.scale = targetScale;
+    state.pan = { x: targetPanX, y: targetPanY };
+    updateWorldTransform();
+    saveGraphToLocalStorage();
   }
 
   function exportGraphJSON() {
@@ -4505,6 +4765,7 @@
           }
         }
       }
+      fitView(32);
     });
   }
 
@@ -4534,7 +4795,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8', 'flame_blueprint_graph_v9'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7', 'flame_blueprint_graph_v8', 'flame_blueprint_graph_v9', 'flame_blueprint_graph_v10'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -4629,6 +4890,11 @@
     if (state.nodes.size === 0) {
       buildDefaultGraph();
     }
+
+    // Auto-fit nodes on initial screen load
+    requestAnimationFrame(() => {
+      fitView(32);
+    });
 
     try {
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
