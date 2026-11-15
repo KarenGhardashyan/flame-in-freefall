@@ -11,7 +11,7 @@
   // CONSTANTS & CONFIGURATION
   // =========================================================================
 
-  const STORAGE_KEY = 'flame_blueprint_graph_v7';
+  const STORAGE_KEY = 'flame_blueprint_graph_v8';
   const API_EVAL_URL = '/api/blueprint-eval';
   const API_PROMPT_URL = '/api/blueprint-prompt';
   const API_NOTE_URL = '/api/blueprint-note';
@@ -407,12 +407,13 @@
       let startW = 0, startH = 0;
       let isResizing = false;
 
-      resizer.addEventListener('mousedown', (e) => {
+      const onStartResize = (e) => {
         e.stopPropagation();
         e.stopImmediatePropagation();
         e.preventDefault();
         isResizing = true;
         resizer.classList.add('resizing');
+        this.element.classList.add('resizing-node');
         startX = e.clientX;
         startY = e.clientY;
         startW = this.element.offsetWidth;
@@ -424,8 +425,9 @@
           ev.preventDefault();
           const dw = (ev.clientX - startX) / state.scale;
           const dh = (ev.clientY - startY) / state.scale;
-          this.width = Math.max(260, Math.round(startW + dw));
-          this.height = Math.max(160, Math.round(startH + dh));
+          // 2D free resizing with strictly enforced minimum dimensions
+          this.width = Math.max(280, Math.round(startW + dw));
+          this.height = Math.max(220, Math.round(startH + dh));
           this.element.style.width = `${this.width}px`;
           this.element.style.height = `${this.height}px`;
           renderAllWires();
@@ -440,14 +442,23 @@
           ev.preventDefault();
           isResizing = false;
           resizer.classList.remove('resizing');
+          this.element.classList.remove('resizing-node');
           window.removeEventListener('mousemove', onMouseMove);
           window.removeEventListener('mouseup', onMouseUp);
+          window.removeEventListener('pointermove', onMouseMove);
+          window.removeEventListener('pointerup', onMouseUp);
+          renderAllWires();
           saveGraphToLocalStorage();
         };
 
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
-      });
+        window.addEventListener('pointermove', onMouseMove);
+        window.addEventListener('pointerup', onMouseUp);
+      };
+
+      resizer.addEventListener('mousedown', onStartResize);
+      resizer.addEventListener('pointerdown', onStartResize);
     }
 
     bindDragEvents() {
@@ -712,7 +723,8 @@
       this.element.querySelectorAll('.note-preset-chip').forEach(chip => {
         chip.addEventListener('click', () => {
           this.noteText = chip.dataset.note;
-          textarea.value = this.noteText;
+          const textarea = this.element.querySelector(`#${this.id}-note-text`);
+          if (textarea) textarea.value = this.noteText;
           if (chip.dataset.o2) {
             const instantParams = {
               o2_percent: parseFloat(chip.dataset.o2),
@@ -723,7 +735,7 @@
               gas_vol_pct: parseFloat(chip.dataset.gas || 0),
               cabin_volume_m3: parseFloat(chip.dataset.vol || 28)
             };
-            this.applyCompiledPlan({ params: instantParams });
+            this.applyCompiledPlan({ params: instantParams, summary: chip.dataset.note });
           }
           this.compile();
         });
@@ -733,10 +745,10 @@
     async compile() {
       const compileBtn = this.element.querySelector(`#${this.id}-btn-compile`);
       compileBtn.disabled = true;
-      compileBtn.innerHTML = `<div class="spinner"></div> <span>COMPILING...</span>`;
+      compileBtn.innerHTML = `<div class="spinner"></div> <span>${state.language === 'ru' ? 'КОМПИЛЯЦИЯ...' : 'COMPILING...'}</span>`;
 
       try {
-        const lang = (this.selectedLang === 'en-US') ? 'en' : 'ru';
+        const lang = state.language || 'en';
         const res = await fetch(API_NOTE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -771,71 +783,111 @@
           warnBanner.style.display = 'none';
         }
 
-        // Render summary card
-        const card = this.element.querySelector(`#${this.id}-summary-card`);
-        if (card) {
-          card.style.display = 'block';
-          card.innerHTML = `
-            <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">✓ MISSION ARCHITECTURE COMPILED</div>
-            <div style="margin-top: 4px; color: #F1F5F9;">${sanitize(compiled.summary || '')}</div>
-            <div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query || '')}</i></div>
-          `;
-        }
-
         this.data = compiled;
         showToast('Mission blueprint compiled');
 
         // Propagate down the wire
         propagateDataFrom(this.id, compiled);
 
-        // Apply to connected Variable node or direct pipeline
+        // Apply strictly to connected Variable node(s) on this network
         this.applyCompiledPlan(compiled);
       } catch (err) {
         console.error('[NoteNode] Compilation error:', err);
         showToast('Compilation error: ' + err.message);
       } finally {
         compileBtn.disabled = false;
-        compileBtn.innerHTML = `<span>COMPILE TO BLUEPRINT</span>`;
+        compileBtn.innerHTML = `<span>${state.language === 'ru' ? 'СКОМПИЛИРОВАТЬ В СХЕМУ' : 'COMPILE TO BLUEPRINT'}</span>`;
       }
     }
 
     applyCompiledPlan(compiled) {
-      // Find connected variable node down the wire
-      let targetVar = findDownstreamNode(this.id, 'variable');
-
-      // If no directly wired Variable node, fallback to the first Variable node
-      if (!targetVar) {
-        for (const n of state.nodes.values()) {
-          if (n.type === 'variable') {
-            targetVar = n;
-            break;
-          }
+      // Strictly isolate: find target variable node(s) ONLY via outgoing wires from this.id
+      const outgoingWires = state.wires.filter(w => w.fromNode === this.id && w.fromPin === 'out');
+      const targetVars = [];
+      outgoingWires.forEach(w => {
+        const target = state.nodes.get(w.toNode);
+        if (target && target.type === 'variable') {
+          targetVars.push(target);
+        } else if (target) {
+          const downstreamVar = findDownstreamNode(target.id, 'variable');
+          if (downstreamVar) targetVars.push(downstreamVar);
         }
+      });
+
+      const card = this.element.querySelector(`#${this.id}-summary-card`);
+
+      // If no connected OUT wire or no connected Variable node, NEVER modify any other node!
+      if (targetVars.length === 0) {
+        if (card) {
+          card.style.display = 'block';
+          const title = (state.language === 'ru') ? '✓ АРХИТЕКТУРА МИССИИ СКОМПИЛИРОВАНА' : '✓ MISSION ARCHITECTURE COMPILED';
+          const hint = (state.language === 'ru')
+            ? 'Скомпилировано (соедините пин OUT с ENV VARIABLES для применения)'
+            : 'Compiled (connect OUT pin to ENV VARIABLES to apply)';
+          card.innerHTML = `
+            <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">${title}</div>
+            <div style="margin-top: 4px; color: var(--text-primary); font-size: 11px;">${sanitize(compiled.summary || '')}</div>
+            <div style="margin-top: 6px; padding: 4px 8px; background: rgba(245, 158, 11, 0.12); border: 1px dashed #F59E0B; border-radius: 4px; color: #F59E0B; font-size: 9.5px; font-family: var(--font-mono);">
+              ℹ ${hint}
+            </div>
+            ${compiled.suggested_query ? `<div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query)}</i></div>` : ''}
+          `;
+        }
+        return;
       }
 
-      if (targetVar && compiled.params) {
-        targetVar.setParams(compiled.params);
-      }
+      // If connected target variable node(s) exist, apply parameters to them
+      targetVars.forEach(targetVar => {
+        if (compiled.params) {
+          targetVar.setParams(compiled.params);
+        }
+        if (compiled.pipeline) {
+          const targetS2r = findDownstreamNode(targetVar.id, 'simtoreal');
+          if (targetS2r) {
+            if (compiled.pipeline.match_by && typeof targetS2r.setMatchBy === 'function') {
+              targetS2r.setMatchBy(compiled.pipeline.match_by);
+            }
+            if (compiled.pipeline.active_benchmark_id && typeof targetS2r.setActiveBenchmark === 'function') {
+              targetS2r.setActiveBenchmark(compiled.pipeline.active_benchmark_id);
+            }
+          }
+          const targetGraph = findDownstreamNode(targetVar.id, 'graph');
+          if (targetGraph && compiled.pipeline.graph_metric) {
+            targetGraph.setChannel(compiled.pipeline.graph_metric);
+          }
+          const targetPrompt = findDownstreamNode(targetVar.id, 'prompt');
+          if (targetPrompt && compiled.suggested_query) {
+            targetPrompt.setQuery(compiled.suggested_query);
+          }
+        }
+      });
 
-      // Set downstream Sim-to-Real criteria/benchmark if specified in pipeline
-      if (compiled.pipeline && targetVar) {
-        const targetS2r = findDownstreamNode(targetVar.id, 'simtoreal');
-        if (targetS2r) {
-          if (compiled.pipeline.match_by && typeof targetS2r.setMatchBy === 'function') {
-            targetS2r.setMatchBy(compiled.pipeline.match_by);
-          }
-          if (compiled.pipeline.active_benchmark_id && typeof targetS2r.setActiveBenchmark === 'function') {
-            targetS2r.setActiveBenchmark(compiled.pipeline.active_benchmark_id);
-          }
-        }
-        const targetGraph = findDownstreamNode(targetVar.id, 'graph');
-        if (targetGraph && compiled.pipeline.graph_metric) {
-          targetGraph.setChannel(compiled.pipeline.graph_metric);
-        }
-        const targetPrompt = findDownstreamNode(targetVar.id, 'prompt');
-        if (targetPrompt && compiled.suggested_query) {
-          targetPrompt.setQuery(compiled.suggested_query);
-        }
+      if (card) {
+        card.style.display = 'block';
+        const title = (state.language === 'ru') ? '✓ АРХИТЕКТУРА МИССИИ СКОМПИЛИРОВАНА' : '✓ MISSION ARCHITECTURE COMPILED';
+        card.innerHTML = `
+          <div style="font-family: var(--font-mono); font-size: 10px; color: #F59E0B; font-weight: 700;">${title}</div>
+          <div style="margin-top: 4px; color: var(--text-primary); font-size: 11px;">${sanitize(compiled.summary || '')}</div>
+          ${compiled.suggested_query ? `<div style="margin-top: 4px; color: var(--text-muted); font-size: 10px;">Suggested Copilot Query: <i>${sanitize(compiled.suggested_query)}</i></div>` : ''}
+        `;
+      }
+    }
+
+    onLanguageChange(lang) {
+      const compileBtn = this.element.querySelector(`#${this.id}-btn-compile span`);
+      if (compileBtn) {
+        compileBtn.textContent = lang === 'ru' ? 'СКОМПИЛИРОВАТЬ В СХЕМУ' : 'COMPILE TO BLUEPRINT';
+      }
+      const voiceText = this.element.querySelector(`#${this.id}-btn-voice .voice-btn-text`);
+      if (voiceText && !this.isRecording) {
+        voiceText.textContent = lang === 'ru' ? 'ГОЛОСОВОЙ ВВОД' : 'VOICE INPUT';
+      }
+      const statusEl = this.element.querySelector(`#${this.id}-voice-status`);
+      if (statusEl && !this.isRecording && !statusEl.classList.contains('listening')) {
+        statusEl.textContent = lang === 'ru' ? 'Готов к голосовому вводу или тексту' : 'Ready for voice input or typing';
+      }
+      if (this.data) {
+        this.applyCompiledPlan(this.data);
       }
     }
   }
@@ -845,12 +897,6 @@
       const varNode = findUpstreamNode(sourceNodeId, 'variable');
       if (varNode) {
         varNode.queueEvaluate();
-        return;
-      }
-    }
-    for (const n of state.nodes.values()) {
-      if (n.type === 'variable') {
-        n.queueEvaluate();
         return;
       }
     }
@@ -1511,8 +1557,29 @@
       const tf = `${Number(tfVal).toFixed(0)} K`;
 
       const vgVal = params && params.flow_velocity_cms !== undefined ? Number(params.flow_velocity_cms) : 10.0;
-      const daVal = simTel.damkohler_da !== undefined ? Number(simTel.damkohler_da).toFixed(2)
-                  : (vgVal > 0.05 ? (14.2 / vgVal).toFixed(2) : '35.0');
+      let daVal = null;
+      if (evalData.damkohler_da !== undefined && !isNaN(evalData.damkohler_da)) {
+        daVal = Number(evalData.damkohler_da).toFixed(3);
+      } else if (simTel.damkohler_da !== undefined && !isNaN(simTel.damkohler_da)) {
+        daVal = Number(simTel.damkohler_da).toFixed(3);
+      } else if (Array.isArray(evalData.objective_reasons)) {
+        for (const r of evalData.objective_reasons) {
+          const m = r.match(/Damk[öo]hler\s+(?:number\s+)?Da\s*(?:=|≈)\s*([\d.]+)/i);
+          if (m && m[1]) {
+            daVal = Number(m[1]).toFixed(3);
+            break;
+          }
+        }
+      }
+      if (!daVal) {
+        const pBar = params && params.pressure_atm !== undefined ? Number(params.pressure_atm) : 1.0;
+        const xO2 = params && params.o2_percent !== undefined ? Number(params.o2_percent) / 100.0 : 0.21;
+        const vgMs = vgVal / 100.0;
+        const tauFlow = 0.008 / (vgMs + 0.005);
+        const rateFactor = 3.2e7 * Math.pow(pBar, 1.75) * xO2 * Math.exp(-14500.0 / 1500.0);
+        const tauChem = 1.0 / Math.max(rateFactor, 1.0e-5);
+        daVal = (tauFlow / tauChem).toFixed(3);
+      }
 
       const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
       const vfVal = evalData.flame_spread_rate_mm_s !== undefined ? Number(evalData.flame_spread_rate_mm_s).toFixed(2)
@@ -1551,44 +1618,75 @@
         }
       }
 
+      const isRu = (state.language === 'ru');
       grid.innerHTML = `
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Combustion Regime:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Режим горения:' : 'Combustion Regime:'}</span>
           <span class="telemetry-summary-value highlight-cyan">${sanitize(rawRegime)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Flame Temp T_f:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Температура T_f:' : 'Flame Temp T_f:'}</span>
           <span class="telemetry-summary-value">${sanitize(tf)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Damköhler Da:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Число Дамкёлера Da:' : 'Damköhler Da:'}</span>
           <span class="telemetry-summary-value">${sanitize(daVal)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Critical LOI_crit:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Предел LOI_crit:' : 'Critical LOI_crit:'}</span>
           <span class="telemetry-summary-value">${sanitize(loiVal)}%</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Spread Rate V_f:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Скорость фронта V_f:' : 'Spread Rate V_f:'}</span>
           <span class="telemetry-summary-value highlight-cyan">${sanitize(vfVal)} mm/s</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Hull Heat Flux q''_w:</span>
+          <span class="telemetry-summary-label">${isRu ? "Тепловой поток q''_w:" : "Hull Heat Flux q''_w:"}</span>
           <span class="telemetry-summary-value ${fluxVal >= 28.0 ? 'highlight-danger' : (fluxVal > 15.0 ? 'highlight-cyan' : '')}">${sanitize(flux)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Peak ΔP Overpressure:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Пик избыточного ΔP:' : 'Peak ΔP Overpressure:'}</span>
           <span class="telemetry-summary-value ${dpVal >= 45.0 ? 'highlight-danger' : ''}">${sanitize(dp)}</span>
         </div>
         <div class="telemetry-summary-item">
-          <span class="telemetry-summary-label">Toxic CO @ 600s:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Токсичный CO @ 600с:' : 'Toxic CO @ 600s:'}</span>
           <span class="telemetry-summary-value">${sanitize(coVal)}</span>
         </div>
         <div class="telemetry-summary-item" style="grid-column: span 2;">
-          <span class="telemetry-summary-label">Time to SMAC 55 ppm:</span>
+          <span class="telemetry-summary-label">${isRu ? 'Время до SMAC 55 ppm:' : 'Time to SMAC 55 ppm:'}</span>
           <span class="telemetry-summary-value ${isSmacCritical ? 'highlight-danger' : 'highlight-safe'}">${sanitize(smacStr)}</span>
         </div>
       `;
+    }
+
+    onLanguageChange(lang) {
+      const isRu = (lang === 'ru');
+      const telTitle = this.element.querySelector('.telemetry-summary-section .table-section-title span:first-child');
+      if (telTitle) {
+        telTitle.textContent = isRu ? 'СВОДКА ТЕЛЕМЕТРИИ СИМУЛЯЦИИ' : 'SIMULATION TELEMETRY SUMMARY';
+      }
+      const expTitle = this.element.querySelector('.psi-runs-section .table-section-title span:first-child');
+      if (expTitle) {
+        expTitle.textContent = isRu ? 'СООТВЕТСТВУЮЩИЕ ПРОГОНЫ NASA PSI' : 'MATCHING NASA PSI EXPERIMENTAL RUNS';
+      }
+      const calibHint = this.element.querySelector('.psi-runs-section .table-section-title span:last-child');
+      if (calibHint) {
+        calibHint.textContent = isRu ? 'КЛИК ПО СТРОКЕ ДЛЯ КАЛИБРОВКИ' : 'CLICK ROW TO CALIBRATE';
+      }
+      const btnRel = this.element.querySelector(`.btn-table-filter[data-mode="relevant"]`);
+      if (btnRel) {
+        btnRel.textContent = isRu ? 'РЕЛЕВАНТНЫЕ (ТОП 5)' : 'RELEVANT (TOP 5)';
+      }
+      const btnAll = this.element.querySelector(`.btn-table-filter[data-mode="all"]`);
+      if (btnAll) {
+        btnAll.textContent = isRu ? 'ВСЕ 41 ПРОГОН' : 'ALL 41 RUNS';
+      }
+      const search = this.element.querySelector(`#${this.id}-search`);
+      if (search) {
+        search.placeholder = isRu ? 'Фильтр по прогонам (PMMA, Saffire, 21%, BASS)...' : 'Filter runs (PMMA, Saffire, 21%, BASS)...';
+      }
+      this.renderTelemetrySummary();
+      this.renderMatrix();
     }
 
     renderMatrix() {
@@ -2652,18 +2750,40 @@
             .map(r => `<li>${sanitize(r)}</li>`)
             .join('');
         } else {
+          const isRu = (state.language === 'ru');
           const o2Val = parseFloat(params.o2_percent || 21.0);
           const vgVal = parseFloat(params.flow_velocity_cms || 10.0);
-          const daVal = vgVal > 0.05 ? (14.2 / vgVal).toFixed(2) : '35.0';
+          let daVal = null;
+          if (evalData.damkohler_da !== undefined && !isNaN(evalData.damkohler_da)) {
+            daVal = Number(evalData.damkohler_da).toFixed(3);
+          } else if (simTel.damkohler_da !== undefined && !isNaN(simTel.damkohler_da)) {
+            daVal = Number(simTel.damkohler_da).toFixed(3);
+          } else {
+            const pBar = params && params.pressure_atm !== undefined ? Number(params.pressure_atm) : 1.0;
+            const xO2 = o2Val / 100.0;
+            const vgMs = vgVal / 100.0;
+            const tauFlow = 0.008 / (vgMs + 0.005);
+            const rateFactor = 3.2e7 * Math.pow(pBar, 1.75) * xO2 * Math.exp(-14500.0 / 1500.0);
+            const tauChem = 1.0 / Math.max(rateFactor, 1.0e-5);
+            daVal = (tauFlow / tauChem).toFixed(3);
+          }
           const rMode = (simTel.flame_color_mode || 'steady').toUpperCase();
           const qVal = (simTel.hull_heat_flux_kw_m2 || 0.5).toFixed(1);
           const dpVal = (simTel.cabin_overpressure_kpa || 0.0).toFixed(1);
-          reasonsList.innerHTML = [
+          const loiVal = simTel.loi_crit_pct !== undefined ? Number(simTel.loi_crit_pct).toFixed(1) : '14.8';
+          const reasonsEn = [
             `Combustion Regime: ${rMode} (Damköhler Da ≈ ${daVal} vs critical Da_ext = 0.45).`,
             `Thermal & Structural Load: Localized hull heat flux = ${qVal} kW/m² (limit: 28 kW/m²), Delta P = ${dpVal} kPa.`,
-            `Ventilation Dynamics: Forced ECLSS flow V_g = ${vgVal.toFixed(1)} cm/s at 0g microgravity (LOI_crit = 14.8%).`,
+            `Ventilation Dynamics: Forced ECLSS flow V_g = ${vgVal.toFixed(1)} cm/s at 0g microgravity (LOI_crit = ${loiVal}%).`,
             `Atmospheric Composition: ${o2Val.toFixed(1)}% O₂ in compartment (CO accumulation monitored vs NASA SMAC 55 ppm).`
-          ].map(r => `<li>${sanitize(r)}</li>`).join('');
+          ];
+          const reasonsRu = [
+            `Режим горения: ${rMode} (Число Дамкёлера Da ≈ ${daVal} против критического Da_ext = 0.45).`,
+            `Тепловая и конструкционная нагрузка: локальный тепловой поток = ${qVal} кВт/м² (предел: 28 кВт/м²), Delta P = ${dpVal} кПа.`,
+            `Динамика вентиляции: принудительный обдув СЖО V_g = ${vgVal.toFixed(1)} см/с при 0g (LOI_crit = ${loiVal}%).`,
+            `Атмосферный состав: ${o2Val.toFixed(1)}% O₂ в отсеке (накопление CO контролируется по норме NASA SMAC 55 ppm).`
+          ];
+          reasonsList.innerHTML = (isRu ? reasonsRu : reasonsEn).map(r => `<li>${sanitize(r)}</li>`).join('');
         }
       }
 
@@ -2900,9 +3020,12 @@
           e.stopPropagation();
           const rId = tr.dataset.runId;
           if (rId) {
-            const s2rNode = findUpstreamNode(this.id, 'simtoreal') || findDownstreamNode(this.id, 'simtoreal') || Array.from(state.nodes.values()).find(n => n.type === 'simtoreal');
+            const s2rNode = findUpstreamNode(this.id, 'simtoreal') || findDownstreamNode(this.id, 'simtoreal');
             if (s2rNode && typeof s2rNode.setActiveBenchmark === 'function') {
               s2rNode.setActiveBenchmark(rId);
+            } else {
+              const varNode = findUpstreamNode(this.id, 'variable');
+              if (varNode) varNode.queueEvaluate();
             }
             rows.forEach(r => r.classList.remove('active-psi-row'));
             tr.classList.add('active-psi-row');
@@ -3923,6 +4046,7 @@
 
   function applyLanguage(lang) {
     state.language = lang;
+    window.currentAppLanguage = lang;
     localStorage.setItem('flame_blueprint_lang', lang);
     const langText = document.getElementById('lang-text');
     if (langText) langText.textContent = lang.toUpperCase();
@@ -4276,7 +4400,7 @@
 
   function loadGraphFromLocalStorage() {
     try {
-      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6'].forEach(k => {
+      ['flame_blueprint_graph', 'flame_blueprint_graph_v1', 'flame_blueprint_graph_v2', 'flame_blueprint_graph_v3', 'flame_blueprint_graph_v4', 'flame_blueprint_graph_v5', 'flame_blueprint_graph_v6', 'flame_blueprint_graph_v7'].forEach(k => {
         if (localStorage.getItem(k)) localStorage.removeItem(k);
       });
       const raw = localStorage.getItem(STORAGE_KEY);

@@ -423,6 +423,7 @@
       fire_risk_pct: Number(fire_risk_pct.toFixed(1)),
       explosion_risk_pct: Number(explosion_risk_pct.toFixed(1)),
       breach_outside_risk: breach_outside_risk,
+      damkohler_da: Number(da.toFixed(3)),
       historical_analog: {
         name: analog_name,
         reason: analog_reason,
@@ -430,6 +431,7 @@
       },
       objective_reasons: objective_reasons,
       sim_telemetry: {
+        damkohler_da: Number(da.toFixed(3)),
         flame_temp_k: Number(flame_temp_k.toFixed(1)),
         flame_color_mode: flame_color_mode,
         spread_rate_mm_s: Number(spread_rate_mm_s.toFixed(2)),
@@ -1182,7 +1184,7 @@
 
         if (url.includes('/api/compile-note') || url.includes('/api/blueprint-note')) {
           const noteText = body.note_text || body.text || body.note || '';
-          const lang = body.language || 'ru';
+          const lang = body.language || window.currentAppLanguage || 'en';
           const resData = compileNoteToBlueprint(noteText, lang);
           return new Response(JSON.stringify(resData), {
             status: 200,
@@ -1217,7 +1219,7 @@
           const params = body.params || {};
           const evalRes = body.evaluation || evaluateFireSafety(params);
           const nearest = body.nearest_benchmark || body.selected_experiment;
-          const lang = body.language || 'ru';
+          const lang = body.language || window.currentAppLanguage || 'en';
           const resData = askSafetyOfficer(q, params, evalRes, nearest, lang);
           return new Response(JSON.stringify(resData), {
             status: 200,
@@ -1229,7 +1231,7 @@
           const branchA = body.branch_a || body.branchA || {};
           const branchB = body.branch_b || body.branchB || {};
           const q = body.query || body.user_query || '';
-          const lang = body.language || 'ru';
+          const lang = body.language || window.currentAppLanguage || 'en';
           const resData = compareBlueprints(branchA, branchB, q, lang);
           return new Response(JSON.stringify(resData), {
             status: 200,
